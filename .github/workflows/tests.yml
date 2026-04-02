@@ -18,7 +18,11 @@ jobs:
           cache-suffix: "py3.14"
       - run: uv sync --no-install-project --prerelease=allow --no-dev --group test
       - run: uv pip install --prerelease=allow "homeassistant==2026.3.*"
-      - run: uv run pytest --cov --cov-fail-under=95
+      - run: uv run pytest --cov --cov-report=xml --cov-fail-under=95
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   compat:
     # Minimum supported: HA 2025.6.x / Py 3.13 (first HA with config subentries + read-only selectors)
