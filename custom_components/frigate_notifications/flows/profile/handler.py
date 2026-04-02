@@ -50,6 +50,7 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
         """Initialize profile subentry flow state."""
         self._data: dict[str, Any] = {}
         self._reconfiguring = False
+        self._ctx: FlowContext | None = None
 
     async def async_step_user(self, user_input=None) -> SubentryFlowResult:
         """Start a new profile subentry flow."""
@@ -60,6 +61,7 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
         del user_input
         self._reconfiguring = True
         self._data.update(copy.deepcopy(dict(self._get_reconfigure_subentry().data)))
+        self._invalidate_context()
         return await self.async_step_menu()
 
     async def async_step_menu(self, user_input=None) -> SubentryFlowResult:
@@ -94,6 +96,7 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
             errors = validate_preset_input(self._data, user_input, ctx)
             if not errors:
                 apply_preset_input(self._data, user_input, ctx)
+                self._invalidate_context()
                 return await self.async_step_basics()
 
         schema = build_preset_schema(self._data, ctx)
@@ -127,6 +130,7 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
             )
             if not errors:
                 apply_basics_input(self._data, user_input, ctx, pass_number=pass_number)
+                self._invalidate_context()
                 if pass_number == 1:
                     return self._show_basics_form()
                 return await self._go_to_menu()
@@ -179,6 +183,7 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
             errors = validate_filtering_input(self._data, user_input, ctx)
             if not errors:
                 apply_filtering_input(self._data, user_input, ctx)
+                self._invalidate_context()
                 return await self._go_to_menu()
 
         schema = build_filtering_schema(self._data, ctx)
@@ -200,6 +205,7 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
             errors = validate_content_input(self._data, user_input, ctx)
             if not errors:
                 apply_content_input(self._data, user_input, ctx)
+                self._invalidate_context()
                 return await self._go_to_menu()
 
         schema = build_content_schema(self._data, ctx)
@@ -218,6 +224,7 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
             errors = validate_media_actions_input(self._data, user_input, ctx)
             if not errors:
                 apply_media_actions_input(self._data, user_input, ctx)
+                self._invalidate_context()
                 return await self._go_to_menu()
 
         schema = build_media_actions_schema(self._data, ctx)
@@ -237,6 +244,7 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
             errors = validate_delivery_input(self._data, user_input, ctx)
             if not errors:
                 apply_delivery_input(self._data, user_input, ctx)
+                self._invalidate_context()
                 return await self._go_to_menu()
 
         schema = build_delivery_schema(self._data, ctx)
@@ -266,14 +274,20 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
         return entry.data["frigate_entry_id"] in self.hass.data.get(FRIGATE_DOMAIN, {})
 
     def _build_context(self) -> FlowContext:
-        """Construct a FlowContext from current handler state."""
-        entry = self._get_entry()
-        return build_flow_context(
-            self.hass,
-            entry,
-            self._data,
-            is_reconfiguring=self._reconfiguring,
-        )
+        """Construct a FlowContext from current handler state, caching until data changes."""
+        if self._ctx is None:
+            entry = self._get_entry()
+            self._ctx = build_flow_context(
+                self.hass,
+                entry,
+                self._data,
+                is_reconfiguring=self._reconfiguring,
+            )
+        return self._ctx
+
+    def _invalidate_context(self) -> None:
+        """Clear cached FlowContext after data changes."""
+        self._ctx = None
 
     async def _go_to_menu(self) -> SubentryFlowResult:
         """Route to the appropriate menu (reconfigure vs initial creation)."""

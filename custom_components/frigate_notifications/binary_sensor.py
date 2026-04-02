@@ -27,7 +27,6 @@ from .entity_base import (
     FrigateNotificationsIntegrationEntity,
     FrigateNotificationsProfileEntity,
 )
-from .enums import Provider
 from .flows.helpers import get_camera_capabilities
 
 if TYPE_CHECKING:
@@ -132,7 +131,7 @@ class FrigateNotificationsSilencedBinarySensor(
         *,
         cameras: tuple[str, ...],
         profile_name: str,
-        provider: str = Provider.APPLE,
+        provider: str,
     ) -> None:
         """Initialize silence binary sensor."""
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
@@ -251,7 +250,7 @@ class FrigateNotificationsDispatchProblemBinarySensor(
         *,
         cameras: tuple[str, ...],
         profile_name: str,
-        provider: str = Provider.APPLE,
+        provider: str,
     ) -> None:
         """Initialize dispatch problem binary sensor."""
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)

@@ -11,7 +11,6 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .data import iter_profile_subentries, profile_common_fields
 from .entity_base import FrigateNotificationsProfileEntity
-from .enums import Provider
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -49,7 +48,7 @@ class FrigateNotificationsSwitch(FrigateNotificationsProfileEntity, SwitchEntity
         *,
         cameras: tuple[str, ...],
         profile_name: str,
-        provider: str = Provider.APPLE,
+        provider: str,
     ) -> None:
         """Initialize profile enabled switch."""
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
