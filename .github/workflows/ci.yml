@@ -2,21 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "custom_components/**"
-      - "tests/**"
-      - "pyproject.toml"
-      - "uv.lock"
-      - ".github/workflows/**"
+    branches:
+      - main
   pull_request:
-    branches: [main]
-    paths:
-      - "custom_components/**"
-      - "tests/**"
-      - "pyproject.toml"
-      - "uv.lock"
-      - ".github/workflows/**"
   workflow_dispatch:
 #  schedule:
 #    - cron: "0 6 * * 1" # Weekly Monday 6am UTC
