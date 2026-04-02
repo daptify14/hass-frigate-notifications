@@ -65,7 +65,7 @@ The filter chain logs exactly which filter rejected each review per profile. See
 If no reviews appear in logs:
 
 1. Verify Frigate is producing reviews (check Frigate's web UI)
-2. Check MQTT status: Settings > System > System Health > MQTT > "Connected: Yes"
+2. Confirm MQTT is added and configured: Settings > Devices & Services > MQTT
 3. Check the **MQTT Connected** binary sensor entity created by the integration
 4. Verify the subscribed topic matches Frigate's config (`frigate/reviews` by default)
 
