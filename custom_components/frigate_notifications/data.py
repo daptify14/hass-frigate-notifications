@@ -239,7 +239,7 @@ def get_profile_device_identifiers(entry_id: str, subentry_id: str) -> set[tuple
 
 def get_profile_device_name(profile_name: str) -> str:
     """Return the human-facing device name for a notification profile."""
-    return f"FN {profile_name}"
+    return profile_name
 
 
 def get_integration_subentry_id(entry: ConfigEntry) -> str | None:
