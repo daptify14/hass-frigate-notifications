@@ -21,6 +21,7 @@ Inspired by [SgtBatten's Frigate Notification Blueprint](https://github.com/SgtB
 
 - Home Assistant 2025.6 or newer
 - Frigate NVR with reviews enabled
+- MQTT configured in Home Assistant
 - [Frigate integration](https://github.com/blakeblackshear/frigate-hass-integration) installed in Home Assistant
 - iOS or Android Companion App (or Android TV / Fire TV integration for TV overlays)
 
@@ -32,9 +33,16 @@ Inspired by [SgtBatten's Frigate Notification Blueprint](https://github.com/SgtB
 4. Restart Home Assistant
 5. Go to **Settings → Devices & Services → Add Integration** and search for "Notifications for Frigate"
 
+For manual installation and more details, see [docs/installation.md](docs/installation.md).
+
 ## Configuration
 
 All configuration is done through the UI — no YAML required. A step-by-step wizard guides you through creating notification profiles, selecting cameras, choosing a preset, and customizing each phase.
+
+- [Installation](docs/installation.md) — prerequisites, HACS/manual install, and removal
+- [Getting Started](docs/getting-started.md) — first profile walkthrough
+- [Troubleshooting](docs/troubleshooting.md) — common issues, logs, and limitations
+- [Full reference](docs/index.md) — overview, features, and reference index
 
 ## License
 
