@@ -21,7 +21,6 @@ from .entity_base import (
     FrigateNotificationsIntegrationEntity,
     FrigateNotificationsProfileEntity,
 )
-from .enums import Provider
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -165,7 +164,7 @@ class FrigateNotificationsLastSentSensor(FrigateNotificationsProfileEntity, Rest
         *,
         cameras: tuple[str, ...],
         profile_name: str,
-        provider: str = Provider.APPLE,
+        provider: str,
     ) -> None:
         """Initialize last-sent sensor."""
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)

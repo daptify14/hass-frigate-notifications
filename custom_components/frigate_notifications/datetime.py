@@ -17,7 +17,6 @@ from homeassistant.util import dt as dt_util
 from .const import SIGNAL_SILENCE_STATE, SILENCE_DATETIMES_KEY
 from .data import iter_profile_subentries, profile_common_fields
 from .entity_base import FrigateNotificationsProfileEntity
-from .enums import Provider
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -67,7 +66,7 @@ class FrigateNotificationsSilenceDateTime(
         *,
         cameras: tuple[str, ...],
         profile_name: str,
-        provider: str = Provider.APPLE,
+        provider: str,
         silence_duration: int,
     ) -> None:
         """Initialize silence datetime entity."""

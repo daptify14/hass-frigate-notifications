@@ -11,7 +11,6 @@ from homeassistant.const import EntityCategory
 from .const import SILENCE_DATETIMES_KEY
 from .data import iter_profile_subentries, profile_common_fields
 from .entity_base import FrigateNotificationsProfileEntity
-from .enums import Provider
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -52,7 +51,7 @@ class FrigateNotificationsSilenceButton(FrigateNotificationsProfileEntity, Butto
         *,
         cameras: tuple[str, ...],
         profile_name: str,
-        provider: str = Provider.APPLE,
+        provider: str,
     ) -> None:
         """Initialize silence button."""
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
@@ -87,7 +86,7 @@ class FrigateNotificationsClearSilenceButton(FrigateNotificationsProfileEntity, 
         *,
         cameras: tuple[str, ...],
         profile_name: str,
-        provider: str = Provider.APPLE,
+        provider: str,
     ) -> None:
         """Initialize clear-silence button."""
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
