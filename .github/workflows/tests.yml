@@ -5,7 +5,7 @@ on:
 
 jobs:
   stable:
-    name: Tests (HA 2026.3.x / Py 3.14)
+    name: Tests (stable)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -21,8 +21,8 @@ jobs:
       - run: uv run pytest --cov --cov-fail-under=95
 
   compat:
-    # Minimum supported: first HA with config subentries + read-only selectors
-    name: Tests (HA 2025.6.x / Py 3.13)
+    # Minimum supported: HA 2025.6.x / Py 3.13 (first HA with config subentries + read-only selectors)
+    name: Tests (compat)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
