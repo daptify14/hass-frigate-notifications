@@ -40,7 +40,7 @@ class FrigateNotificationsIntegrationEntity(Entity):
         self._entry = entry
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
-            name="FN",
+            name="Notifications for Frigate",
             manufacturer="Notifications for Frigate",
             entry_type=DeviceEntryType.SERVICE,
         )
