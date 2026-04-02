@@ -1,0 +1,32 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Test Notify",
+      "dependsOn": ["Tail Notifications", "Run Simulate"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "Tail Notifications",
+      "type": "shell",
+      "command": "just notifications",
+      "isBackground": true,
+      "presentation": {
+        "group": "test-notify",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Simulate",
+      "type": "shell",
+      "command": "sleep 2 && just simulate",
+      "presentation": {
+        "group": "test-notify",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

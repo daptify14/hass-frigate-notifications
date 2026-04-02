@@ -1,0 +1,38 @@
+---
+default_config:
+
+homeassistant:
+  name: FN Dev
+  latitude: 0
+  longitude: 0
+  elevation: 0
+  unit_system: us_customary
+  country: US
+  currency: USD
+  time_zone: "America/New_York"
+  external_url: "http://localhost:8123"
+  internal_url: "http://localhost:8123"
+  auth_providers:
+    - type: trusted_networks
+      trusted_networks:
+        - 0.0.0.0/0
+      trusted_users:
+        0.0.0.0/0: 0a0482f011a14cf8a0879002f154d431
+      allow_bypass_login: true
+    - type: homeassistant
+
+notify:
+  - platform: group
+    name: all_mobile
+    services:
+      - service: mobile_app_dev_iphone
+      - service: mobile_app_dev_pixel
+
+debugpy:
+
+logger:
+  default: warning
+  logs:
+    custom_components.frigate_notifications: debug
+    homeassistant.components.debugpy: warning
+    homeassistant.components.mqtt: error

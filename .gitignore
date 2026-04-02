@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+**/.venv/
+
+# Testing / Linting caches
+.pytest_cache/
+.ruff_cache/
+coverage.xml
+.coverage
+
+# IDE
+.idea/
+!.vscode/*
+
+# Secrets
+.env
+.envrc
+# OS
+.DS_Store
+
+# HA runtime
+*.db
+*.log

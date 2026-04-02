@@ -1,0 +1,51 @@
+schema_version: 1
+id: simple
+version: 1
+name: Live Alerts
+summary: Recommended default - instant alert, quiet follow-ups
+description: >-
+  The default live notification style. Sends an immediate alert when an event
+  starts, follows up quietly as it develops, and can optionally replace the end
+  card with a GenAI summary. Works well without extra setup.
+sort_order: 1
+
+phases:
+  initial:
+    message_template: "object_only"
+    subtitle_template: "merged_subjects"
+    emoji_message: true
+    emoji_subtitle: false
+    sound: default
+    volume: 1.0
+    interruption_level: active
+    attachment: snapshot_cropped
+    delay: 0.0
+
+  update:
+    enabled: true
+    message_template: "object_only"
+    subtitle_template: "merged_subjects"
+    emoji_message: true
+    emoji_subtitle: false
+    sound: none
+    volume: 0.0
+    interruption_level: active
+    attachment: review_gif
+    delay: 0.0
+    use_latest_detection: true
+
+  end:
+    delay: 5.0
+
+  genai:
+    enabled: true
+    message_template: "genai_summary"
+    subtitle_template: "merged_subjects"
+    emoji_message: false
+    emoji_subtitle: false
+    sound: default
+    volume: 1.0
+    interruption_level: passive
+    attachment: review_gif
+    delay: 0.0
+    use_latest_detection: true

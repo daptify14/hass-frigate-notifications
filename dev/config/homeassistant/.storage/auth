@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "auth",
+  "data": {
+    "users": [
+      {
+        "id": "0a0482f011a14cf8a0879002f154d431",
+        "group_ids": ["system-admin"],
+        "is_owner": true,
+        "is_active": true,
+        "name": "Dev Admin",
+        "system_generated": false,
+        "local_only": false
+      }
+    ],
+    "groups": [
+      {"id": "system-admin", "name": "Administrators"},
+      {"id": "system-users", "name": "Users"},
+      {"id": "system-read-only", "name": "Read Only"}
+    ],
+    "credentials": [
+      {
+        "id": "dev_credential_00000000000000001",
+        "user_id": "0a0482f011a14cf8a0879002f154d431",
+        "auth_provider_type": "homeassistant",
+        "auth_provider_id": null,
+        "data": {"username": "dev"}
+      }
+    ],
+    "refresh_tokens": [
+      {
+        "id": "dev_refresh_token_0000000000000001",
+        "user_id": "0a0482f011a14cf8a0879002f154d431",
+        "client_id": "http://localhost:8123/",
+        "client_name": null,
+        "client_icon": null,
+        "token_type": "normal",
+        "created_at": "2026-01-01T00:00:00.000000+00:00",
+        "access_token_expiration": 1800,
+        "token": "dev_normal_token_placeholder_0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "jwt_key": "dev_jwt_key_placeholder_000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "last_used_at": "2026-01-01T00:00:00.000001+00:00",
+        "last_used_ip": "172.22.0.1",
+        "credential_id": "dev_credential_00000000000000001",
+        "version": "2026.3.4"
+      },
+      {
+        "id": "6358c624e32f40f09d022aedf64594ae",
+        "user_id": "0a0482f011a14cf8a0879002f154d431",
+        "client_id": null,
+        "client_name": "vscode",
+        "client_icon": null,
+        "token_type": "long_lived_access_token",
+        "created_at": "2026-01-01T00:00:00.000000+00:00",
+        "access_token_expiration": 315360000,
+        "token": "f49a9c5fea15944e08da422a222567c010194749899ae5e9cdc8aaa3a2634c04fd2ff195f30eba6b898294cb1e4ffb28d58831582ba94696d86143b4c33f2494",
+        "jwt_key": "386bdb1807329f0a9e6d170e15b0ce7b8885c1cdc41ddad91649cceac10331daf9f9468fe504dcc169d3ebf4a14072754b0aa58721b30948aaae14020dae681e",
+        "last_used_at": "2026-01-01T00:00:00.000001+00:00",
+        "last_used_ip": null,
+        "credential_id": null,
+        "version": "2026.3.4"
+      }
+    ]
+  }
+}

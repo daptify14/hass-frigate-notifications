@@ -1,0 +1,15 @@
+{
+  "domain": "frigate_notifications",
+  "name": "Notifications for Frigate",
+  "after_dependencies": ["frigate"],
+  "codeowners": [
+    "@daptify14"
+  ],
+  "config_flow": true,
+  "dependencies": ["mqtt"],
+  "documentation": "https://github.com/daptify14/hass-frigate-notifications",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/daptify14/hass-frigate-notifications/issues",
+  "requirements": [],
+  "version": "0.0.1"
+}

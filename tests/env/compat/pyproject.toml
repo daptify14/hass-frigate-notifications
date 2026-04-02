@@ -1,0 +1,9 @@
+# Minimum supported HA: first release with config subentries + read-only selectors
+[project]
+name = "frigate-notifications-test-compat"
+version = "2025.6"
+requires-python = ">=3.13.2,<3.14"
+dependencies = [
+    "pytest-homeassistant-custom-component==0.13.254",
+    "pycares<5",
+]

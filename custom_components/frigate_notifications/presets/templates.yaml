@@ -1,0 +1,179 @@
+# Template presets for config flow selectors. Content and title entries require
+# a unique `id` (used in config storage) and `label` (shown in the UI dropdown).
+# Add `phases` to restrict visibility to specific phase selectors. Zone phrases
+# use value/label only (no id).
+
+content:
+  - id: object_action_zone
+    value: "{{ object }} {{ zone_phrase }} {{ zone_alias }}"
+    label: "Object + action + zone"
+
+  - id: phase_icon_context
+    value: "{{ phase_emoji }} {{ object }} {{ zone_phrase }} {{ zone_alias }}"
+    label: "Phase icon + context"
+
+  - id: object_zone_only
+    value: "{{ object }} in {{ zone_alias }}"
+    label: "Object + zone only"
+
+  - id: object_zone_phrase
+    value: "{{ object }} {{ zone_phrase }}"
+    label: "Object + action (no zone)"
+
+  - id: merged_subjects
+    value: "{{ subjects }}"
+    label: "Merged subjects"
+
+  - id: object_only
+    value: "{{ object }} detected"
+    label: "Object only"
+
+  - id: single_subject
+    value: "{{ subject }}"
+    label: "Single subject"
+
+  - id: rich_update
+    value: |-
+      {{ phase_emoji }} {{ object }} {{ zone_phrase }} {{ zone_alias }}{% if added_subject %}
+      {{ added_subject }} detected{% endif %}
+    label: "Rich update (new line)"
+    phases:
+      - update
+      - end
+
+  - id: zone_info
+    value: "{{ zone_alias }}"
+    label: "Zone info"
+
+  - id: update_delta
+    value: "{{ added_subject }} detected"
+    label: "Update delta"
+    phases:
+      - update
+      - end
+
+  - id: camera_zone
+    value: "{{ camera_name }} {{ zone_alias }}"
+    label: "Camera + zone"
+
+  - id: camera_only_content
+    value: "{{ camera_name }}"
+    label: "Camera only"
+
+  # GenAI-specific templates (end/genai phases)
+  - id: duration_summary
+    value: "Duration: {{ duration }}s"
+    label: "Duration summary"
+    phases:
+      - end
+
+  - id: genai_summary
+    value: "{{ genai_summary }}"
+    label: "GenAI summary"
+    phases:
+      - genai
+
+  - id: phase_icon_genai_summary
+    value: "{{ phase_emoji }} {{ genai_summary }}"
+    label: "Phase icon + GenAI summary"
+    phases:
+      - genai
+
+  - id: genai_pending
+    value: "{{ phase_emoji }} Pending AI Summary"
+    label: "GenAI pending placeholder"
+    phases:
+      - end
+
+  - id: genai_scene
+    value: "{{ genai_scene }}"
+    label: "GenAI scene"
+    phases:
+      - genai
+
+  - id: genai_summary_concerns
+    value: |-
+      {{ genai_summary }}
+      {{ genai_concerns }}
+    label: "GenAI summary + concerns"
+    phases:
+      - genai
+
+titles:
+  - id: camera_time
+    value: "{{ camera_name }} - {{ time }}"
+    label: "Camera + time (default)"
+
+  - id: camera_time_24hr
+    value: "{{ camera_name }} - {{ time_24hr }}"
+    label: "Camera + 24hr time"
+
+  - id: camera_only
+    value: "{{ camera_name }}"
+    label: "Camera only"
+
+  - id: camera_object
+    value: "{{ camera_name }} - {{ object }}"
+    label: "Camera + object"
+
+  - id: camera_subject
+    value: "{{ camera_name }} - {{ subject }}"
+    label: "Camera + subject"
+  # GenAI-specific titles (genai phase)
+  - id: genai_title
+    value: "{{ genai_title }}"
+    label: "GenAI title"
+    phases:
+      - genai
+
+  - id: camera_genai_title
+    value: "{{ camera_name }} - {{ genai_title }}"
+    label: "Camera + GenAI title"
+    phases:
+      - genai
+
+  - id: camera_genai_title_time
+    value: "{{ camera_name }} - {{ genai_title }} ({{ genai_time }})"
+    label: "Camera + GenAI title + time"
+    phases:
+      - genai
+
+zone_phrases:
+  - value: "at"
+    label: "at"
+
+  - value: "near"
+    label: "near"
+
+  - value: "entered"
+    label: "entered"
+
+  - value: "left"
+    label: "left"
+
+  - value: "arrived at"
+    label: "arrived at"
+
+  - value: "spotted near"
+    label: "spotted near"
+
+  - value: "approaching"
+    label: "approaching"
+
+  - value: "leaving"
+    label: "leaving"
+
+  - value: "passing through"
+    label: "passing through"
+
+  - value: "crossing"
+    label: "crossing"
+
+  - value: "detected in"
+    label: "detected in"
+
+  - value: "outside"
+    label: "outside"
+
+  - value: "seen at"
+    label: "seen at"

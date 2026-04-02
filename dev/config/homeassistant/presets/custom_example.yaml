@@ -1,0 +1,57 @@
+schema_version: 1
+id: custom_example
+version: 1
+name: Custom Example
+summary: Sample user-defined profile for devcontainer testing
+description: >-
+  A sample custom profile placed in the user presets directory
+  to verify that custom profile loading works correctly.
+  This profile ships only in the devcontainer setup.
+sort_order: 50
+
+phases:
+  initial:
+    message_template: "[Custom] {{ object }} spotted"
+    subtitle_template: "{{ details }}"
+    emoji_message: true
+    emoji_subtitle: false
+    sound: default
+    volume: 1.0
+    interruption_level: active
+    attachment: snapshot_cropped
+    delay: 0.0
+
+  update:
+    enabled: true
+    message_template: "[Custom] {{ object }} spotted"
+    subtitle_template: "{{ details }}"
+    emoji_message: true
+    emoji_subtitle: false
+    sound: none
+    volume: 0.0
+    interruption_level: active
+    attachment: review_gif
+    delay: 0.0
+    use_latest_detection: true
+
+  end:
+    delay: 5.0
+
+  genai:
+    enabled: true
+    message_template: "[Custom] {{ genai_summary }}"
+    subtitle_template: "{{ details }}"
+    emoji_message: false
+    emoji_subtitle: false
+    sound: default
+    volume: 1.0
+    interruption_level: passive
+    attachment: review_gif
+    delay: 0.0
+    use_latest_detection: true
+
+examples:
+  initial: "[Custom] Person spotted"
+  update: "[Custom] Person spotted"
+  end: "[Custom] Person spotted"
+  genai: "[Custom] A person walked across the driveway..."

@@ -1,0 +1,60 @@
+schema_version: 1
+id: detailed
+version: 3
+name: Rich Alerts
+summary: Structured live alerts with phase-aware context
+description: >-
+  A richer live-alert layout with phase icons, zone context, and structured
+  update messages. When GenAI is enabled, the end phase shows a pending summary
+  until Frigate replaces it with the final AI description. Without GenAI, the
+  end card falls back to a normal final message.
+sort_order: 2
+
+phases:
+  initial:
+    message_template: "phase_icon_context"
+    subtitle_template: "merged_subjects"
+    emoji_message: false
+    emoji_subtitle: false
+    sound: default
+    volume: 1.0
+    interruption_level: active
+    attachment: snapshot_cropped
+    delay: 0.0
+
+  update:
+    enabled: true
+    message_template: "rich_update"
+    subtitle_template: "merged_subjects"
+    emoji_message: false
+    emoji_subtitle: false
+    sound: none
+    volume: 0.0
+    interruption_level: passive
+    attachment: review_gif
+    delay: 1.0
+    use_latest_detection: true
+
+  end:
+    delay: 5.0
+    message_template: "genai_pending"
+    emoji_message: false
+    subtitle_template: "merged_subjects"
+    use_latest_detection: true
+
+  genai:
+    enabled: true
+    message_template: "phase_icon_genai_summary"
+    subtitle_template: "merged_subjects"
+    emoji_message: false
+    emoji_subtitle: false
+    sound: default
+    volume: 1.0
+    interruption_level: passive
+    attachment: review_gif
+    delay: 0.0
+    use_latest_detection: true
+
+genai_disabled_overrides:
+  end:
+    message_template: "phase_icon_context"

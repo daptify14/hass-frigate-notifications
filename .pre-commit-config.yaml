@@ -1,0 +1,41 @@
+files: ^(custom_components/|tests/|pyproject\.toml|\.pre-commit-config\.yaml|\.github/workflows/)
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+        args: ['--maxkb=512']
+        files: ''
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.8
+    hooks:
+      - id: ruff-check
+        args:
+          - --fix
+          - --show-fixes
+      - id: ruff-format
+        files: ^(custom_components/|tests/)
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.11
+    hooks:
+      - id: actionlint
+        files: ^\.github/workflows/
+
+  - repo: local
+    hooks:
+      - id: ty
+        name: ty typecheck
+        entry: uv run ty check --error-on-warning
+        language: system
+        types: [python]
+        pass_filenames: false

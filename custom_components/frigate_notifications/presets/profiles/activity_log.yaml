@@ -1,0 +1,52 @@
+schema_version: 1
+id: activity_log
+version: 1
+name: Silent Log
+summary: Silent history in notification center only
+description: >-
+  Completely silent. Every phase uses passive interruption level - no screen
+  wake, no sound, no vibration, no banner. Notifications go straight to the
+  notification center as a visual history you can review at your own pace.
+sort_order: 6
+
+phases:
+  initial:
+    message_template: "object_action_zone"
+    subtitle_template: "merged_subjects"
+    emoji_message: true
+    emoji_subtitle: false
+    sound: none
+    volume: 0.0
+    interruption_level: passive
+    attachment: thumbnail
+    delay: 0.0
+
+  update:
+    enabled: true
+    message_template: "object_action_zone"
+    subtitle_template: "merged_subjects"
+    emoji_message: true
+    emoji_subtitle: false
+    sound: none
+    volume: 0.0
+    interruption_level: passive
+    attachment: thumbnail
+    delay: 0.0
+    use_latest_detection: true
+
+  end:
+    delay: 5.0
+    attachment: review_gif
+
+  genai:
+    enabled: true
+    message_template: "genai_summary"
+    subtitle_template: ""
+    emoji_message: false
+    emoji_subtitle: false
+    sound: none
+    volume: 0.0
+    interruption_level: passive
+    attachment: review_gif
+    delay: 0.0
+    use_latest_detection: true

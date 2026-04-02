@@ -1,0 +1,797 @@
+{
+  "title": "Notifications for Frigate",
+  "config": {
+    "flow_title": "{title}",
+    "step": {
+      "user": {
+        "title": "Connect to Frigate",
+        "description": "Select the Frigate instance this integration should use for camera metadata and MQTT review events.",
+        "data": {
+          "frigate_entry_id": "Frigate instance"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Notifications for Frigate is already configured for this instance.",
+      "frigate_not_loaded": "Frigate integration is not loaded. Add the Frigate integration first.",
+      "no_cameras_available": "No cameras found in the Frigate instance."
+    },
+    "error": {
+      "frigate_not_found": "Selected Frigate instance not found.",
+      "camera_not_found": "Selected camera not found in Frigate.",
+      "profile_name_duplicate": "A profile with this name and camera selection already exists.",
+      "notify_target_required": "Either a device or a notify service is required.",
+      "notify_service_required": "A notify service is required for this provider.",
+      "tv_notify_service_invalid": "Android TV profiles cannot use mobile_app services.",
+      "guard_entity_required": "A guard entity is required when mode is Custom.",
+      "time_filter_start_required": "Start time is required for custom time filter.",
+      "time_filter_end_required": "End time is required for custom time filter.",
+      "state_entity_required": "A state entity is required when mode is Custom.",
+      "sub_label_overlap": "The same identity cannot be in both include and exclude lists."
+    }
+  },
+  "options": {
+    "step": {
+      "menu": {
+        "title": "Global options",
+        "description": "Select a section to configure.",
+        "menu_options": {
+          "delivery": "Delivery & filters",
+          "appearance": "Appearance & formatting",
+          "zone_aliases": "Zone aliases",
+          "save": "Save changes"
+        },
+        "menu_option_descriptions": {
+          "delivery": "URLs, timing, guard, time, presence, state filters",
+          "appearance": "Title template, emojis, sub-label overrides, GenAI prefixes",
+          "zone_aliases": "Human-readable names for camera zones",
+          "save": "Save changes and close"
+        }
+      },
+      "delivery": {
+        "title": "Delivery defaults",
+        "description": "Configure shared delivery settings, URLs, and filter entities used by all profiles.",
+        "data": {
+          "base_url": "Home Assistant URL",
+          "frigate_url": "Frigate URL"
+        },
+        "data_description": {
+          "base_url": "Used to build attachment URLs. External URL is usually best for mobile.",
+          "frigate_url": "URL for the 'Open Frigate' tap action. For add-on users, select the ingress path. For external Frigate, enter a URL reachable from your phone (e.g. {example_frigate_url}). Internal/local addresses may not work outside your network."
+        },
+        "sections": {
+          "timers": {
+            "name": "Timing",
+            "data": {
+              "initial_delay": "Initial delay",
+              "silence_duration": "Silence duration",
+              "cooldown_seconds": "Cooldown"
+            },
+            "data_description": {
+              "initial_delay": "Wait before sending the first notification. Gives Frigate time to refine snapshots and detect zones.",
+              "silence_duration": "How long to suppress notifications after the silence action.",
+              "cooldown_seconds": "Minimum gap between notifications per profile per camera. 0 to disable."
+            }
+          },
+          "guard": {
+            "name": "Guard entity",
+            "data": {
+              "shared_guard_entity": "Guard entity"
+            },
+            "data_description": {
+              "shared_guard_entity": "Toggle to globally allow or block notifications. Use a switch, input_boolean, or binary sensor."
+            }
+          },
+          "time_filter": {
+            "name": "Time filter",
+            "data": {
+              "shared_time_filter_mode": "Mode",
+              "shared_time_filter_start": "Start time",
+              "shared_time_filter_end": "End time"
+            },
+            "data_description": {
+              "shared_time_filter_mode": "\"Only during\" suppresses outside the window. \"Not during\" suppresses inside it.",
+              "shared_time_filter_start": "Overnight ranges are supported (e.g. 22:00 to 06:00)."
+            }
+          },
+          "presence": {
+            "name": "Presence filter",
+            "data": {
+              "presence_entities": "Presence entities"
+            },
+            "data_description": {
+              "presence_entities": "Notifications are suppressed when any selected entity is home."
+            }
+          },
+          "state_filter": {
+            "name": "State filter",
+            "data": {
+              "shared_state_entity": "Entity",
+              "shared_state_filter_states": "Required states"
+            },
+            "data_description": {
+              "shared_state_entity": "Only notify when this entity is in an allowed state."
+            }
+          }
+        }
+      },
+      "appearance": {
+        "title": "Appearance",
+        "description": "Configure the title template, emoji settings, custom emoji mappings, and sub-label overrides.",
+        "data": {
+          "title_template": "Title template"
+        },
+        "data_description": {
+          "title_template": "Shared title for all profiles. Select a preset or enter a custom Jinja2 template."
+        },
+        "sections": {
+          "emoji_config": {
+            "name": "Emoji",
+            "data": {
+              "enable_emojis": "Enable emojis",
+              "default_emoji": "Default emoji"
+            },
+            "data_description": {
+              "enable_emojis": "When disabled, all emoji output is suppressed globally.",
+              "default_emoji": "Fallback when the detected object has no emoji mapping."
+            }
+          },
+          "custom_emoji_config": {
+            "name": "Custom emoji mappings",
+            "data": {
+              "emoji_map": "Object-to-emoji map"
+            },
+            "data_description": {
+              "emoji_map": "Pre-filled with defaults. Edit to add or change emoji for specific object types."
+            }
+          },
+          "phase_emoji_config": {
+            "name": "Phase emojis",
+            "data": {
+              "phase_initial": "Initial detection",
+              "phase_update": "Update",
+              "phase_end": "Review ended",
+              "phase_genai": "AI summary"
+            },
+            "data_description": {
+              "phase_initial": "Emoji prefixed to messages for new detections. Clear to suppress.",
+              "phase_update": "Emoji prefixed to messages for detection updates.",
+              "phase_end": "Emoji prefixed to messages when a review ends.",
+              "phase_genai": "Emoji prefixed to AI-generated summary messages."
+            }
+          },
+          "genai_prefix_config": {
+            "name": "GenAI title prefixes",
+            "data": {
+              "title_genai_prefix_0": "Routine (level 0)",
+              "title_genai_prefix_1": "Notable (level 1)",
+              "title_genai_prefix_2": "Concerning (level 2)"
+            },
+            "data_description": {
+              "title_genai_prefix_0": "Prepended to the title for low-confidence GenAI descriptions. Blank by default.",
+              "title_genai_prefix_1": "Prepended to the title for medium-confidence GenAI descriptions.",
+              "title_genai_prefix_2": "Prepended to the title for high-confidence GenAI descriptions."
+            }
+          },
+          "face_overrides": {
+            "name": "Face emoji overrides",
+            "description": "Emoji only (e.g. 👧). Do not include the name — it is added automatically. Leave blank for no override."
+          },
+          "plate_overrides": {
+            "name": "License plate emoji overrides",
+            "description": "Emoji only (e.g. 🚗). Do not include the name — it is added automatically. Leave blank for no override."
+          }
+        }
+      },
+      "zone_aliases": {
+        "title": "Zone aliases",
+        "description": "Set human-readable names for camera zones. Expand a camera section to edit its zones."
+      },
+      "save": {
+        "title": "Save options"
+      }
+    }
+  },
+  "config_subentries": {
+    "profile": {
+      "initiate_flow": {
+        "user": "Add notification profile",
+        "reconfigure": "Edit notification profile"
+      },
+      "entry_type": "Notification profile",
+      "step": {
+        "preset": {
+          "title": "Notification preset",
+          "description": "Choose a preset to pre-fill notification settings, or start from scratch.",
+          "data": {
+            "preset": "Preset"
+          },
+          "data_description": {
+            "preset": "Pre-fills templates and delivery for each phase. Customize in later steps."
+          },
+          "sections": {
+            "preset_info": {
+              "name": "Preset descriptions",
+              "data": {
+                "default_preset": "Default preset"
+              },
+              "data_description": {
+                "default_preset": "{preset_details}"
+              }
+            }
+          }
+        },
+        "basics": {
+          "title": "Profile basics",
+          "description": "Set the profile name, cameras, provider, and notification target.",
+          "data": {
+            "name": "Profile name",
+            "cameras": "Cameras",
+            "provider": "Provider",
+            "notify_device": "Notify device",
+            "notify_service": "Notify service",
+            "tag": "Tag template",
+            "group": "Group template"
+          },
+          "data_description": {
+            "cameras": "Select one or more cameras. Multi-camera profiles share filters and templates; zone filtering is unavailable for multi-camera.",
+            "provider": "iOS/Android use the Companion app. Mixed is for groups with both. Android TV uses overlay notifications.",
+            "notify_device": "Select a device, or leave empty and specify a service below.",
+            "notify_service": "e.g. notify.family. TV profiles must use a TV notify service.",
+            "tag": "Determines which notification gets replaced on updates. Variables: review_id, camera, detection_id, object.",
+            "group": "Groups notifications on iOS. Variables: review_id, camera."
+          }
+        },
+        "filtering": {
+          "title": "Filtering",
+          "description": "Configure which detections trigger notifications for {camera_name}.",
+          "data": {
+            "objects": "Object types",
+            "severity": "Severity",
+            "required_zones": "Required zones",
+            "zone_match_mode": "Zone match mode"
+          },
+          "data_description": {
+            "objects": "Leave empty for all tracked objects on the selected cameras.",
+            "severity": "Frigate classifies reviews as alert or detection. Choose which to notify on.",
+            "required_zones": "Leave empty to accept all zones."
+          },
+          "sections": {
+            "guard_config": {
+              "name": "Guard entity",
+              "data": {
+                "guard_mode": "Guard mode",
+                "guard_entity": "Guard entity"
+              },
+              "data_description": {
+                "guard_entity": "Only used when mode is Custom."
+              }
+            },
+            "time_filter_config": {
+              "name": "Time filter",
+              "data": {
+                "time_filter_override": "Time filter override",
+                "time_filter_mode": "Mode",
+                "time_filter_start": "Start time",
+                "time_filter_end": "End time"
+              },
+              "data_description": {
+                "time_filter_mode": "Only used when override is Custom."
+              }
+            },
+            "presence_config": {
+              "name": "Presence filter",
+              "data": {
+                "presence_mode": "Presence mode"
+              }
+            },
+            "state_filter_config": {
+              "name": "State filter",
+              "data": {
+                "state_filter_mode": "State filter mode",
+                "state_entity": "State entity",
+                "state_filter_states": "Required states"
+              },
+              "data_description": {
+                "state_entity": "Only used when mode is Custom.",
+                "state_filter_states": "Only used when mode is Custom."
+              }
+            },
+            "recognition_config": {
+              "name": "Recognition filter",
+              "description": "Filter notifications based on known faces and license plates",
+              "data": {
+                "recognition_mode": "Recognition mode",
+                "include_sub_labels": "Notify only for these",
+                "exclude_sub_labels": "Do not notify for these"
+              },
+              "data_description": {
+                "recognition_mode": "Disabled: no filtering. Only recognized: hold notifications until a known face or plate is confirmed. Exclude specific: suppress further notifications once a selected identity is confirmed.",
+                "include_sub_labels": "Active when mode is 'Only recognized'. Only these trigger notifications. Leave empty for any recognized identity.",
+                "exclude_sub_labels": "Active when mode is 'Exclude specific'. These are blocked from triggering further updates."
+              }
+            }
+          }
+        },
+        "content": {
+          "title": "Content",
+          "description": "Configure message templates, subtitles, and emoji for each notification phase on {camera_name}. Dropdown values are template IDs — see the [template reference]({templates_url}) for what each ID renders to. You can also type custom Jinja2 directly.",
+          "data": {
+            "title_template": "Title template"
+          },
+          "data_description": {
+            "title_template": "Override the global title for this profile. Leave blank to use the shared default."
+          },
+          "sections": {
+            "initial_content": {
+              "name": "Initial phase",
+              "data": {
+                "enabled": "Enabled",
+                "message_template": "Message template",
+                "subtitle_template": "Subtitle template",
+                "emoji_message": "Emoji in message",
+                "emoji_subtitle": "Emoji in subtitle"
+              },
+              "data_description": {
+                "subtitle_template": "Shown as subtitle on iOS, subject on Android. Leave blank for no subtitle."
+              }
+            },
+            "update_content": {
+              "name": "Update phase",
+              "data": {
+                "enabled": "Enabled",
+                "message_template": "Message template",
+                "subtitle_template": "Subtitle template",
+                "emoji_message": "Emoji in message",
+                "emoji_subtitle": "Emoji in subtitle"
+              },
+              "data_description": {
+                "subtitle_template": "Shown as subtitle on iOS, subject on Android. Leave blank for no subtitle."
+              }
+            },
+            "end_content": {
+              "name": "End phase",
+              "data": {
+                "enabled": "Enabled",
+                "message_template": "Message template",
+                "subtitle_template": "Subtitle template",
+                "emoji_message": "Emoji in message",
+                "emoji_subtitle": "Emoji in subtitle"
+              },
+              "data_description": {
+                "subtitle_template": "Shown as subtitle on iOS, subject on Android. Leave blank for no subtitle."
+              }
+            },
+            "genai_content": {
+              "name": "GenAI phase",
+              "data": {
+                "enabled": "Enabled",
+                "message_template": "Message template",
+                "subtitle_template": "Subtitle template",
+                "emoji_message": "Emoji in message",
+                "emoji_subtitle": "Emoji in subtitle",
+                "title_prefix_enabled": "Threat level prefix in title"
+              },
+              "data_description": {
+                "subtitle_template": "Shown as subtitle on iOS, subject on Android. Leave blank for no subtitle.",
+                "title_prefix_enabled": "Prepends the global GenAI threat-level prefix to the notification title for this profile."
+              }
+            },
+            "zone_overrides": {
+              "name": "Zone phrase overrides"
+            }
+          }
+        },
+        "media_actions": {
+          "title": "Media & Actions",
+          "description": "Configure attachments, video, and action buttons for each notification phase on {camera_name}.",
+          "sections": {
+            "initial_media": {
+              "name": "Initial phase",
+              "data": {
+                "attachment": "Attachment",
+                "video": "Video",
+                "use_latest_detection": "Use latest detection"
+              },
+              "data_description": {
+                "video": "HLS streams instantly on iOS. MP4 must fully download before playback.",
+                "use_latest_detection": "Use the most recent detection for thumbnails, snapshots, event GIFs, and clips. Does not affect review GIFs."
+              }
+            },
+            "update_media": {
+              "name": "Update phase",
+              "data": {
+                "attachment": "Attachment",
+                "video": "Video",
+                "use_latest_detection": "Use latest detection"
+              },
+              "data_description": {
+                "video": "HLS streams instantly on iOS. MP4 must fully download before playback.",
+                "use_latest_detection": "Use the most recent detection for thumbnails, snapshots, event GIFs, and clips. Does not affect review GIFs."
+              }
+            },
+            "end_media": {
+              "name": "End phase",
+              "data": {
+                "attachment": "Attachment",
+                "video": "Video",
+                "use_latest_detection": "Use latest detection"
+              },
+              "data_description": {
+                "video": "HLS streams instantly on iOS. MP4 must fully download before playback.",
+                "use_latest_detection": "Use the most recent detection for thumbnails, snapshots, event GIFs, and clips. Does not affect review GIFs."
+              }
+            },
+            "genai_media": {
+              "name": "GenAI phase",
+              "data": {
+                "attachment": "Attachment",
+                "video": "Video",
+                "use_latest_detection": "Use latest detection"
+              },
+              "data_description": {
+                "video": "HLS streams instantly on iOS. MP4 must fully download before playback.",
+                "use_latest_detection": "Use the most recent detection for thumbnails, snapshots, event GIFs, and clips. Does not affect review GIFs."
+              }
+            },
+            "custom_actions": {
+              "name": "Custom actions",
+              "data": {
+                "initial_custom_actions": "Initial",
+                "update_custom_actions": "Update",
+                "end_custom_actions": "End",
+                "genai_custom_actions": "GenAI"
+              },
+              "data_description": {
+                "initial_custom_actions": "Runs automatically after this phase's notification.",
+                "update_custom_actions": "Runs automatically after this phase's notification.",
+                "end_custom_actions": "Runs automatically after this phase's notification.",
+                "genai_custom_actions": "Runs automatically after this phase's notification."
+              }
+            },
+            "tap_action": {
+              "name": "Tap action",
+              "data": {
+                "tap_preset": "Tap action preset"
+              },
+              "data_description": {
+                "tap_preset": "What opens when you tap the notification."
+              }
+            },
+            "actions_config": {
+              "name": "Action buttons",
+              "data": {
+                "action_1": "Button 1",
+                "action_2": "Button 2",
+                "action_3": "Button 3"
+              }
+            },
+            "on_button_action_section": {
+              "name": "Custom button action",
+              "data": {
+                "on_button_action": "Action sequence"
+              },
+              "data_description": {
+                "on_button_action": "Runs when the Custom Action button is pressed."
+              }
+            }
+          }
+        },
+        "delivery": {
+          "title": "Delivery",
+          "description": "Configure sound, volume, timing, and platform-specific delivery for each notification phase on {camera_name}.",
+          "sections": {
+            "initial_delivery": {
+              "name": "Initial phase",
+              "data": {
+                "sound": "Sound",
+                "volume": "Volume",
+                "interruption_level": "Interruption level",
+                "delay": "Delay",
+                "critical": "Critical notification",
+                "tv_fontsize": "Font size",
+                "tv_position": "Position",
+                "tv_duration": "Duration",
+                "tv_transparency": "Transparency",
+                "tv_interrupt": "Interrupt",
+                "tv_timeout": "Timeout",
+                "tv_color": "Color"
+              },
+              "data_description": {
+                "delay": "Seconds to wait before sending this phase.",
+                "critical": "Overrides DND and silent mode.",
+                "tv_interrupt": "Pauses media playback."
+              }
+            },
+            "update_delivery": {
+              "name": "Update phase",
+              "data": {
+                "sound": "Sound",
+                "volume": "Volume",
+                "interruption_level": "Interruption level",
+                "delay": "Delay",
+                "critical": "Critical notification",
+                "tv_fontsize": "Font size",
+                "tv_position": "Position",
+                "tv_duration": "Duration",
+                "tv_transparency": "Transparency",
+                "tv_interrupt": "Interrupt",
+                "tv_timeout": "Timeout",
+                "tv_color": "Color"
+              },
+              "data_description": {
+                "delay": "Seconds to wait before sending this phase.",
+                "critical": "Overrides DND and silent mode.",
+                "tv_interrupt": "Pauses media playback."
+              }
+            },
+            "end_delivery": {
+              "name": "End phase",
+              "data": {
+                "sound": "Sound",
+                "volume": "Volume",
+                "interruption_level": "Interruption level",
+                "delay": "Delay",
+                "critical": "Critical notification",
+                "tv_fontsize": "Font size",
+                "tv_position": "Position",
+                "tv_duration": "Duration",
+                "tv_transparency": "Transparency",
+                "tv_interrupt": "Interrupt",
+                "tv_timeout": "Timeout",
+                "tv_color": "Color"
+              },
+              "data_description": {
+                "delay": "Seconds to wait before sending this phase.",
+                "critical": "Overrides DND and silent mode.",
+                "tv_interrupt": "Pauses media playback."
+              }
+            },
+            "genai_delivery": {
+              "name": "GenAI phase",
+              "data": {
+                "sound": "Sound",
+                "volume": "Volume",
+                "interruption_level": "Interruption level",
+                "delay": "Delay",
+                "critical": "Critical notification",
+                "tv_fontsize": "Font size",
+                "tv_position": "Position",
+                "tv_duration": "Duration",
+                "tv_transparency": "Transparency",
+                "tv_interrupt": "Interrupt",
+                "tv_timeout": "Timeout",
+                "tv_color": "Color"
+              },
+              "data_description": {
+                "delay": "Seconds to wait before sending this phase.",
+                "critical": "Overrides DND and silent mode.",
+                "tv_interrupt": "Pauses media playback."
+              }
+            },
+            "rate_limiting": {
+              "name": "Rate limiting",
+              "data": {
+                "silence_duration": "Silence duration",
+                "cooldown_override": "Cooldown override",
+                "alert_once": "Alert once"
+              },
+              "data_description": {
+                "silence_duration": "Overrides the shared default. Leave blank to inherit.",
+                "cooldown_override": "Overrides the shared cooldown. Leave blank to inherit.",
+                "alert_once": "Only the first notification plays sound. Later phases are delivered silently regardless of their sound settings. Critical phases always play sound."
+              }
+            },
+            "android_delivery": {
+              "name": "Android options",
+              "data": {
+                "android_channel": "Channel",
+                "android_importance": "Importance",
+                "android_priority": "Priority",
+                "android_ttl": "TTL",
+                "android_sticky": "Sticky",
+                "android_persistent": "Persistent",
+                "android_auto": "Android Auto",
+                "android_color": "Color"
+              },
+              "data_description": {
+                "android_sticky": "Stays until manually dismissed.",
+                "android_persistent": "Cannot be swiped away.",
+                "android_color": "Color name or hex value (e.g. #FF0000)."
+              }
+            }
+          }
+        },
+        "menu": {
+          "title": "Edit profile: {profile_name}",
+          "description": "Select a section to edit for {camera_name}.",
+          "menu_options": {
+            "basics": "Profile basics",
+            "filtering": "Filtering",
+            "content": "Content & templates",
+            "media_actions": "Media & actions",
+            "delivery": "Delivery & timing",
+            "save": "Save changes"
+          },
+          "menu_option_descriptions": {
+            "basics": "Camera, notify target, tag, group",
+            "filtering": "Objects, zones, guard, time, presence, state",
+            "content": "Message templates, subtitles, emoji",
+            "media_actions": "Attachments, video, action buttons",
+            "delivery": "Sound, timing, rate limiting, platform options",
+            "save": "Save changes and close"
+          }
+        },
+        "customize": {
+          "title": "Customize: {profile_name}",
+          "description": "Your profile is ready to save. Optionally customize specific sections, or save now to use preset defaults.",
+          "menu_options": {
+            "filtering": "Filtering",
+            "content": "Content & templates",
+            "media_actions": "Media & actions",
+            "delivery": "Delivery & timing",
+            "save": "Save profile"
+          },
+          "menu_option_descriptions": {
+            "filtering": "Objects, zones, guard, time, presence, state",
+            "content": "Message templates, subtitles, emoji",
+            "media_actions": "Attachments, video, action buttons",
+            "delivery": "Sound, timing, rate limiting, platform options",
+            "save": "Save profile with current settings"
+          }
+        },
+        "save": {
+          "title": "Save profile"
+        }
+      },
+      "abort": {
+        "frigate_not_loaded": "Frigate integration is not loaded.",
+        "no_cameras_available": "No cameras found in the Frigate instance.",
+        "reconfigure_successful": "Profile updated successfully."
+      }
+    }
+  },
+  "selector": {
+    "provider": {
+      "options": {
+        "apple": "Apple (iOS Push)",
+        "android": "Android (Companion)",
+        "cross_platform": "Cross-Platform (iOS + Android group)",
+        "android_tv": "Android TV / Fire TV"
+      }
+    },
+    "severity": {
+      "options": {
+        "alert": "Alert",
+        "detection": "Detection",
+        "any": "Any"
+      }
+    },
+    "zone_match_mode": {
+      "options": {
+        "any": "Any zone (at least one)",
+        "all": "All zones (every listed zone)",
+        "ordered": "Ordered (zones in sequence)"
+      }
+    },
+    "guard_mode": {
+      "options": {
+        "inherit": "Inherit shared guard",
+        "custom": "Use profile guard",
+        "disabled": "No guard entity"
+      }
+    },
+    "time_filter_override": {
+      "options": {
+        "inherit": "Inherit shared time filter",
+        "custom": "Use profile time filter",
+        "disabled": "No time filter"
+      }
+    },
+    "time_filter_mode": {
+      "options": {
+        "disabled": "Disabled",
+        "notify_only_during": "Notify only during this window",
+        "do_not_notify_during": "Do not notify during this window"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "inherit": "Inherit shared presence filter",
+        "disabled": "Ignore presence for this profile"
+      }
+    },
+    "state_filter_mode": {
+      "options": {
+        "inherit": "Inherit shared state filter",
+        "custom": "Use profile state filter",
+        "disabled": "No state filter"
+      }
+    },
+    "interruption_level": {
+      "options": {
+        "active": "Active",
+        "passive": "Passive",
+        "time-sensitive": "Time Sensitive"
+      }
+    },
+    "attachment": {
+      "options": {
+        "thumbnail": "Thumbnail",
+        "snapshot": "Snapshot",
+        "snapshot_bbox": "Snapshot (bounding box)",
+        "snapshot_cropped": "Snapshot (cropped)",
+        "snapshot_cropped_bbox": "Snapshot (cropped + bbox)",
+        "review_gif": "Review GIF",
+        "event_gif": "Event GIF"
+      }
+    },
+    "video": {
+      "options": {
+        "none": "None (use attachment)",
+        "clip_hls": "Clip (HLS)",
+        "clip_mp4": "Clip (MP4)",
+        "live_view": "Live View (iOS)",
+        "review_gif_video": "Review GIF video"
+      }
+    },
+    "recognition_mode": {
+      "options": {
+        "disabled": "Disabled",
+        "require_recognized": "Only recognized",
+        "exclude_sub_labels": "Exclude specific"
+      }
+    },
+    "importance": {
+      "options": {
+        "default": "Default",
+        "low": "Low",
+        "min": "Min",
+        "high": "High",
+        "max": "Max"
+      }
+    },
+    "priority": {
+      "options": {
+        "default": "Default",
+        "low": "Low",
+        "min": "Min",
+        "high": "High",
+        "max": "Max"
+      }
+    },
+    "urgency": {
+      "options": {
+        "quiet": "Quiet",
+        "normal": "Normal",
+        "urgent": "Urgent"
+      }
+    }
+  },
+  "services": {
+    "silence_profile": {
+      "name": "Silence profile",
+      "description": "Temporarily silence notifications for a specific profile.",
+      "fields": {
+        "profile_id": {
+          "name": "Profile ID",
+          "description": "The unique identifier of the notification profile to silence."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "How long to silence the profile, in minutes. Uses the profile default if omitted."
+        }
+      }
+    },
+    "clear_silence": {
+      "name": "Clear silence",
+      "description": "Clear the silence timer for a profile, resuming notifications immediately.",
+      "fields": {
+        "profile_id": {
+          "name": "Profile ID",
+          "description": "The unique identifier of the notification profile to un-silence."
+        }
+      }
+    }
+  }
+}

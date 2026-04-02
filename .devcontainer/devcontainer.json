@@ -1,0 +1,66 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/python:3-3.14",
+  "features": {
+    "ghcr.io/devcontainers-extra/features/uv:1": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/guiyomh/features/just:0": {}
+  },
+  "workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind,consistency=cached",
+  "workspaceFolder": "${localWorkspaceFolder}",
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind"
+  ],
+  "remoteEnv": {
+    "UV_PROJECT_ENVIRONMENT": "/home/vscode/.local/venv",
+    "PATH": "/home/vscode/.local/venv/bin:${containerEnv:PATH}"
+  },
+  "postCreateCommand": "scripts/setup.sh",
+  "forwardPorts": [8123, 5000, 5678],
+  "portsAttributes": {
+    "8123": {
+      "label": "Home Assistant",
+      "onAutoForward": "silent"
+    },
+    "5000": {
+      "label": "Frigate",
+      "onAutoForward": "silent"
+    },
+    "5678": {
+      "label": "debugpy",
+      "onAutoForward": "silent"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.debugpy",
+        "charliermarsh.ruff",
+        "astral-sh.ty",
+        "skellock.just",
+        "wholroyd.jinja",
+        "redhat.vscode-yaml",
+        "keesschollaart.vscode-home-assistant",
+        "ms-azuretools.vscode-containers"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/home/vscode/.local/venv/bin/python",
+        "vscode-home-assistant.hostUrl": "http://localhost:8123",
+        "vscode-home-assistant.longLivedAccessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI2MzU4YzYyNGUzMmY0MGYwOWQwMjJhZWRmNjQ1OTRhZSIsImlhdCI6MTc3NTE1NDQ4NiwiZXhwIjoyMDkwNTE0NDg2fQ.ZzXEIipD6ZXSOmHkNX3YamGG5zoBM6ZKkZsb_7KmWF4",
+        "files.associations": {
+          "**/dev/config/homeassistant/.storage/*": "json",
+          "**/dev/config/homeassistant/configuration.yaml": "home-assistant"
+        },
+        "[home-assistant]": {
+          "editor.defaultFormatter": "keesschollaart.vscode-home-assistant"
+        },
+        "[yaml]": {
+          "editor.defaultFormatter": "redhat.vscode-yaml"
+        }
+      }
+    }
+  }
+}

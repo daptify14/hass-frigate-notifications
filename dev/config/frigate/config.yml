@@ -1,0 +1,73 @@
+---
+version: 0.17-0
+
+tls:
+  enabled: false
+
+auth:
+  enabled: false
+
+detectors:
+  cpu1:
+    type: cpu
+
+mqtt:
+  host: mqtt
+
+genai:
+  provider: openai
+  api_key: "dummy"
+  model: gpt-4o
+
+review:
+  genai:
+    enabled: false
+
+cameras:
+  driveway:
+    enabled: false
+    ffmpeg:
+      inputs:
+        - path: /dev/null
+          roles:
+            - detect
+    detect:
+      enabled: false
+    review:
+      genai:
+        enabled: true
+    objects:
+      track:
+        - person
+        - car
+        - cat
+        - dog
+    zones:
+      driveway_approach:
+        coordinates: 0,0,100,0,100,100,0,100
+      driveway_main:
+        coordinates: 0,0,200,0,200,200,0,200
+      driveway_garage:
+        coordinates: 0,0,50,0,50,50,0,50
+  front_door:
+    enabled: false
+    ffmpeg:
+      inputs:
+        - path: /dev/null
+          roles:
+            - detect
+    detect:
+      enabled: false
+    review:
+      genai:
+        enabled: false
+    objects:
+      track:
+        - person
+        - cat
+        - dog
+    zones:
+      porch:
+        coordinates: 0,0,100,0,100,100,0,100
+      walkway:
+        coordinates: 0,0,200,0,200,200,0,200

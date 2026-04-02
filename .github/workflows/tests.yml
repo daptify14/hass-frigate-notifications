@@ -1,0 +1,37 @@
+name: Tests
+
+on:
+  workflow_call:
+
+jobs:
+  stable:
+    name: Tests (HA 2026.3.x / Py 3.14)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: "py3.14"
+      - run: uv sync --no-install-project --prerelease=allow --no-dev --group test
+      - run: uv pip install --prerelease=allow "homeassistant==2026.3.*"
+      - run: uv run pytest --cov --cov-fail-under=95
+
+  compat:
+    # Minimum supported: first HA with config subentries + read-only selectors
+    name: Tests (HA 2025.6.x / Py 3.13)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: "compat"
+      - run: uv sync --project tests/env/compat
+      - run: uv run --project tests/env/compat pytest

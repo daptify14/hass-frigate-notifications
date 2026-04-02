@@ -1,0 +1,31 @@
+schema_version: 1
+id: snapshot_pager
+version: 1
+name: Snapshot Only
+summary: One immediate snapshot, no follow-ups
+description: >-
+  One snapshot, one sound, done. Optimized for speed - you get an instant
+  cropped snapshot on detection with no follow-up notifications. No updates, no
+  GIFs, no AI summaries.
+sort_order: 4
+
+phases:
+  initial:
+    message_template: "object_action_zone"
+    subtitle_template: "merged_subjects"
+    emoji_message: true
+    emoji_subtitle: false
+    sound: default
+    volume: 1.0
+    interruption_level: active
+    attachment: snapshot_cropped
+    delay: 0.0
+
+  update:
+    enabled: false
+
+  end:
+    enabled: false
+
+  genai:
+    enabled: false

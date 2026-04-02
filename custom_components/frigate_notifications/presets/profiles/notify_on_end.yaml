@@ -1,0 +1,43 @@
+schema_version: 1
+id: notify_on_end
+version: 1
+name: End Only
+summary: One alert after the event ends
+description: >-
+  Suppresses real-time alerts entirely. You get one audible notification per
+  event when the review ends, with a complete GIF of what happened. GenAI can
+  silently replace that final card with an AI summary if available.
+sort_order: 3
+
+phases:
+  initial:
+    enabled: false
+
+  update:
+    enabled: false
+
+  end:
+    enabled: true
+    message_template: "object_action_zone"
+    subtitle_template: "duration_summary"
+    emoji_message: true
+    emoji_subtitle: false
+    sound: default
+    volume: 1.0
+    interruption_level: active
+    attachment: review_gif
+    delay: 5.0
+    use_latest_detection: true
+
+  genai:
+    enabled: true
+    message_template: "genai_summary"
+    subtitle_template: ""
+    emoji_message: false
+    emoji_subtitle: false
+    sound: none
+    volume: 0.0
+    interruption_level: passive
+    attachment: review_gif
+    delay: 0.0
+    use_latest_detection: true

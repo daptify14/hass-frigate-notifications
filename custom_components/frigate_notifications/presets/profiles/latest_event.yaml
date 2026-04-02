@@ -1,0 +1,55 @@
+schema_version: 1
+id: latest_event
+version: 1
+name: Latest Only
+summary: Keep only one rolling notification card
+description: >-
+  A single shared notification that always shows the most recent event across
+  all cameras using this preset. New events replace old ones instead of
+  stacking, so you only ever see the latest.
+sort_order: 5
+
+profile_defaults:
+  tag: "frigate-latest"
+  group: "frigate"
+
+phases:
+  initial:
+    message_template: "single_subject"
+    subtitle_template: "camera_zone"
+    emoji_message: true
+    emoji_subtitle: false
+    sound: default
+    volume: 1.0
+    interruption_level: active
+    attachment: snapshot_cropped
+    delay: 0.0
+
+  update:
+    enabled: true
+    message_template: "single_subject"
+    subtitle_template: "camera_zone"
+    emoji_message: true
+    emoji_subtitle: false
+    sound: none
+    volume: 0.0
+    interruption_level: passive
+    attachment: review_gif
+    delay: 0.0
+    use_latest_detection: true
+
+  end:
+    delay: 5.0
+
+  genai:
+    enabled: true
+    message_template: "genai_summary"
+    subtitle_template: "camera_only_content"
+    emoji_message: false
+    emoji_subtitle: false
+    sound: none
+    volume: 0.0
+    interruption_level: passive
+    attachment: review_gif
+    delay: 0.0
+    use_latest_detection: true

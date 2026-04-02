@@ -1,0 +1,75 @@
+---
+services:
+  homeassistant:
+    image: "homeassistant/home-assistant:${HA_VERSION:-2026.3.4}"
+    restart: unless-stopped
+    depends_on:
+      frigate-integration-init:
+        condition: service_completed_successfully
+      mqtt:
+        condition: service_started
+      frigate:
+        condition: service_started
+    environment:
+      - HA_PRECONFIG=${HA_PRECONFIG:-true}
+      - FN_PRECONFIG=${FN_PRECONFIG:-true}
+    ports:
+      - "8123:8123"
+      - "5678:5678"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./dev/preconfig.sh:/etc/cont-init.d/preconfig.sh:ro
+      - ./dev/config/homeassistant/.storage:/preconfig.d/.storage:ro
+      - ./dev/config/homeassistant/configuration.yaml:/config/configuration.yaml:ro
+      - ./custom_components/frigate_notifications:/config/custom_components/frigate_notifications:ro
+      - frigate-integration:/config/custom_components/frigate:ro
+      - ./dev/config/homeassistant/presets:/config/frigate_notifications/presets:ro
+
+  frigate-integration-init:
+    image: alpine/git
+    entrypoint: /bin/sh
+    volumes:
+      - frigate-integration:/out
+    environment:
+      - FRIGATE_INTEG_VERSION=${FRIGATE_INTEG_VERSION:-v5.15.2}
+    command:
+      - -c
+      - |
+        if [ -f /out/.installed ] && [ "$(cat /out/.installed)" = "$${FRIGATE_INTEG_VERSION}" ]; then
+          echo "Frigate HA integration $${FRIGATE_INTEG_VERSION} already installed"; exit 0
+        fi
+        rm -rf /out/* /out/.installed &&
+        git clone --depth 1 --branch "$${FRIGATE_INTEG_VERSION}" \
+          https://github.com/blakeblackshear/frigate-hass-integration.git /tmp/repo &&
+        cp -R /tmp/repo/custom_components/frigate/. /out/ &&
+        echo "$${FRIGATE_INTEG_VERSION}" > /out/.installed &&
+        echo "Frigate HA integration $${FRIGATE_INTEG_VERSION} installed"
+    restart: "no"
+
+  frigate:
+    image: "ghcr.io/blakeblackshear/frigate:${FRIGATE_VERSION:-0.17.1}"
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./dev/config/frigate/config.yml:/config/config.yml:ro
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./dev/config/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  webhook:
+    image: mendhak/http-https-echo
+    restart: unless-stopped
+    environment:
+      - LOG_WITHOUT_NEWLINE=true
+      - ECHO_BACK_TO_CLIENT=false
+    ports:
+      - "8080:8080"
+
+volumes:
+  frigate-integration:

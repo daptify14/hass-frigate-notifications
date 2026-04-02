@@ -1,0 +1,22 @@
+silence_profile:
+  fields:
+    profile_id:
+      required: true
+      example: "01ABCDEF1234567890ABCDEF12"
+      selector:
+        text:
+    duration:
+      example: 30
+      selector:
+        number:
+          min: 1
+          max: 1440
+          unit_of_measurement: minutes
+
+clear_silence:
+  fields:
+    profile_id:
+      required: true
+      example: "01ABCDEF1234567890ABCDEF12"
+      selector:
+        text:

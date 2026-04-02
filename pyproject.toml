@@ -1,0 +1,87 @@
+[project]
+name = "frigate-notifications"
+version = "0.0.1"
+description = "Notifications for Frigate"
+requires-python = ">=3.14.2"
+
+[dependency-groups]
+test = [
+    "pytest-homeassistant-custom-component==0.13.320",
+]
+dev = [
+    {include-group = "test"},
+    "colorlog==6.10.1",
+    "homeassistant==2026.3.4",
+    "paho-mqtt==2.1.0",
+    "pre-commit==4.5.1",
+    "ruff==0.15.8",
+    "ty==0.0.27",
+    "voluptuous-stubs==0.1.1",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+include = ["custom_components/**/*.py", "tests/**/*.py", "scripts/**/*.py"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN",      # missing-type-annotation
+    "ARG",      # unused-function-argument
+    "COM812",   # missing-trailing-comma
+    "FBT",      # flake8-boolean-trap
+    "FIX",      # flake8-fixme
+    "INP001",   # implicit-namespace-package
+    "ISC001",   # single-line-implicit-string-concatenation
+    "PLC0415",  # import-outside-top-level
+    "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+    "S101",     # assert
+    "TC002",    # typing-only-third-party-import
+    "TC003",    # typing-only-standard-library-import
+    "TD",       # flake8-todos
+    "TID252",   # relative-imports
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.ruff.lint.flake8-pytest-style]
+fixture-parentheses = false
+mark-parentheses = false
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D100", "D101", "D102", "D103", "D107", "D403", "SLF001", "PLR2004"]
+"scripts/**/*.py" = ["T201"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components.frigate_notifications", "tests"]
+force-sort-within-sections = true
+combine-as-imports = true
+
+[tool.ty.environment]
+python-version = "3.14"
+extra-paths = ["custom_components"]
+
+[tool.ty.src]
+include = ["custom_components", "tests"]
+
+[tool.ty.rules]
+all = "warn"
+
+[tool.coverage.run]
+branch = true
+source = ["custom_components/frigate_notifications"]
+
+[tool.coverage.report]
+exclude_lines = ["if TYPE_CHECKING:", "pragma: no cover"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = "."
+testpaths = ["tests"]
+addopts = "--timeout=10"
