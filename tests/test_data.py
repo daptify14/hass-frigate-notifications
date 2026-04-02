@@ -846,12 +846,12 @@ class TestMultiCameraProfile:
         p = result.profiles["driveway"][0]
         assert p.cameras == ("driveway",)
 
-    def test_profile_device_name_uses_fn_prefix(self) -> None:
-        """Profile device name uses FN prefix for clean entity IDs."""
+    def test_profile_device_name_returns_profile_name(self) -> None:
+        """Profile device name is the profile name without prefix."""
         from custom_components.frigate_notifications.data import get_profile_device_name
 
-        assert get_profile_device_name("Alerts") == "FN Alerts"
-        assert get_profile_device_name("Driveway") == "FN Driveway"
+        assert get_profile_device_name("Alerts") == "Alerts"
+        assert get_profile_device_name("Driveway") == "Driveway"
 
     @patch("custom_components.frigate_notifications.data.dr.async_get")
     def test_zone_aliases_empty_for_multi_camera(self, mock_dr: MagicMock) -> None:

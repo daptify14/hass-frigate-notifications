@@ -128,7 +128,7 @@ class TestAsyncSetupEntry:
         assert profile_device.model == "Apple Mobile Profile"
         assert profile_device.manufacturer == "Notifications for Frigate"
         assert profile_device.name is not None
-        assert profile_device.name.startswith("FN ")
+        assert profile_device.name == "Test Profile"
 
         # The profile device should link to the Frigate camera via via_device.
         assert profile_device.via_device_id == frigate_device.id
@@ -193,7 +193,7 @@ class TestAsyncSetupEntry:
 
         profile_device = device_registry.async_get(registry_entry.device_id)
         assert profile_device is not None
-        assert profile_device.name == "FN Multi Cam"
+        assert profile_device.name == "Multi Cam"
         assert profile_device.via_device_id == frigate_server.id
 
     async def test_integration_entities_are_registered_under_integration_subentry(
