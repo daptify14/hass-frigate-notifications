@@ -28,6 +28,30 @@ notify:
       - service: mobile_app_dev_iphone
       - service: mobile_app_dev_pixel
 
+automation:
+  - alias: "Dev: seed presence states"
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - delay: "00:00:05"
+      - service: device_tracker.see
+        data:
+          dev_id: alice_phone
+          location_name: home
+      - service: device_tracker.see
+        data:
+          dev_id: bob_phone
+          location_name: not_home
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.security_armed
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.home_mode
+        data:
+          option: home
+
 debugpy:
 
 logger:

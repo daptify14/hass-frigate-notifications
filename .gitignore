@@ -13,7 +13,9 @@ build/
 .pytest_cache/
 .ruff_cache/
 coverage.xml
+coverage.json
 .coverage
+htmlcov/
 
 # IDE
 .idea/

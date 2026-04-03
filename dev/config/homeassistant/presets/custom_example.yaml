@@ -11,8 +11,8 @@ sort_order: 50
 
 phases:
   initial:
-    message_template: "[Custom] {{ object }} spotted"
-    subtitle_template: "{{ details }}"
+    message_template: phase_icon_context
+    subtitle_template: merged_subjects
     emoji_message: true
     emoji_subtitle: false
     sound: default
@@ -23,8 +23,8 @@ phases:
 
   update:
     enabled: true
-    message_template: "[Custom] {{ object }} spotted"
-    subtitle_template: "{{ details }}"
+    message_template: phase_icon_context
+    subtitle_template: merged_subjects
     emoji_message: true
     emoji_subtitle: false
     sound: none
@@ -39,8 +39,8 @@ phases:
 
   genai:
     enabled: true
-    message_template: "[Custom] {{ genai_summary }}"
-    subtitle_template: "{{ details }}"
+    message_template: phase_icon_genai_summary
+    subtitle_template: merged_subjects
     emoji_message: false
     emoji_subtitle: false
     sound: default
@@ -49,9 +49,3 @@ phases:
     attachment: review_gif
     delay: 0.0
     use_latest_detection: true
-
-examples:
-  initial: "[Custom] Person spotted"
-  update: "[Custom] Person spotted"
-  end: "[Custom] Person spotted"
-  genai: "[Custom] A person walked across the driveway..."
