@@ -36,7 +36,7 @@ class TestHandleReviewMessage:
             on_review_update=lambda r, c: callbacks["update"].append((r, c)),
             on_review_end=callbacks["end"].append,
             on_genai=callbacks["genai"].append,
-            on_review_complete=callbacks["complete"].append,
+            on_review_retired=callbacks["complete"].append,
             on_review_message=lambda t, p: callbacks["message"].append((t, p)),
         )
 
@@ -105,8 +105,9 @@ class TestHandleReviewMessage:
         review = callbacks["genai"][0]
         assert review.genai is not None
         assert review.genai.title == "Person and Vehicle in Driveway"
-        assert len(callbacks["complete"]) == 1
-        assert callbacks["complete"][0] == "1773840946.10543-review1"
+        # GenAI no longer calls on_review_retired — review stays in _active_reviews.
+        assert len(callbacks["complete"]) == 0
+        assert processor.get_review("1773840946.10543-review1") is not None
 
     async def test_genai_unknown_review_ignored(
         self, processor: ReviewProcessor, callbacks: dict[str, list]
@@ -213,10 +214,10 @@ class TestCleanupStale:
         assert processor.active_review_count == 0
         assert "1773840946.10543-review1" not in processor._review_locks
 
-    async def test_fires_on_review_complete_for_each_stale_review(self) -> None:
+    async def test_fires_on_review_retired_for_each_stale_review(self) -> None:
         complete_calls: list[str] = []
         processor = ReviewProcessor(
-            on_review_complete=complete_calls.append,
+            on_review_retired=complete_calls.append,
         )
         await processor.handle_review_message(json.dumps(REVIEW_NEW_PAYLOAD))
 

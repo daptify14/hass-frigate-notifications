@@ -332,13 +332,23 @@ class NotificationDispatcher:
         await self._handle_lifecycle(review, Lifecycle.GENAI)
 
     def cleanup_review(self, review_id: str) -> None:
-        """Cancel pending tasks and remove all states for a review."""
+        """Cancel pending tasks and remove all states for a review (stale-timer fallback)."""
         keys = [k for k in self._review_states if k[1] == review_id]
         for key in keys:
             rs = self._review_states[key]
             if rs.pending_task and not rs.pending_task.done():
                 rs.pending_task.cancel()
             del self._review_states[key]
+
+    def retire_profile_review(self, profile_id: str, review_id: str) -> None:
+        """Clean up dispatcher state for a single (profile, review) pair."""
+        key = (profile_id, review_id)
+        rs = self._review_states.get(key)
+        if rs is None:
+            return
+        if rs.pending_task and not rs.pending_task.done():
+            rs.pending_task.cancel()
+        del self._review_states[key]
 
     async def _handle_lifecycle(self, review: Review, lifecycle: Lifecycle) -> None:
         """Iterate matching profiles and dispatch for each that passes."""
@@ -477,6 +487,7 @@ class NotificationDispatcher:
                 review.review_id[:25],
             )
             self._signal_dispatch_problem(profile, error_msg=str(err))
+            self._maybe_retire(profile, review, lifecycle, is_genai=is_genai)
             return
 
         if not success:
@@ -512,6 +523,22 @@ class NotificationDispatcher:
             profile.notify_target,
             review.review_id[:25],
         )
+
+        self._maybe_retire(profile, review, lifecycle, is_genai=is_genai)
+
+    def _maybe_retire(
+        self,
+        profile: ProfileRuntime,
+        review: Review,
+        lifecycle: Lifecycle,
+        *,
+        is_genai: bool,
+    ) -> None:
+        """Retire this profile's review state if this was the final dispatch."""
+        if is_genai or (
+            lifecycle == Lifecycle.END and not profile.get_phase(Phase.GENAI).delivery.enabled
+        ):
+            self.retire_profile_review(profile.profile_id, review.review_id)
 
     def _update_last_sent(
         self,

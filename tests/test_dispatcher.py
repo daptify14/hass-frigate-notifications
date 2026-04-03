@@ -233,6 +233,136 @@ class TestDispatcherGenAI:
         assert not title.startswith("!!  ")
 
 
+class TestDispatcherRetirement:
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_genai_dispatch_retires_profile_review_state(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Full lifecycle (new -> end -> genai) retires state after GenAI dispatch."""
+        profile = make_profile(phases={Phase.GENAI: DEFAULT_PHASE_GENAI})
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review(genai=make_genai())
+
+        await dispatcher.on_review_new(review)
+        await hass.async_block_till_done()
+        await dispatcher.on_review_end(review)
+        await hass.async_block_till_done()
+
+        key = (profile.profile_id, review.review_id)
+        assert key in dispatcher._review_states
+
+        await dispatcher.on_genai(review)
+        await hass.async_block_till_done()
+
+        assert key not in dispatcher._review_states
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_end_dispatch_retires_when_no_genai_configured(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Profile with GenAI disabled retires state after end dispatch."""
+        disabled_genai = PhaseConfig(delivery=PhaseDelivery(enabled=False))
+        profile = make_profile(phases={Phase.GENAI: disabled_genai})
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        await dispatcher.on_review_new(review)
+        await hass.async_block_till_done()
+
+        key = (profile.profile_id, review.review_id)
+        assert key in dispatcher._review_states
+
+        await dispatcher.on_review_end(review)
+        await hass.async_block_till_done()
+
+        assert key not in dispatcher._review_states
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_end_dispatch_does_not_retire_when_genai_configured(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Profile with GenAI enabled keeps state after end dispatch."""
+        profile = make_profile(phases={Phase.GENAI: DEFAULT_PHASE_GENAI})
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        await dispatcher.on_review_new(review)
+        await hass.async_block_till_done()
+        await dispatcher.on_review_end(review)
+        await hass.async_block_till_done()
+
+        key = (profile.profile_id, review.review_id)
+        assert key in dispatcher._review_states
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_retirement_does_not_affect_other_profiles(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Retiring one profile's state doesn't touch another profile's state."""
+        disabled_genai = PhaseConfig(delivery=PhaseDelivery(enabled=False))
+        profile_a = make_profile(
+            profile_id="profile_a",
+            cameras=("driveway",),
+            phases={Phase.GENAI: disabled_genai},
+        )
+        profile_b = make_profile(
+            profile_id="profile_b",
+            cameras=("driveway",),
+            phases={Phase.GENAI: DEFAULT_PHASE_GENAI},
+        )
+        runtime = make_runtime([profile_a, profile_b])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        await dispatcher.on_review_new(review)
+        await hass.async_block_till_done()
+
+        key_a = (profile_a.profile_id, review.review_id)
+        key_b = (profile_b.profile_id, review.review_id)
+        assert key_a in dispatcher._review_states
+        assert key_b in dispatcher._review_states
+
+        # Profile A (no GenAI) finishes end → retires.
+        await dispatcher.on_review_end(review)
+        await hass.async_block_till_done()
+
+        assert key_a not in dispatcher._review_states
+        assert key_b in dispatcher._review_states
+
+    async def test_genai_does_not_cancel_pending_non_genai_dispatch(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """GenAI dispatch doesn't cancel a pending initial task."""
+        profile = make_profile(phases={Phase.GENAI: DEFAULT_PHASE_GENAI})
+        # Long delay keeps the initial task pending.
+        runtime = make_runtime([profile], initial_delay=60.0)
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review(genai=make_genai())
+
+        # Initial with long delay — stays pending (real sleep, not patched).
+        await dispatcher.on_review_new(review)
+        key = (profile.profile_id, review.review_id)
+        rs = dispatcher._review_states[key]
+        initial_task = rs.pending_task
+        assert initial_task is not None
+        assert not initial_task.done()
+
+        # GenAI fires independently — should NOT cancel pending initial.
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            await dispatcher.on_genai(review)
+            await hass.async_block_till_done()
+
+        assert not initial_task.done()
+        assert len(notify_calls) == 1  # Only GenAI sent.
+
+        # Clean up.
+        dispatcher.cleanup_review(review.review_id)
+        await hass.async_block_till_done()
+
+
 class TestDispatcherCleanup:
     @pytest.mark.usefixtures("_zero_delays")
     async def test_cleanup_removes_states(

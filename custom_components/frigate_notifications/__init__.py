@@ -118,7 +118,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
         on_review_update=_on_review_update,
         on_review_end=_fire(dispatcher.on_review_end),
         on_genai=_fire(dispatcher.on_genai),
-        on_review_complete=dispatcher.cleanup_review,
+        on_review_retired=dispatcher.cleanup_review,
         on_review_message=_on_review_message,
     )
 
