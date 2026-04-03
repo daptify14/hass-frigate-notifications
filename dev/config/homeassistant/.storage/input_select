@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "key": "input_select",
+  "data": {
+    "items": [
+      {
+        "id": "home_mode",
+        "name": "Home Mode",
+        "options": [
+          "home",
+          "away",
+          "night",
+          "vacation"
+        ],
+        "icon": "mdi:home-account"
+      }
+    ]
+  }
+}

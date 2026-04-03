@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "key": "input_boolean",
+  "data": {
+    "items": [
+      {
+        "id": "security_armed",
+        "name": "Security Armed",
+        "icon": "mdi:shield-home"
+      }
+    ]
+  }
+}
