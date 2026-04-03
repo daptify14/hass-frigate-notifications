@@ -805,5 +805,15 @@
         }
       }
     }
+  },
+  "issues": {
+    "broken_camera_binding": {
+      "title": "Profile \"{profile_name}\" references missing camera",
+      "description": "The profile **{profile_name}** is configured for camera **{camera}**, which no longer exists in Frigate. Re-add the camera in Frigate, or delete the profile and create a new one with a valid camera."
+    },
+    "stale_zone_config": {
+      "title": "Profile \"{profile_name}\" references missing zones",
+      "description": "The profile **{profile_name}** requires zones **{zones}** which no longer exist in Frigate. Edit the profile to update zone filtering, or re-add the zones in Frigate."
+    }
   }
 }

@@ -71,15 +71,26 @@ class TestBrokenCameraIssues:
         hass: HomeAssistant,
         mock_entry_with_missing_camera: MockConfigEntry,
     ) -> None:
-        """Creates a repair issue when a profile references a missing camera."""
+        """Creates a per-profile repair issue with placeholders for a missing camera."""
         entry = mock_entry_with_missing_camera
         entry.add_to_hass(hass)
+        sub_id = next(
+            s.subentry_id for s in entry.subentries.values() if s.subentry_type == "profile"
+        )
 
         sync_broken_camera_issues(hass, entry)
 
         issue_reg = ir.async_get(hass)
-        issues = {iid[1]: issue for iid, issue in issue_reg.issues.items() if iid[0] == DOMAIN}
-        assert any("broken_camera" in iid for iid in issues)
+        issues = [issue for iid, issue in issue_reg.issues.items() if iid[0] == DOMAIN]
+        assert len(issues) == 1
+
+        issue_ids = [iid[1] for iid in issue_reg.issues if iid[0] == DOMAIN]
+        assert any(sub_id in iid and "broken_camera" in iid for iid in issue_ids)
+
+        placeholders = issues[0].translation_placeholders
+        assert placeholders is not None
+        assert placeholders["profile_name"] == "Ghost Camera"
+        assert placeholders["camera"] == "ghost_cam"
 
     def test_creates_issue_for_secondary_missing_camera(
         self,
@@ -111,14 +122,57 @@ class TestBrokenCameraIssues:
         self,
         hass: HomeAssistant,
         mock_config_entry: MockConfigEntry,
+        mock_frigate_data: dict[str, Any],
     ) -> None:
-        """No repair issue created when all cameras are valid."""
+        """No repair issue created when all cameras are valid or Frigate unavailable."""
         mock_config_entry.add_to_hass(hass)
         sync_broken_camera_issues(hass, mock_config_entry)
 
         issue_reg = ir.async_get(hass)
         broken = [iid for iid in issue_reg.issues if iid[0] == DOMAIN and "broken_camera" in iid[1]]
         assert not broken
+
+        # Also safe when Frigate config is unavailable — guard returns early.
+        del mock_frigate_data[FRIGATE_ENTRY_ID]
+        sync_broken_camera_issues(hass, mock_config_entry)
+        assert not [
+            iid for iid in issue_reg.issues if iid[0] == DOMAIN and "broken_camera" in iid[1]
+        ]
+
+    def test_resolves_issue_when_camera_returns(
+        self,
+        hass: HomeAssistant,
+        mock_entry_with_missing_camera: MockConfigEntry,
+        mock_frigate_data: dict[str, Any],
+    ) -> None:
+        """Issue auto-resolves when the missing camera reappears in Frigate."""
+        entry = mock_entry_with_missing_camera
+        entry.add_to_hass(hass)
+
+        sync_broken_camera_issues(hass, entry)
+        issue_reg = ir.async_get(hass)
+        assert any(iid[0] == DOMAIN and "broken_camera" in iid[1] for iid in issue_reg.issues)
+
+        # Foreign-domain issue should survive the sweep.
+        ir.async_create_issue(
+            hass,
+            "other",
+            "unrelated",
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="x",
+        )
+
+        mock_frigate_data[FRIGATE_ENTRY_ID]["config"]["cameras"]["ghost_cam"] = {
+            "zones": {},
+            "objects": {"track": ["person"]},
+            "review": {"genai": {"enabled": False}},
+        }
+        sync_broken_camera_issues(hass, entry)
+
+        broken = [iid for iid in issue_reg.issues if iid[0] == DOMAIN and "broken_camera" in iid[1]]
+        assert not broken
+        assert ("other", "unrelated") in issue_reg.issues
 
 
 class TestStaleZoneIssues:
@@ -129,25 +183,75 @@ class TestStaleZoneIssues:
         hass: HomeAssistant,
         mock_entry_with_stale_zone: MockConfigEntry,
     ) -> None:
-        """Creates a repair issue when zones reference nonexistent Frigate zones."""
+        """Creates a per-profile repair issue with placeholders for stale zones."""
         entry = mock_entry_with_stale_zone
         entry.add_to_hass(hass)
+        sub_id = next(
+            s.subentry_id for s in entry.subentries.values() if s.subentry_type == "profile"
+        )
 
         sync_stale_zone_issues(hass, entry)
 
         issue_reg = ir.async_get(hass)
-        issues = {iid[1]: issue for iid, issue in issue_reg.issues.items() if iid[0] == DOMAIN}
-        assert any("stale_zone" in iid for iid in issues)
+        issues = [issue for iid, issue in issue_reg.issues.items() if iid[0] == DOMAIN]
+        assert len(issues) == 1
+
+        issue_ids = [iid[1] for iid in issue_reg.issues if iid[0] == DOMAIN]
+        assert any(sub_id in iid and "stale_zone" in iid for iid in issue_ids)
+
+        placeholders = issues[0].translation_placeholders
+        assert placeholders is not None
+        assert placeholders["profile_name"] == "Stale Zone Profile"
+        assert "nonexistent_zone" in placeholders["zones"]
 
     def test_no_issue_when_zones_valid(
         self,
         hass: HomeAssistant,
         mock_config_entry: MockConfigEntry,
+        mock_frigate_data: dict[str, Any],
     ) -> None:
-        """No repair issue when no stale zones exist."""
+        """No repair issue when no stale zones exist or Frigate unavailable."""
         mock_config_entry.add_to_hass(hass)
         sync_stale_zone_issues(hass, mock_config_entry)
 
         issue_reg = ir.async_get(hass)
         stale = [iid for iid in issue_reg.issues if iid[0] == DOMAIN and "stale_zone" in iid[1]]
         assert not stale
+
+        # Also safe when Frigate config is unavailable — guard returns early.
+        del mock_frigate_data[FRIGATE_ENTRY_ID]
+        sync_stale_zone_issues(hass, mock_config_entry)
+        assert not [iid for iid in issue_reg.issues if iid[0] == DOMAIN and "stale_zone" in iid[1]]
+
+    def test_resolves_issue_when_zone_returns(
+        self,
+        hass: HomeAssistant,
+        mock_entry_with_stale_zone: MockConfigEntry,
+        mock_frigate_data: dict[str, Any],
+    ) -> None:
+        """Issue auto-resolves when the missing zone reappears in Frigate."""
+        entry = mock_entry_with_stale_zone
+        entry.add_to_hass(hass)
+
+        sync_stale_zone_issues(hass, entry)
+        issue_reg = ir.async_get(hass)
+        assert any(iid[0] == DOMAIN and "stale_zone" in iid[1] for iid in issue_reg.issues)
+
+        # Foreign-domain issue should survive the sweep.
+        ir.async_create_issue(
+            hass,
+            "other",
+            "unrelated",
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="x",
+        )
+
+        mock_frigate_data[FRIGATE_ENTRY_ID]["config"]["cameras"]["driveway"]["zones"][
+            "nonexistent_zone"
+        ] = {}
+        sync_stale_zone_issues(hass, entry)
+
+        stale = [iid for iid in issue_reg.issues if iid[0] == DOMAIN and "stale_zone" in iid[1]]
+        assert not stale
+        assert ("other", "unrelated") in issue_reg.issues
