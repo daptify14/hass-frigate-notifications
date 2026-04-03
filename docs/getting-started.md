@@ -8,8 +8,8 @@ Before creating a profile, make sure your Home Assistant and Frigate URLs are se
 
 1. Go to Settings > Devices & Services > Notifications for Frigate
 2. Click the settings cog (**Configure**) on the integration entry
-3. Set your **Home Assistant URL** and **Frigate URL** in the Delivery Defaults step
-4. Click through the remaining steps (the defaults are fine to start with)
+3. Set your **Home Assistant URL** and **Frigate URL** in the Delivery Defaults section
+4. Click through the remaining sections (the defaults are fine to start with)
 
 > **Tip:** You can come back and adjust shared defaults anytime. Saving the options automatically reloads the integration and applies the updated defaults.
 
@@ -25,19 +25,21 @@ Pick a starting template. **Live Alerts** is the recommended default: instant al
 
 ### Basics
 
-Give the profile a name (e.g., "Driveway Alerts") and select one or more Frigate cameras. Choose your platform: Apple (iOS Push), Android (Companion), Cross-Platform (iOS + Android group), or Android TV / Fire TV. After pressing next, the step reloads for you to pick the target device or notify service (group or TV), tag template, and group template.
+Give the profile a name (e.g., "Driveway Alerts") and select one or more Frigate cameras. Choose your platform: Apple (iOS Push), Android (Companion), Cross-Platform (iOS + Android group), or Android TV / Fire TV. After pressing next, the step reloads for you to pick the target device or notify service, tag template, and group template.
 
 ### Customize (optional)
 
 After Basics, you land on a menu with these sections:
 
-- **Filtering**: object types, severity, required zones, recognition filters
-- **Content**: message and subtitle templates per phase, zone phrases
-- **Media & Actions**: attachments (snapshot, GIF), tap action, action buttons per phase
-- **Delivery**: sound, volume, interruption level, delays per phase
-- **Save**: save the profile as-is
+- **Filtering** -- objects, zones, guard, time, presence, state
+- **Content & templates** -- message templates, subtitles, emoji, zone phrases
+- **Media & actions** -- attachments, video, action buttons
+- **Delivery & timing** -- sound, timing, rate limiting, platform options
+- **Save profile** -- save with current settings
 
-If the preset defaults work for you, go straight to **Save**. Profiles can be reconfigured later as well to customize further.
+If the preset defaults work for you, go straight to **Save**. You can reconfigure any section later from the profile device's three-dot menu.
+
+See [Profiles](configuration/profiles.md) for a full reference of every field.
 
 ## Test it
 
