@@ -341,14 +341,16 @@ class NotificationDispatcher:
             del self._review_states[key]
 
     def retire_profile_review(self, profile_id: str, review_id: str) -> None:
-        """Clean up dispatcher state for a single (profile, review) pair."""
+        """Clean up dispatcher state for a single (profile, review) pair.
+
+        Called from _delayed_dispatch after the final dispatch completes —
+        the pending_task is always the currently-running task, so cancelling
+        it would be self-cancellation.  Task cancellation for abandoned
+        dispatches is handled by cleanup_review (stale-timer fallback).
+        """
         key = (profile_id, review_id)
-        rs = self._review_states.get(key)
-        if rs is None:
-            return
-        if rs.pending_task and not rs.pending_task.done():
-            rs.pending_task.cancel()
-        del self._review_states[key]
+        if key in self._review_states:
+            del self._review_states[key]
 
     async def _handle_lifecycle(self, review: Review, lifecycle: Lifecycle) -> None:
         """Iterate matching profiles and dispatch for each that passes."""
