@@ -268,6 +268,7 @@ async def deliver_notification(
         "notify",
         notify_call.service,
         service_data=notify_call.service_data,
+        blocking=True,
     )
     return True
 

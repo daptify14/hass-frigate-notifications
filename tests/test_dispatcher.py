@@ -394,6 +394,75 @@ class TestDispatcherFailure:
         assert received[0] is not None
         assert "boom" in received[0]
 
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_handler_failure_does_not_update_stats(self, hass: HomeAssistant) -> None:
+        """Registered service that raises prevents stats signal."""
+        from homeassistant.exceptions import HomeAssistantError
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+        async def _raise(*args, **kwargs):
+            msg = "Push delivery failed"
+            raise HomeAssistantError(msg)
+
+        hass.services.async_register("notify", "mobile_app_test_phone", _raise)
+
+        profile = make_profile()
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+
+        stats_received: list = []
+        async_dispatcher_connect(
+            hass,
+            f"frigate_notifications_stats_{profile.entry_id}",
+            lambda *a: stats_received.append(a),
+        )
+
+        await dispatcher.on_review_new(make_review())
+        await hass.async_block_till_done()
+        assert len(stats_received) == 0
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_handler_failure_does_not_update_cooldown(self, hass: HomeAssistant) -> None:
+        """Registered service that raises prevents cooldown update."""
+        from homeassistant.exceptions import HomeAssistantError
+
+        async def _raise(*args, **kwargs):
+            msg = "Push delivery failed"
+            raise HomeAssistantError(msg)
+
+        hass.services.async_register("notify", "mobile_app_test_phone", _raise)
+
+        profile = make_profile(cooldown_seconds=60)
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+
+        await dispatcher.on_review_new(make_review())
+        await hass.async_block_till_done()
+
+        ps = dispatcher._get_profile_state(profile.profile_id)
+        assert "driveway" not in ps.last_sent_at
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_handler_failure_does_not_mark_initial_sent(self, hass: HomeAssistant) -> None:
+        """Registered service that raises prevents initial_sent flag."""
+        from homeassistant.exceptions import HomeAssistantError
+
+        async def _raise(*args, **kwargs):
+            msg = "Push delivery failed"
+            raise HomeAssistantError(msg)
+
+        hass.services.async_register("notify", "mobile_app_test_phone", _raise)
+
+        profile = make_profile()
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+
+        await dispatcher.on_review_new(make_review())
+        await hass.async_block_till_done()
+
+        rs = dispatcher._get_review_state(profile.profile_id, make_review().review_id)
+        assert rs.initial_sent is False
+
 
 class TestDispatcherCustomActions:
     @pytest.mark.usefixtures("_zero_delays")
