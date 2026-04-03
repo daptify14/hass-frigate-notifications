@@ -651,6 +651,13 @@
       }
     }
   },
+  "entity": {
+    "datetime": {
+      "silenced_until": {
+        "name": "Silenced until"
+      }
+    }
+  },
   "selector": {
     "provider": {
       "options": {
