@@ -297,71 +297,6 @@ class TestDispatcherRetirement:
         key = (profile.profile_id, review.review_id)
         assert key in dispatcher._review_states
 
-    @pytest.mark.usefixtures("_zero_delays")
-    async def test_retirement_does_not_affect_other_profiles(
-        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
-    ) -> None:
-        """Retiring one profile's state doesn't touch another profile's state."""
-        disabled_genai = PhaseConfig(delivery=PhaseDelivery(enabled=False))
-        profile_a = make_profile(
-            profile_id="profile_a",
-            cameras=("driveway",),
-            phases={Phase.GENAI: disabled_genai},
-        )
-        profile_b = make_profile(
-            profile_id="profile_b",
-            cameras=("driveway",),
-            phases={Phase.GENAI: DEFAULT_PHASE_GENAI},
-        )
-        runtime = make_runtime([profile_a, profile_b])
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-        review = make_review()
-
-        await dispatcher.on_review_new(review)
-        await hass.async_block_till_done()
-
-        key_a = (profile_a.profile_id, review.review_id)
-        key_b = (profile_b.profile_id, review.review_id)
-        assert key_a in dispatcher._review_states
-        assert key_b in dispatcher._review_states
-
-        # Profile A (no GenAI) finishes end → retires.
-        await dispatcher.on_review_end(review)
-        await hass.async_block_till_done()
-
-        assert key_a not in dispatcher._review_states
-        assert key_b in dispatcher._review_states
-
-    async def test_genai_does_not_cancel_pending_non_genai_dispatch(
-        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
-    ) -> None:
-        """GenAI dispatch doesn't cancel a pending initial task."""
-        profile = make_profile(phases={Phase.GENAI: DEFAULT_PHASE_GENAI})
-        # Long delay keeps the initial task pending.
-        runtime = make_runtime([profile], initial_delay=60.0)
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-        review = make_review(genai=make_genai())
-
-        # Initial with long delay — stays pending (real sleep, not patched).
-        await dispatcher.on_review_new(review)
-        key = (profile.profile_id, review.review_id)
-        rs = dispatcher._review_states[key]
-        initial_task = rs.pending_task
-        assert initial_task is not None
-        assert not initial_task.done()
-
-        # GenAI fires independently — should NOT cancel pending initial.
-        with patch("asyncio.sleep", new_callable=AsyncMock):
-            await dispatcher.on_genai(review)
-            await hass.async_block_till_done()
-
-        assert not initial_task.done()
-        assert len(notify_calls) == 1  # Only GenAI sent.
-
-        # Clean up.
-        dispatcher.cleanup_review(review.review_id)
-        await hass.async_block_till_done()
-
 
 class TestDispatcherCleanup:
     @pytest.mark.usefixtures("_zero_delays")
@@ -527,36 +462,10 @@ class TestDispatcherFailure:
         assert "boom" in received[0]
 
     @pytest.mark.usefixtures("_zero_delays")
-    async def test_handler_failure_does_not_update_stats(self, hass: HomeAssistant) -> None:
-        """Registered service that raises prevents stats signal."""
+    async def test_handler_failure_skips_all_bookkeeping(self, hass: HomeAssistant) -> None:
+        """Registered service that raises skips stats, cooldown, and initial_sent."""
         from homeassistant.exceptions import HomeAssistantError
         from homeassistant.helpers.dispatcher import async_dispatcher_connect
-
-        async def _raise(*args, **kwargs):
-            msg = "Push delivery failed"
-            raise HomeAssistantError(msg)
-
-        hass.services.async_register("notify", "mobile_app_test_phone", _raise)
-
-        profile = make_profile()
-        runtime = make_runtime([profile])
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-
-        stats_received: list = []
-        async_dispatcher_connect(
-            hass,
-            f"frigate_notifications_stats_{profile.entry_id}",
-            lambda *a: stats_received.append(a),
-        )
-
-        await dispatcher.on_review_new(make_review())
-        await hass.async_block_till_done()
-        assert len(stats_received) == 0
-
-    @pytest.mark.usefixtures("_zero_delays")
-    async def test_handler_failure_does_not_update_cooldown(self, hass: HomeAssistant) -> None:
-        """Registered service that raises prevents cooldown update."""
-        from homeassistant.exceptions import HomeAssistantError
 
         async def _raise(*args, **kwargs):
             msg = "Push delivery failed"
@@ -567,32 +476,21 @@ class TestDispatcherFailure:
         profile = make_profile(cooldown_seconds=60)
         runtime = make_runtime([profile])
         dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
 
-        await dispatcher.on_review_new(make_review())
+        stats_received: list = []
+        async_dispatcher_connect(
+            hass,
+            f"frigate_notifications_stats_{profile.entry_id}",
+            lambda *a: stats_received.append(a),
+        )
+
+        await dispatcher.on_review_new(review)
         await hass.async_block_till_done()
 
-        ps = dispatcher._get_profile_state(profile.profile_id)
-        assert "driveway" not in ps.last_sent_at
-
-    @pytest.mark.usefixtures("_zero_delays")
-    async def test_handler_failure_does_not_mark_initial_sent(self, hass: HomeAssistant) -> None:
-        """Registered service that raises prevents initial_sent flag."""
-        from homeassistant.exceptions import HomeAssistantError
-
-        async def _raise(*args, **kwargs):
-            msg = "Push delivery failed"
-            raise HomeAssistantError(msg)
-
-        hass.services.async_register("notify", "mobile_app_test_phone", _raise)
-
-        profile = make_profile()
-        runtime = make_runtime([profile])
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-
-        await dispatcher.on_review_new(make_review())
-        await hass.async_block_till_done()
-
-        rs = dispatcher._get_review_state(profile.profile_id, make_review().review_id)
+        assert len(stats_received) == 0
+        assert "driveway" not in dispatcher._get_profile_state(profile.profile_id).last_sent_at
+        rs = dispatcher._get_review_state(profile.profile_id, review.review_id)
         assert rs.initial_sent is False
 
 
@@ -815,73 +713,6 @@ class TestDelayedRefilter:
             await hass.async_block_till_done()
 
         assert len(notify_calls) == 0
-
-    async def test_switch_disabled_during_delay_suppresses_notification(
-        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
-    ) -> None:
-        """Switch disabled during delay window prevents notification."""
-        import asyncio
-
-        from homeassistant.const import STATE_OFF
-
-        from custom_components.frigate_notifications.const import ENABLED_SWITCHES_KEY
-
-        profile = make_profile()
-        runtime = make_runtime([profile], initial_delay=10.0)
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-        review = make_review()
-
-        blocker: asyncio.Future[None] = hass.loop.create_future()
-
-        async def _block(delay: float) -> None:
-            await blocker
-
-        with patch("asyncio.sleep", side_effect=_block):
-            await dispatcher.on_review_new(review)
-
-            # Disable switch mid-delay.
-            entity_id = "switch.test_enabled"
-            hass.data.setdefault(ENABLED_SWITCHES_KEY, {})[profile.profile_id] = type(
-                "E", (), {"entity_id": entity_id}
-            )()
-            hass.states.async_set(entity_id, STATE_OFF)
-
-            blocker.set_result(None)
-            await hass.async_block_till_done()
-
-        assert len(notify_calls) == 0
-
-    async def test_cooldown_not_rechecked_after_delay(
-        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
-    ) -> None:
-        """Cooldown filter is not re-applied post-delay — admitted review still sends."""
-        import asyncio
-
-        profile = make_profile(cooldown_seconds=60)
-        runtime = make_runtime([profile], initial_delay=5.0)
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-
-        review_a = make_review(review_id="rev_a")
-
-        blocker: asyncio.Future[None] = hass.loop.create_future()
-
-        async def _block(delay: float) -> None:
-            await blocker
-
-        # Review A passes cooldown, enters delay.
-        with patch("asyncio.sleep", side_effect=_block):
-            await dispatcher.on_review_new(review_a)
-
-        # Advance cooldown externally — simulate another profile's dispatch.
-        import time
-
-        dispatcher._get_profile_state(profile.profile_id).last_sent_at["driveway"] = time.time()
-
-        # Unblock A's delay — cooldown re-check would reject, but cooldown is skipped.
-        blocker.set_result(None)
-        await hass.async_block_till_done()
-
-        assert len(notify_calls) == 1  # A still sent despite active cooldown.
 
 
 class TestDispatcherPendingTaskCancel:

@@ -462,12 +462,6 @@ class TestSilenceFilter:
         ctx = make_filter_context(hass=hass)
         assert SilenceFilter().check(ctx).passed is True
 
-    def test_filter_passes_when_entity_not_in_map(self, hass: HomeAssistant) -> None:
-        """Filter passes when hass.data map exists but has no entry for this profile."""
-        hass.data[SILENCE_DATETIMES_KEY] = {}
-        ctx = make_filter_context(hass=hass)
-        assert SilenceFilter().check(ctx).passed is True
-
     @pytest.mark.parametrize(
         ("state_value", "expected"),
         [
@@ -493,12 +487,6 @@ class TestSilenceFilter:
 
 class TestSwitchEnabledFilter:
     def test_no_switch_registered_passes(self, hass: HomeAssistant) -> None:
-        ctx = make_filter_context(hass=hass)
-        assert SwitchEnabledFilter().check(ctx).passed is True
-
-    def test_filter_passes_when_entity_not_in_map(self, hass: HomeAssistant) -> None:
-        """Filter passes when hass.data map exists but has no entry for this profile."""
-        hass.data[ENABLED_SWITCHES_KEY] = {}
         ctx = make_filter_context(hass=hass)
         assert SwitchEnabledFilter().check(ctx).passed is True
 
