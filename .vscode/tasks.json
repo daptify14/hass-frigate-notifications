@@ -21,12 +21,57 @@
     {
       "label": "Run Simulate",
       "type": "shell",
-      "command": "sleep 2 && just simulate",
+      "command": "sleep 2 && just simulate --camera '${input:camera}' --objects '${input:objects}' --zones '${input:zones}' --sub-labels '${input:subLabels}' --severity '${input:severity}'",
       "presentation": {
         "group": "test-notify",
         "panel": "dedicated"
       },
       "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "camera",
+      "type": "pickString",
+      "description": "Camera",
+      "options": ["driveway", "front_door"],
+      "default": "driveway"
+    },
+    {
+      "id": "objects",
+      "type": "pickString",
+      "description": "Objects",
+      "options": ["person,car", "person", "car", "person,car-verified"],
+      "default": "person,car"
+    },
+    {
+      "id": "zones",
+      "type": "pickString",
+      "description": "Zones",
+      "options": [
+        "driveway_approach,driveway_main",
+        "driveway_approach",
+        "driveway_main",
+        "driveway_garage",
+        "porch",
+        "walkway",
+        "porch,walkway"
+      ],
+      "default": "driveway_approach,driveway_main"
+    },
+    {
+      "id": "subLabels",
+      "type": "pickString",
+      "description": "Sub-labels",
+      "options": ["", "Alice", "Bob", "Alice's Car", "Bob's Car"],
+      "default": ""
+    },
+    {
+      "id": "severity",
+      "type": "pickString",
+      "description": "Severity",
+      "options": ["alert", "detection"],
+      "default": "alert"
     }
   ]
 }
