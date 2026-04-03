@@ -84,7 +84,7 @@ class TestBuildFlowContext:
         return_value=True,
     )
     def test_build_flow_context_passes_cameras(self, mock_genai: MagicMock) -> None:
-        """available_cameras comes from get_available_cameras."""
+        """available_cameras comes from get_available_cameras; no draft cameras falls back."""
         hass = MagicMock()
         hass.data = {"frigate": {"fid": {"config": {"cameras": {"front": {}, "back": {}}}}}}
         entry = MagicMock()
@@ -94,6 +94,24 @@ class TestBuildFlowContext:
 
         assert sorted(ctx.available_cameras) == ["back", "front"]
         assert ctx.genai_available is True
+        mock_genai.assert_called_once()
+
+    @patch(
+        "custom_components.frigate_notifications.flows.profile.context.camera_supports_genai",
+    )
+    def test_build_flow_context_genai_scoped_to_draft_cameras(
+        self, mock_cam_genai: MagicMock
+    ) -> None:
+        """GenAI check uses only draft cameras when present, not all cameras."""
+        hass = MagicMock()
+        hass.data = {"frigate": {"fid": {"config": {"cameras": {"front": {}, "back": {}}}}}}
+        entry = MagicMock()
+        entry.data = {"frigate_entry_id": "fid"}
+
+        mock_cam_genai.return_value = False
+        ctx = build_flow_context(hass, entry, {"cameras": ["front"]}, is_reconfiguring=False)
+        assert ctx.genai_available is False
+        mock_cam_genai.assert_called_once_with(hass, "fid", "front")
 
     @patch(
         "custom_components.frigate_notifications.flows.profile.context.supports_genai",

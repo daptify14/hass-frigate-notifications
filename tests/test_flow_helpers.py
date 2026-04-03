@@ -3,9 +3,6 @@
 from typing import Any
 
 
-# =========================================================================
-# Helper unit tests
-# =========================================================================
 class TestHelpers:
     """Test config flow helper functions."""
 
@@ -77,9 +74,6 @@ class TestHelpers:
     # Discovery helper tests moved to tests/test_helpers.py
 
 
-# =========================================================================
-# Filtering validation
-# =========================================================================
 class TestFilteringValidation:
     """Test filtering step validation."""
 
@@ -196,9 +190,6 @@ class TestFilteringValidation:
         assert data["exclude_sub_labels"] == []
 
 
-# =========================================================================
-# Notification step submission helpers
-# =========================================================================
 class TestSubmissionHelpers:
     """Test standalone submission helper functions for edge cases."""
 

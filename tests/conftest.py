@@ -139,9 +139,6 @@ def template_id_map():
     return build_template_id_map(load_template_presets())
 
 
-# =========================================================================
-# Config flow fixtures
-# =========================================================================
 FRIGATE_DOMAIN = "frigate"
 FRIGATE_ENTRY_TITLE = "Frigate"
 FRIGATE_ENTRY_DATA: dict[str, Any] = {"url": "http://frigate.local:5000"}
