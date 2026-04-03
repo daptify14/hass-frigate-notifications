@@ -89,6 +89,8 @@ class TestDispatcherNew:
         """When filter chain rejects, no notification is sent."""
 
         class RejectAll:
+            runtime_recheck = False
+
             def check(self, ctx):
                 return FilterResult(passed=False, filter_name="test", reason="test")
 
@@ -644,6 +646,112 @@ class TestDispatcherInitialSentFlag:
 
         rs = dispatcher._get_review_state(profile.profile_id, review.review_id)
         assert rs.initial_sent is True
+
+
+class TestDelayedRefilter:
+    async def test_silence_during_delay_suppresses_notification(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Silence activated during delay window prevents notification."""
+        import asyncio
+
+        from custom_components.frigate_notifications.const import SILENCE_DATETIMES_KEY
+
+        profile = make_profile()
+        runtime = make_runtime([profile], initial_delay=10.0)
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        blocker: asyncio.Future[None] = hass.loop.create_future()
+
+        async def _block(delay: float) -> None:
+            await blocker
+
+        with patch("asyncio.sleep", side_effect=_block):
+            await dispatcher.on_review_new(review)
+
+            # Activate silence mid-delay.
+            from datetime import UTC, datetime, timedelta
+
+            future = (datetime.now(tz=UTC) + timedelta(hours=1)).isoformat()
+            entity_id = "datetime.test_silenced_until"
+            hass.data.setdefault(SILENCE_DATETIMES_KEY, {})[profile.profile_id] = type(
+                "E", (), {"entity_id": entity_id}
+            )()
+            hass.states.async_set(entity_id, future)
+
+            # Unblock the sleep.
+            blocker.set_result(None)
+            await hass.async_block_till_done()
+
+        assert len(notify_calls) == 0
+
+    async def test_switch_disabled_during_delay_suppresses_notification(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Switch disabled during delay window prevents notification."""
+        import asyncio
+
+        from homeassistant.const import STATE_OFF
+
+        from custom_components.frigate_notifications.const import ENABLED_SWITCHES_KEY
+
+        profile = make_profile()
+        runtime = make_runtime([profile], initial_delay=10.0)
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        blocker: asyncio.Future[None] = hass.loop.create_future()
+
+        async def _block(delay: float) -> None:
+            await blocker
+
+        with patch("asyncio.sleep", side_effect=_block):
+            await dispatcher.on_review_new(review)
+
+            # Disable switch mid-delay.
+            entity_id = "switch.test_enabled"
+            hass.data.setdefault(ENABLED_SWITCHES_KEY, {})[profile.profile_id] = type(
+                "E", (), {"entity_id": entity_id}
+            )()
+            hass.states.async_set(entity_id, STATE_OFF)
+
+            blocker.set_result(None)
+            await hass.async_block_till_done()
+
+        assert len(notify_calls) == 0
+
+    async def test_cooldown_not_rechecked_after_delay(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Cooldown filter is not re-applied post-delay — admitted review still sends."""
+        import asyncio
+
+        profile = make_profile(cooldown_seconds=60)
+        runtime = make_runtime([profile], initial_delay=5.0)
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+
+        review_a = make_review(review_id="rev_a")
+
+        blocker: asyncio.Future[None] = hass.loop.create_future()
+
+        async def _block(delay: float) -> None:
+            await blocker
+
+        # Review A passes cooldown, enters delay.
+        with patch("asyncio.sleep", side_effect=_block):
+            await dispatcher.on_review_new(review_a)
+
+        # Advance cooldown externally — simulate another profile's dispatch.
+        import time
+
+        dispatcher._get_profile_state(profile.profile_id).last_sent_at["driveway"] = time.time()
+
+        # Unblock A's delay — cooldown re-check would reject, but cooldown is skipped.
+        blocker.set_result(None)
+        await hass.async_block_till_done()
+
+        assert len(notify_calls) == 1  # A still sent despite active cooldown.
 
 
 class TestDispatcherPendingTaskCancel:

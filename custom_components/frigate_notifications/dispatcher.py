@@ -435,6 +435,21 @@ class NotificationDispatcher:
             except asyncio.CancelledError:
                 return
 
+        # Re-check runtime filters after delay — HA state may have changed.
+        if delay > 0:
+            ps = self._get_profile_state(profile.profile_id)
+            recheck_ctx = FilterContext(
+                profile=profile,
+                review=review,
+                lifecycle=lifecycle,
+                review_state=review_state,
+                profile_state=ps,
+                hass=self._hass,
+            )
+            result = self._filter_chain.evaluate_runtime(recheck_ctx)
+            if not result.passed:
+                return
+
         phase_name = lifecycle_to_phase(lifecycle, is_initial=is_initial)
         phase_cfg = profile.get_phase(phase_name)
 

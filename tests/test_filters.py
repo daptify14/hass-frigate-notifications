@@ -22,6 +22,8 @@ from custom_components.frigate_notifications.enums import (
 from custom_components.frigate_notifications.filters import (
     CooldownFilter,
     FilterChain,
+    FilterContext,
+    FilterResult,
     GuardEntityFilter,
     ObjectFilter,
     PresenceFilter,
@@ -446,6 +448,15 @@ class _FakeEntity:
         self.entity_id = entity_id
 
 
+class _StaticRejectFilter:
+    """Filter with runtime_recheck=False that always rejects."""
+
+    runtime_recheck = False
+
+    def check(self, ctx: FilterContext) -> FilterResult:
+        return FilterResult(passed=False, filter_name="static", reason="always reject")
+
+
 class TestSilenceFilter:
     def test_no_entity_registered_passes(self, hass: HomeAssistant) -> None:
         ctx = make_filter_context(hass=hass)
@@ -598,3 +609,12 @@ class TestFilterChain:
         chain = FilterChain([])
         ctx = make_filter_context(hass=hass)
         assert chain.evaluate(ctx).passed is True
+
+    def test_evaluate_runtime_skips_static_filters(self, hass: HomeAssistant) -> None:
+        """Static filters (runtime_recheck=False) are not re-run by evaluate_runtime."""
+        chain = FilterChain([_StaticRejectFilter()])
+        ctx = make_filter_context(hass=hass)
+        # evaluate() should reject (static filter runs)
+        assert chain.evaluate(ctx).passed is False
+        # evaluate_runtime() should pass (static filter skipped)
+        assert chain.evaluate_runtime(ctx).passed is True
