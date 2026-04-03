@@ -10,7 +10,7 @@ logger:
 
 ## Filter rejections
 
-The filter chain logs a specific rejection reason per profile. All rejections follow the pattern `Profile {name} rejected by {filter}: {reason}`:
+The [filter chain](filtering.md) logs a specific rejection reason per profile. All rejections follow the pattern `Profile {name} rejected by {filter}: {reason}`:
 
 | Filter | Reason example |
 |--------|---------------|

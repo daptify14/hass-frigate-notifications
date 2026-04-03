@@ -58,7 +58,7 @@ logger:
     custom_components.frigate_notifications: debug
 ```
 
-The filter chain logs exactly which filter rejected each review per profile. See [Logging Reference](reference/logging.md) for all filter rejection messages and other key log entries.
+The filter chain logs exactly which filter rejected each review per profile. See [Filtering](reference/filtering.md) for how the chain works and [Logging Reference](reference/logging.md) for all filter rejection messages.
 
 ## MQTT not connected
 

@@ -22,11 +22,14 @@ Each review can trigger up to four notification phases: initial alert, update, e
 
 **Templates**: Notification titles, messages, and subtitles are Jinja2 templates with access to 40+ context variables (camera name, detected objects, zones, severity, AI summaries, and more). Built-in templates cover common patterns; override at the profile or phase level for full control.
 
-**Filtering**: Controls which reviews produce notifications. Filters cover object type, zone, severity, sub-labels, time of day, HA entity state, presence, cooldown, and more. Filters follow the same inheritance model as other profile settings.
+**Filtering**: Controls which reviews produce notifications. Filters cover object type, zone, severity, sub-labels, time of day, HA entity state, presence, cooldown, and more. Filters follow the same inheritance model as other profile settings. See [Filtering](reference/filtering.md) for the full filter chain.
 
 ## Full reference
 
 - [Installation](installation.md): HACS, manual install, and removal
 - [Getting Started](getting-started.md): first profile walkthrough
+- [Profiles](configuration/profiles.md): every profile field, entities, and device details
+- [Filtering](reference/filtering.md): the 11-filter chain and inheritance model
+- [Notification Lifecycle](reference/notification-lifecycle.md): phases, dispatch, silence, and cooldown
 - [Troubleshooting](troubleshooting.md): common issues, logs, known limitations
 - [Logging Reference](reference/logging.md): filter rejection messages and key log entries
