@@ -12,10 +12,6 @@ from custom_components.frigate_notifications.const import DOMAIN
 from .conftest import FRIGATE_DOMAIN, FRIGATE_ENTRY_ID
 from .flow_helpers import _schema_section_keys
 
-# =========================================================================
-# Helpers
-# =========================================================================
-
 
 async def _enter_menu_section(
     hass: HomeAssistant, entry: MockConfigEntry, section: str
@@ -37,9 +33,6 @@ async def _save_from_menu(hass: HomeAssistant, flow_id: str) -> ConfigFlowResult
     return result
 
 
-# =========================================================================
-# Options flow — menu mode (base_url already set)
-# =========================================================================
 class TestOptionsFlowMenu:
     """Tests for the menu-based reconfigure mode."""
 
@@ -406,9 +399,6 @@ class TestOptionsFlowMenu:
         assert "zone_aliases" not in result["data"]
 
 
-# =========================================================================
-# Options flow — linear mode (first-time setup, no base_url)
-# =========================================================================
 class TestOptionsFlowLinear:
     """Tests for the linear first-time setup mode."""
 

@@ -8,9 +8,6 @@ from custom_components.frigate_notifications.const import DOMAIN
 from .conftest import FRIGATE_ENTRY_ID
 
 
-# =========================================================================
-# Main config flow
-# =========================================================================
 class TestMainFlow:
     """Main config flow tests."""
 

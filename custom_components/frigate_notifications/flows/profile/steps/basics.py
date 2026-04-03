@@ -131,6 +131,8 @@ def validate_basics_input(
                 "notify_service"
             ].strip().startswith("notify.mobile_app_"):
                 errors["notify_service"] = "tv_notify_service_invalid"
+        elif has_device and has_service:
+            errors["notify_service"] = "notify_target_exclusive"
         elif not has_device and not has_service:
             errors["notify_device"] = "notify_target_required"
 

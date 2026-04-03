@@ -23,9 +23,6 @@ async def _start_profile_reconfigure(
     )
 
 
-# =========================================================================
-# Profile reconfigure
-# =========================================================================
 class TestProfileReconfigure:
     """Profile reconfigure tests."""
 

@@ -20,10 +20,6 @@ from .flow_helpers import (
     _schema_section_keys,
 )
 
-# =========================================================================
-# Helpers
-# =========================================================================
-
 
 async def _basics_to_menu(
     hass: HomeAssistant, flow_id: str, *, name: str, cameras: list[str], provider: str
@@ -293,6 +289,22 @@ class TestProfileWizard:
         assert errors is not None
         assert "notify_device" in errors
 
+        # Pass 2 again - both device and service filled (mutual exclusion).
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"],
+            {
+                "name": "Test",
+                "cameras": ["driveway"],
+                "provider": "apple",
+                "notify_device": "fake_device_id",
+                "notify_service": "notify.mobile_app_test",
+            },
+        )
+        assert result["type"] is FlowResultType.FORM
+        errors = result["errors"]
+        assert errors is not None
+        assert errors["notify_service"] == "notify_target_exclusive"
+
     async def test_tv_provider_rejects_mobile_app(
         self, hass: HomeAssistant, mock_frigate_data: dict
     ) -> None:
@@ -383,9 +395,6 @@ class TestProfileWizard:
         assert "recognition_config" not in keys
 
 
-# =========================================================================
-# Conditional visibility
-# =========================================================================
 class TestConditionalVisibility:
     """Tests for conditional phase/provider visibility in the profile flow."""
 
@@ -563,9 +572,6 @@ class TestConditionalVisibility:
         assert "update_media" in keys
 
 
-# =========================================================================
-# Multi-camera config flow behavior
-# =========================================================================
 class TestMultiCameraConfigFlow:
     """Tests for multi-camera profile config flow behavior."""
 
@@ -727,9 +733,6 @@ class TestMultiCameraConfigFlow:
         assert r["data"]["cameras"] == ["backyard", "driveway"]
 
 
-# =========================================================================
-# Per-profile title template override
-# =========================================================================
 class TestProfileTitleTemplate:
     """Tests for per-profile title_template override in the content step."""
 

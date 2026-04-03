@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from ...enums import Provider
 from ...providers.base import ProviderFamilyCapabilities, get_capabilities
-from ..helpers import get_available_cameras, supports_genai
+from ..helpers import camera_supports_genai, get_available_cameras, supports_genai
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -53,7 +53,12 @@ def build_flow_context(
     """Construct a FlowContext from current handler state."""
     provider = Provider(draft.get("provider", "apple"))
     frigate_entry_id = entry.data["frigate_entry_id"]
-    genai = supports_genai(hass, frigate_entry_id)
+    selected_cameras = draft.get("cameras", [])
+    genai = (
+        any(camera_supports_genai(hass, frigate_entry_id, cam) for cam in selected_cameras)
+        if selected_cameras
+        else supports_genai(hass, frigate_entry_id)
+    )
     return FlowContext(
         provider=provider,
         capabilities=get_capabilities(provider),

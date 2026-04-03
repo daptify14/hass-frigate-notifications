@@ -21,6 +21,7 @@
       "camera_not_found": "Selected camera not found in Frigate.",
       "profile_name_duplicate": "A profile with this name and camera selection already exists.",
       "notify_target_required": "Either a device or a notify service is required.",
+      "notify_target_exclusive": "Select either a device or a notify service, not both.",
       "notify_service_required": "A notify service is required for this provider.",
       "tv_notify_service_invalid": "Android TV profiles cannot use mobile_app services.",
       "guard_entity_required": "A guard entity is required when mode is Custom.",
@@ -314,7 +315,7 @@
           }
         },
         "content": {
-          "title": "Content",
+          "title": "Content & templates",
           "description": "Configure message templates, subtitles, and emoji for each notification phase on {camera_name}. Dropdown values are template IDs — see the [template reference]({templates_url}) for what each ID renders to. You can also type custom Jinja2 directly.",
           "data": {
             "title_template": "Title template"
@@ -383,7 +384,7 @@
           }
         },
         "media_actions": {
-          "title": "Media & Actions",
+          "title": "Media & actions",
           "description": "Configure attachments, video, and action buttons for each notification phase on {camera_name}.",
           "sections": {
             "initial_media": {
@@ -478,7 +479,7 @@
           }
         },
         "delivery": {
-          "title": "Delivery",
+          "title": "Delivery & timing",
           "description": "Configure sound, volume, timing, and platform-specific delivery for each notification phase on {camera_name}.",
           "sections": {
             "initial_delivery": {

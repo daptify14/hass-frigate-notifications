@@ -119,7 +119,6 @@ def build_filtering_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schem
                         vol.Optional("time_filter_mode"): SelectSelector(
                             SelectSelectorConfig(
                                 options=[
-                                    TimeFilterMode.DISABLED,
                                     TimeFilterMode.ONLY_DURING,
                                     TimeFilterMode.NOT_DURING,
                                 ],
