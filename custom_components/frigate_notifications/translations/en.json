@@ -652,6 +652,11 @@
     }
   },
   "entity": {
+    "button": {
+      "reset_stats": {
+        "name": "Reset stats"
+      }
+    },
     "datetime": {
       "silenced_until": {
         "name": "Silenced until"
