@@ -73,15 +73,15 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConfigEntry) -> bool:
     """Set up Notifications for Frigate from a config entry."""
-    sync_broken_camera_issues(hass, entry)
-    sync_stale_zone_issues(hass, entry)
-
     frigate_entry_id = entry.data["frigate_entry_id"]
     try:
         frigate_config = get_frigate_config(hass, frigate_entry_id)
     except KeyError as err:
         msg = f"Frigate entry {frigate_entry_id} not ready"
         raise ConfigEntryNotReady(msg) from err
+
+    sync_broken_camera_issues(hass, entry)
+    sync_stale_zone_issues(hass, entry)
 
     # Before update listener to avoid reload loop.
     _ensure_integration_subentry(hass, entry)
