@@ -14,7 +14,14 @@ if TYPE_CHECKING:
 
     from .data import FrigateNotificationsConfigEntry
 
-REDACT_KEYS = {"base_url", "name", "notify_target", "notify_service", "notify_device"}
+REDACT_KEYS = {
+    "base_url",
+    "frigate_url",
+    "name",
+    "notify_target",
+    "notify_service",
+    "notify_device",
+}
 
 
 async def async_get_config_entry_diagnostics(
