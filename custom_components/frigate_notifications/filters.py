@@ -10,10 +10,9 @@ import time
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from homeassistant.const import STATE_HOME, STATE_OFF
-from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import ENABLED_SWITCHES_KEY, SILENCE_DATETIMES_KEY
 from .enums import Lifecycle, RecognitionMode, Severity, TimeFilterMode, ZoneMatchMode
 
 if TYPE_CHECKING:
@@ -242,12 +241,11 @@ class SilenceFilter:
 
     def check(self, ctx: FilterContext) -> FilterResult:
         """Evaluate the filter."""
-        ent_reg = er.async_get(ctx.hass)
-        unique_id = f"{ctx.profile.entry_id}_{ctx.profile.profile_id}_silenced_until"
-        entity_id = ent_reg.async_get_entity_id("datetime", DOMAIN, unique_id)
-        if entity_id is None:
+        silence_map = ctx.hass.data.get(SILENCE_DATETIMES_KEY, {})
+        entity = silence_map.get(ctx.profile.profile_id)
+        if entity is None:
             return _PASS
-        state = ctx.hass.states.get(entity_id)
+        state = ctx.hass.states.get(entity.entity_id)
         if state is None or state.state in ("unknown", "unavailable"):
             return _PASS
         try:
@@ -264,14 +262,13 @@ class SwitchEnabledFilter:
 
     def check(self, ctx: FilterContext) -> FilterResult:
         """Evaluate the filter."""
-        ent_reg = er.async_get(ctx.hass)
-        unique_id = f"{ctx.profile.entry_id}_{ctx.profile.profile_id}_enabled"
-        entity_id = ent_reg.async_get_entity_id("switch", DOMAIN, unique_id)
-        if entity_id is None:
+        switch_map = ctx.hass.data.get(ENABLED_SWITCHES_KEY, {})
+        entity = switch_map.get(ctx.profile.profile_id)
+        if entity is None:
             return _PASS
-        state = ctx.hass.states.get(entity_id)
+        state = ctx.hass.states.get(entity.entity_id)
         if state is not None and state.state == STATE_OFF:
-            return _reject("switch_enabled", f"switch {entity_id} is off")
+            return _reject("switch_enabled", f"switch {entity.entity_id} is off")
         return _PASS
 
 

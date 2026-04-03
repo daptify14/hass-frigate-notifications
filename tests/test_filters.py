@@ -6,10 +6,12 @@ from unittest.mock import patch
 
 from homeassistant.const import STATE_HOME, STATE_NOT_HOME, STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
 import pytest
 
-from custom_components.frigate_notifications.const import DOMAIN
+from custom_components.frigate_notifications.const import (
+    ENABLED_SWITCHES_KEY,
+    SILENCE_DATETIMES_KEY,
+)
 from custom_components.frigate_notifications.enums import (
     Lifecycle,
     RecognitionMode,
@@ -437,8 +439,21 @@ class TestPresenceFilter:
         assert result.filter_name == "presence"
 
 
+class _FakeEntity:
+    """Minimal stand-in for an entity, providing entity_id."""
+
+    def __init__(self, entity_id: str) -> None:
+        self.entity_id = entity_id
+
+
 class TestSilenceFilter:
     def test_no_entity_registered_passes(self, hass: HomeAssistant) -> None:
+        ctx = make_filter_context(hass=hass)
+        assert SilenceFilter().check(ctx).passed is True
+
+    def test_filter_passes_when_entity_not_in_map(self, hass: HomeAssistant) -> None:
+        """Filter passes when hass.data map exists but has no entry for this profile."""
+        hass.data[SILENCE_DATETIMES_KEY] = {}
         ctx = make_filter_context(hass=hass)
         assert SilenceFilter().check(ctx).passed is True
 
@@ -455,14 +470,9 @@ class TestSilenceFilter:
     def test_silence_entity_state(
         self, hass: HomeAssistant, state_value: str, expected: bool
     ) -> None:
-        ent_reg = er.async_get(hass)
-        ent_reg.async_get_or_create(
-            "datetime",
-            DOMAIN,
-            "test_entry_id_test_profile_id_silenced_until",
-            suggested_object_id="test_silenced_until",
-        )
-        hass.states.async_set("datetime.test_silenced_until", state_value)
+        entity_id = "datetime.test_silenced_until"
+        hass.data.setdefault(SILENCE_DATETIMES_KEY, {})["test_profile_id"] = _FakeEntity(entity_id)
+        hass.states.async_set(entity_id, state_value)
         ctx = make_filter_context(hass=hass)
         result = SilenceFilter().check(ctx)
         assert result.passed is expected
@@ -475,27 +485,23 @@ class TestSwitchEnabledFilter:
         ctx = make_filter_context(hass=hass)
         assert SwitchEnabledFilter().check(ctx).passed is True
 
+    def test_filter_passes_when_entity_not_in_map(self, hass: HomeAssistant) -> None:
+        """Filter passes when hass.data map exists but has no entry for this profile."""
+        hass.data[ENABLED_SWITCHES_KEY] = {}
+        ctx = make_filter_context(hass=hass)
+        assert SwitchEnabledFilter().check(ctx).passed is True
+
     def test_switch_on_passes(self, hass: HomeAssistant) -> None:
-        ent_reg = er.async_get(hass)
-        ent_reg.async_get_or_create(
-            "switch",
-            DOMAIN,
-            "test_entry_id_test_profile_id_enabled",
-            suggested_object_id="test_enabled",
-        )
-        hass.states.async_set("switch.test_enabled", STATE_ON)
+        entity_id = "switch.test_enabled"
+        hass.data.setdefault(ENABLED_SWITCHES_KEY, {})["test_profile_id"] = _FakeEntity(entity_id)
+        hass.states.async_set(entity_id, STATE_ON)
         ctx = make_filter_context(hass=hass)
         assert SwitchEnabledFilter().check(ctx).passed is True
 
     def test_switch_off_rejects(self, hass: HomeAssistant) -> None:
-        ent_reg = er.async_get(hass)
-        ent_reg.async_get_or_create(
-            "switch",
-            DOMAIN,
-            "test_entry_id_test_profile_id_enabled",
-            suggested_object_id="test_enabled",
-        )
-        hass.states.async_set("switch.test_enabled", STATE_OFF)
+        entity_id = "switch.test_enabled"
+        hass.data.setdefault(ENABLED_SWITCHES_KEY, {})["test_profile_id"] = _FakeEntity(entity_id)
+        hass.states.async_set(entity_id, STATE_OFF)
         ctx = make_filter_context(hass=hass)
         result = SwitchEnabledFilter().check(ctx)
         assert result.passed is False
