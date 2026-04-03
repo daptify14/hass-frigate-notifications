@@ -101,6 +101,7 @@ class FrigateNotificationsReviewDebugSensor(FrigateNotificationsIntegrationEntit
 class FrigateNotificationsStatsSensor(FrigateNotificationsIntegrationEntity, RestoreSensor):
     """Sensor tracking total notifications sent, with per-camera/profile breakdown."""
 
+    _attr_native_unit_of_measurement = "notifications"
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_translation_key = "stats"
 
