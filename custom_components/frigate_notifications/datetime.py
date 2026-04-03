@@ -72,7 +72,6 @@ class FrigateNotificationsSilenceDateTime(
         """Initialize silence datetime entity."""
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_silenced_until"
-        self._attr_name = "Silenced until"
         self._silence_duration = silence_duration
         self._cancel_timer: CALLBACK_TYPE | None = None
 

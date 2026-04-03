@@ -19,6 +19,7 @@ from custom_components.frigate_notifications.const import (
     SIGNAL_DISPATCH_PROBLEM,
     SIGNAL_LAST_SENT,
     SIGNAL_STATS,
+    STATS_SENSOR_KEY,
 )
 
 from .conftest import FRIGATE_DOMAIN, FRIGATE_ENTRY_ID, get_profile_subentry_id, setup_integration
@@ -238,6 +239,53 @@ class TestStatsSensor:
         state = hass.states.get(ent_entry.entity_id)
         assert state is not None
         assert state.state == "0"
+
+    async def test_reset_stats_button_zeroes_counters(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Reset stats button zeros the counter and breakdowns."""
+        await setup_integration(hass, mock_config_entry)
+        stats_unique_id = f"{mock_config_entry.entry_id}_stats"
+
+        ent_reg = er.async_get(hass)
+        stats_entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, stats_unique_id)
+        assert stats_entity_id is not None
+
+        # Increment a few times.
+        signal = f"{SIGNAL_STATS}_{mock_config_entry.entry_id}"
+        async_dispatcher_send(hass, signal, "driveway", "Test Profile")
+        async_dispatcher_send(hass, signal, "backyard", "Profile B")
+        await hass.async_block_till_done()
+
+        state = hass.states.get(stats_entity_id)
+        assert state is not None
+        assert state.state == "2"
+
+        # Press the reset button.
+        button_unique_id = f"{mock_config_entry.entry_id}_reset_stats"
+        button_entity_id = ent_reg.async_get_entity_id("button", DOMAIN, button_unique_id)
+        assert button_entity_id is not None
+
+        await hass.services.async_call("button", "press", {"entity_id": button_entity_id})
+        await hass.async_block_till_done()
+
+        state = hass.states.get(stats_entity_id)
+        assert state is not None
+        assert state.state == "0"
+        assert state.attributes["by_camera"] == {}
+        assert state.attributes["by_profile"] == {}
+
+    async def test_stats_sensor_cleanup_on_unload(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Stats sensor is removed from hass.data on entry unload."""
+        await setup_integration(hass, mock_config_entry)
+        assert mock_config_entry.entry_id in hass.data.get(STATS_SENSOR_KEY, {})
+
+        await hass.config_entries.async_unload(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+        assert mock_config_entry.entry_id not in hass.data.get(STATS_SENSOR_KEY, {})
 
 
 class TestLastSentSensor:

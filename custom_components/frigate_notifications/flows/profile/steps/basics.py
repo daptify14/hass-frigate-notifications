@@ -85,8 +85,9 @@ def build_basics_schema(
                 DeviceSelectorConfig(integration="mobile_app")
             )
         schema_dict[vol.Optional("notify_service")] = notify_service_selector(ctx.hass)
-        schema_dict[vol.Optional("tag", default=DEFAULT_TAG)] = TextSelector()
-        schema_dict[vol.Optional("group", default=DEFAULT_GROUP)] = TextSelector()
+        if provider != Provider.ANDROID_TV:
+            schema_dict[vol.Optional("tag", default=DEFAULT_TAG)] = TextSelector()
+            schema_dict[vol.Optional("group", default=DEFAULT_GROUP)] = TextSelector()
 
     return vol.Schema(schema_dict)
 
@@ -156,5 +157,9 @@ def apply_basics_input(
         else:
             draft["notify_service"] = user_input["notify_service"].strip()
             draft.pop("notify_device", None)
-        draft["tag"] = (user_input.get("tag") or DEFAULT_TAG).strip() or DEFAULT_TAG
-        draft["group"] = (user_input.get("group") or DEFAULT_GROUP).strip() or DEFAULT_GROUP
+        if draft.get("provider") != Provider.ANDROID_TV:
+            draft["tag"] = (user_input.get("tag") or DEFAULT_TAG).strip() or DEFAULT_TAG
+            draft["group"] = (user_input.get("group") or DEFAULT_GROUP).strip() or DEFAULT_GROUP
+        else:
+            draft.pop("tag", None)
+            draft.pop("group", None)

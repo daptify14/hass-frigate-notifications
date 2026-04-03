@@ -5,6 +5,10 @@ from unittest.mock import MagicMock
 
 from custom_components.frigate_notifications.enums import Provider
 from custom_components.frigate_notifications.flows.profile.context import FlowContext
+from custom_components.frigate_notifications.flows.profile.steps.basics import (
+    apply_basics_input,
+    build_basics_schema,
+)
 from custom_components.frigate_notifications.flows.profile.steps.delivery import (
     _submit_rate_limiting,
     apply_delivery_input,
@@ -166,3 +170,42 @@ class TestDeliverySuggested:
         draft: dict[str, Any] = {"alert_once": True}
         suggested = build_delivery_suggested(draft, ctx)
         assert suggested["rate_limiting"]["alert_once"] is True
+
+
+class TestBasicsTagGroupByProvider:
+    """Test that tag/group fields are provider-dependent in basics step."""
+
+    def test_basics_android_tv_excludes_tag_and_group(self) -> None:
+        """Android TV hides tag/group from schema and pops stale values on apply."""
+        ctx = _make_ctx(Provider.ANDROID_TV)
+        draft: dict[str, Any] = {
+            "provider": "android_tv",
+            "tag": "old_tag",
+            "group": "old_group",
+        }
+        schema = build_basics_schema(draft, ctx, pass_number=2)
+        keys = {str(k) for k in schema.schema}
+        assert "tag" not in keys
+        assert "group" not in keys
+
+        apply_basics_input(draft, {"notify_service": "notify.living_room_tv"}, ctx, pass_number=2)
+        assert "tag" not in draft
+        assert "group" not in draft
+
+    def test_basics_mobile_provider_includes_tag_and_group(self) -> None:
+        """Mobile provider shows tag/group in schema and stores values on apply."""
+        ctx = _make_ctx(Provider.APPLE)
+        draft: dict[str, Any] = {"provider": "apple"}
+        schema = build_basics_schema(draft, ctx, pass_number=2)
+        keys = {str(k) for k in schema.schema}
+        assert "tag" in keys
+        assert "group" in keys
+
+        apply_basics_input(
+            draft,
+            {"notify_service": "notify.my_iphone", "tag": "custom", "group": "cam"},
+            ctx,
+            pass_number=2,
+        )
+        assert draft["tag"] == "custom"
+        assert draft["group"] == "cam"

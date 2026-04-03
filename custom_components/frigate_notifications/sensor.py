@@ -15,6 +15,7 @@ from .const import (
     DOMAIN,
     SIGNAL_LAST_SENT,
     SIGNAL_STATS,
+    STATS_SENSOR_KEY,
 )
 from .data import get_integration_subentry_id, iter_profile_subentries, profile_common_fields
 from .entity_base import (
@@ -101,6 +102,7 @@ class FrigateNotificationsReviewDebugSensor(FrigateNotificationsIntegrationEntit
 class FrigateNotificationsStatsSensor(FrigateNotificationsIntegrationEntity, RestoreSensor):
     """Sensor tracking total notifications sent, with per-camera/profile breakdown."""
 
+    _attr_native_unit_of_measurement = "notifications"
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_translation_key = "stats"
 
@@ -131,8 +133,22 @@ class FrigateNotificationsStatsSensor(FrigateNotificationsIntegrationEntity, Res
             self._by_camera = dict(attrs.get("by_camera", {}))
             self._by_profile = dict(attrs.get("by_profile", {}))
 
+        self.hass.data.setdefault(STATS_SENSOR_KEY, {})[self._entry.entry_id] = self
+
         signal = f"{SIGNAL_STATS}_{self._entry.entry_id}"
         self.async_on_remove(async_dispatcher_connect(self.hass, signal, self._on_stats_signal))
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Remove hass.data reference."""
+        self.hass.data.get(STATS_SENSOR_KEY, {}).pop(self._entry.entry_id, None)
+
+    @callback
+    def reset(self) -> None:
+        """Zero all counters."""
+        self._attr_native_value = 0
+        self._by_camera = {}
+        self._by_profile = {}
+        self.async_write_ha_state()
 
     @callback
     def _on_stats_signal(self, camera: str, profile_name: str) -> None:
