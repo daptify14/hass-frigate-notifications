@@ -11,8 +11,11 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigSubentry
 from homeassistant.const import Platform
+from homeassistant.core import callback
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.event import async_track_time_interval
 
 from .actions import setup_action_listener
@@ -20,6 +23,7 @@ from .const import (
     CLEANUP_INTERVAL,
     DEBUG_SENSOR_KEY,
     DOMAIN,
+    FRIGATE_DOMAIN,
     SILENCE_DATETIMES_KEY,
     SUBENTRY_TYPE_INTEGRATION,
     SUBENTRY_TYPE_PROFILE,
@@ -44,7 +48,7 @@ from .services import register_services
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
-    from homeassistant.core import HomeAssistant
+    from homeassistant.core import Event, HomeAssistant
     from homeassistant.helpers.device_registry import DeviceEntry
 
     from .data import FrigateNotificationsConfigEntry
@@ -53,6 +57,8 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+DEBOUNCE_SECONDS = 2.0
 
 PLATFORMS = [
     Platform.DATETIME,
@@ -147,6 +153,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
     unsub_cleanup = async_track_time_interval(hass, _cleanup, timedelta(seconds=CLEANUP_INTERVAL))
     entry.async_on_unload(unsub_cleanup)
 
+    _setup_frigate_device_listener(hass, entry, frigate_entry_id)
+
     _LOGGER.debug(
         "Setup complete for %s: %d profiles, topic=%s",
         entry.title,
@@ -193,6 +201,57 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload the integration when options change."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+def _setup_frigate_device_listener(
+    hass: HomeAssistant, entry: ConfigEntry, frigate_entry_id: str
+) -> None:
+    """Subscribe to device-registry changes and re-sync repairs when Frigate topology changes."""
+
+    async def _async_sync_repairs() -> None:
+        try:
+            get_frigate_config(hass, frigate_entry_id)
+        except KeyError:
+            return
+        sync_broken_camera_issues(hass, entry)
+        sync_stale_zone_issues(hass, entry)
+
+    debouncer = Debouncer(
+        hass,
+        _LOGGER,
+        cooldown=DEBOUNCE_SECONDS,
+        immediate=False,
+        function=_async_sync_repairs,
+    )
+
+    @callback
+    def _frigate_device_filter(event_data: dr.EventDeviceRegistryUpdatedData) -> bool:
+        return event_data["action"] in ("create", "remove")
+
+    @callback
+    def _on_device_registry_updated(event: Event[dr.EventDeviceRegistryUpdatedData]) -> None:
+        data = event.data
+        if data["action"] == "remove":
+            identifiers: Any = data["device"]["identifiers"]
+        else:
+            device = dr.async_get(hass).async_get(data["device_id"])
+            if device is None:
+                return
+            identifiers = device.identifiers
+
+        if not any(domain == FRIGATE_DOMAIN for domain, _ident in identifiers):
+            return
+
+        debouncer.async_schedule_call()
+
+    entry.async_on_unload(
+        hass.bus.async_listen(
+            dr.EVENT_DEVICE_REGISTRY_UPDATED,
+            _on_device_registry_updated,
+            event_filter=_frigate_device_filter,
+        )
+    )
+    entry.async_on_unload(debouncer.async_shutdown)
 
 
 def _ensure_integration_subentry(hass: HomeAssistant, entry: ConfigEntry) -> None:

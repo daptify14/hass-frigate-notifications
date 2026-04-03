@@ -1,12 +1,17 @@
 """Tests for integration lifecycle (__init__.py)."""
 
+from datetime import timedelta
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntryState
+from homeassistant.config_entries import ConfigEntryState, ConfigSubentryData
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, issue_registry as ir
+from homeassistant.util import dt as dt_util
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_fire_time_changed,
+)
 
 from custom_components.frigate_notifications import async_remove_config_entry_device
 from custom_components.frigate_notifications.const import (
@@ -345,8 +350,8 @@ class TestAsyncRemoveEntry:
             DOMAIN,
             f"broken_camera_{mock_config_entry.entry_id}_test",
             is_fixable=False,
-            severity=ir.IssueSeverity.WARNING,
-            translation_key="broken_camera",
+            severity=ir.IssueSeverity.ERROR,
+            translation_key="broken_camera_binding",
         )
         pre_issues = [iid for iid in issue_registry.issues if iid[0] == DOMAIN]
         assert len(pre_issues) > 0
@@ -376,3 +381,204 @@ class TestAsyncUpdateListener:
 
         # After reload, entry should still be loaded.
         assert mock_config_entry.state is ConfigEntryState.LOADED
+
+
+class TestFrigateDeviceRegistryListener:
+    """Tests for the Frigate device-registry change listener."""
+
+    async def test_frigate_device_removal_triggers_repair_sync(
+        self,
+        hass: HomeAssistant,
+        mock_frigate_data: dict[str, Any],
+        device_registry: dr.DeviceRegistry,
+    ) -> None:
+        """Removing a Frigate camera device creates broken-camera repair after debounce."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test",
+            data={"frigate_entry_id": FRIGATE_ENTRY_ID},
+            subentries_data=[
+                ConfigSubentryData(
+                    data={
+                        "name": "Driveway",
+                        "cameras": ["driveway"],
+                        "provider": "apple",
+                        "notify_service": "notify.mobile_app_test_phone",
+                    },
+                    subentry_type="profile",
+                    title="Driveway",
+                    unique_id="drv_uid",
+                ),
+                ConfigSubentryData(
+                    data={}, subentry_type="integration", title="Integration", unique_id="int_uid"
+                ),
+            ],
+        )
+        await setup_integration(hass, entry)
+
+        # No broken camera issues initially.
+        issue_reg = ir.async_get(hass)
+        assert not [
+            iid for iid in issue_reg.issues if iid[0] == DOMAIN and "broken_camera" in iid[1]
+        ]
+
+        # Remove driveway from Frigate config.
+        del mock_frigate_data[FRIGATE_ENTRY_ID]["config"]["cameras"]["driveway"]
+
+        # Fire a Frigate device removal event directly on the bus.
+        hass.bus.async_fire(
+            "device_registry_updated",
+            {
+                "action": "remove",
+                "device_id": "fake_id",
+                "device": {
+                    "identifiers": [(FRIGATE_DOMAIN, f"{FRIGATE_ENTRY_ID}:driveway")],
+                },
+            },
+        )
+        await hass.async_block_till_done()
+
+        # Advance time past debounce cooldown, then let the task execute.
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=3))
+        await hass.async_block_till_done()
+
+        broken = [iid for iid in issue_reg.issues if iid[0] == DOMAIN and "broken_camera" in iid[1]]
+        assert len(broken) == 1
+
+    async def test_frigate_device_creation_resolves_repair(
+        self,
+        hass: HomeAssistant,
+        mock_frigate_data: dict[str, Any],
+        device_registry: dr.DeviceRegistry,
+    ) -> None:
+        """Creating a Frigate camera device resolves a broken-camera repair."""
+        # Profile references a missing camera — issue created at setup.
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test",
+            data={"frigate_entry_id": FRIGATE_ENTRY_ID},
+            subentries_data=[
+                ConfigSubentryData(
+                    data={
+                        "name": "Porch",
+                        "cameras": ["porch_cam"],
+                        "provider": "apple",
+                        "notify_service": "notify.mobile_app_test_phone",
+                    },
+                    subentry_type="profile",
+                    title="Porch",
+                    unique_id="porch_uid",
+                ),
+                ConfigSubentryData(
+                    data={}, subentry_type="integration", title="Integration", unique_id="int_uid"
+                ),
+            ],
+        )
+        await setup_integration(hass, entry)
+
+        issue_reg = ir.async_get(hass)
+        assert [iid for iid in issue_reg.issues if iid[0] == DOMAIN and "broken_camera" in iid[1]]
+
+        # Camera appears in Frigate config.
+        mock_frigate_data[FRIGATE_ENTRY_ID]["config"]["cameras"]["porch_cam"] = {
+            "zones": {},
+            "objects": {"track": ["person"]},
+            "review": {"genai": {"enabled": False}},
+        }
+
+        # Fire a Frigate device creation event.
+        hass.bus.async_fire(
+            "device_registry_updated",
+            {"action": "create", "device_id": "fake_porch_id"},
+        )
+        await hass.async_block_till_done()
+
+        # For "create" events, our handler looks up the device from the registry.
+        # Register a Frigate device so the lookup succeeds.
+        device_registry.async_get_or_create(
+            config_entry_id=FRIGATE_ENTRY_ID,
+            identifiers={(FRIGATE_DOMAIN, f"{FRIGATE_ENTRY_ID}:porch_cam")},
+            name="Porch Cam",
+        )
+
+        # The create from async_get_or_create also fires an event — wait + advance.
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=3))
+        await hass.async_block_till_done()
+
+        broken = [iid for iid in issue_reg.issues if iid[0] == DOMAIN and "broken_camera" in iid[1]]
+        assert not broken
+
+    async def test_unrelated_device_event_ignored(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry: MockConfigEntry,
+    ) -> None:
+        """Device events for non-Frigate devices do not trigger repair sync."""
+        await setup_integration(hass, mock_config_entry)
+
+        issue_reg = ir.async_get(hass)
+        issues_before = len(list(issue_reg.issues))
+
+        # Fire a create event for a non-Frigate device (filtered by event_filter).
+        hass.bus.async_fire(
+            "device_registry_updated",
+            {"action": "create", "device_id": "unrelated_device"},
+        )
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=3))
+        await hass.async_block_till_done()
+
+        assert len(list(issue_reg.issues)) == issues_before
+
+    async def test_no_false_repairs_when_frigate_unavailable(
+        self,
+        hass: HomeAssistant,
+        mock_frigate_data: dict[str, Any],
+    ) -> None:
+        """Events while Frigate config is unavailable do not create false repairs."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test",
+            data={"frigate_entry_id": FRIGATE_ENTRY_ID},
+            subentries_data=[
+                ConfigSubentryData(
+                    data={
+                        "name": "Driveway",
+                        "cameras": ["driveway"],
+                        "provider": "apple",
+                        "notify_service": "notify.mobile_app_test_phone",
+                    },
+                    subentry_type="profile",
+                    title="Driveway",
+                    unique_id="drv_uid",
+                ),
+                ConfigSubentryData(
+                    data={}, subentry_type="integration", title="Integration", unique_id="int_uid"
+                ),
+            ],
+        )
+        await setup_integration(hass, entry)
+
+        # Simulate Frigate being temporarily unavailable.
+        saved = mock_frigate_data.pop(FRIGATE_ENTRY_ID)
+
+        hass.bus.async_fire(
+            "device_registry_updated",
+            {
+                "action": "remove",
+                "device_id": "fake_id",
+                "device": {
+                    "identifiers": [(FRIGATE_DOMAIN, f"{FRIGATE_ENTRY_ID}:driveway")],
+                },
+            },
+        )
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=3))
+        await hass.async_block_till_done()
+
+        issue_reg = ir.async_get(hass)
+        broken = [iid for iid in issue_reg.issues if iid[0] == DOMAIN and "broken_camera" in iid[1]]
+        assert not broken
+
+        mock_frigate_data[FRIGATE_ENTRY_ID] = saved
