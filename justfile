@@ -30,6 +30,11 @@ test-compat *ARGS:
     uv python install 3.13
     uv run --project tests/env/compat --python 3.13 pytest {{ ARGS }}
 
+# Generate HTML coverage report and open in browser
+coverage:
+    uv run pytest --cov --cov-report=html -q
+    open htmlcov/index.html
+
 # Full quality gate: lint + format check + typecheck + tests (95% coverage)
 check: lint && typecheck
     uv run ruff format --check .
