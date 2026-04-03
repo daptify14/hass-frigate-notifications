@@ -23,7 +23,7 @@ class ReviewProcessor:
         on_review_update: Callable[[Review, str], None] | None = None,
         on_review_end: Callable[[Review], None] | None = None,
         on_genai: Callable[[Review], None] | None = None,
-        on_review_complete: Callable[[str], None] | None = None,
+        on_review_retired: Callable[[str], None] | None = None,
         on_review_message: Callable[[str, dict[str, Any]], None] | None = None,
     ) -> None:
         """Initialize processor with lifecycle callbacks."""
@@ -34,7 +34,7 @@ class ReviewProcessor:
         self._on_review_update = on_review_update
         self._on_review_end = on_review_end
         self._on_genai = on_genai
-        self._on_review_complete = on_review_complete
+        self._on_review_retired = on_review_retired
         self._on_review_message = on_review_message
 
     @property
@@ -195,9 +195,6 @@ class ReviewProcessor:
         if self._on_genai:
             self._on_genai(review)
 
-        if self._on_review_complete:
-            self._on_review_complete(review_id)
-
     def cleanup_stale(self) -> None:
         """Remove stale reviews and their associated locks."""
         now = time.time()
@@ -210,7 +207,7 @@ class ReviewProcessor:
             _LOGGER.debug("Cleaning up stale review %s", rid[:25])
             del self._active_reviews[rid]
             self._review_locks.pop(rid, None)
-            if self._on_review_complete:
-                self._on_review_complete(rid)
+            if self._on_review_retired:
+                self._on_review_retired(rid)
         if stale_reviews:
             _LOGGER.debug("Cleaned up %d stale review(s)", len(stale_reviews))

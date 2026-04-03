@@ -89,6 +89,8 @@ class TestDispatcherNew:
         """When filter chain rejects, no notification is sent."""
 
         class RejectAll:
+            runtime_recheck = False
+
             def check(self, ctx):
                 return FilterResult(passed=False, filter_name="test", reason="test")
 
@@ -229,6 +231,71 @@ class TestDispatcherGenAI:
         title = notify_calls[0].data["title"]
         assert title.startswith("!! ")
         assert not title.startswith("!!  ")
+
+
+class TestDispatcherRetirement:
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_genai_dispatch_retires_profile_review_state(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Full lifecycle (new -> end -> genai) retires state after GenAI dispatch."""
+        profile = make_profile(phases={Phase.GENAI: DEFAULT_PHASE_GENAI})
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review(genai=make_genai())
+
+        await dispatcher.on_review_new(review)
+        await hass.async_block_till_done()
+        await dispatcher.on_review_end(review)
+        await hass.async_block_till_done()
+
+        key = (profile.profile_id, review.review_id)
+        assert key in dispatcher._review_states
+
+        await dispatcher.on_genai(review)
+        await hass.async_block_till_done()
+
+        assert key not in dispatcher._review_states
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_end_dispatch_retires_when_no_genai_configured(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Profile with GenAI disabled retires state after end dispatch."""
+        disabled_genai = PhaseConfig(delivery=PhaseDelivery(enabled=False))
+        profile = make_profile(phases={Phase.GENAI: disabled_genai})
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        await dispatcher.on_review_new(review)
+        await hass.async_block_till_done()
+
+        key = (profile.profile_id, review.review_id)
+        assert key in dispatcher._review_states
+
+        await dispatcher.on_review_end(review)
+        await hass.async_block_till_done()
+
+        assert key not in dispatcher._review_states
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_end_dispatch_does_not_retire_when_genai_configured(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Profile with GenAI enabled keeps state after end dispatch."""
+        profile = make_profile(phases={Phase.GENAI: DEFAULT_PHASE_GENAI})
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        await dispatcher.on_review_new(review)
+        await hass.async_block_till_done()
+        await dispatcher.on_review_end(review)
+        await hass.async_block_till_done()
+
+        key = (profile.profile_id, review.review_id)
+        assert key in dispatcher._review_states
 
 
 class TestDispatcherCleanup:
@@ -393,6 +460,38 @@ class TestDispatcherFailure:
         assert len(received) == 1
         assert received[0] is not None
         assert "boom" in received[0]
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_handler_failure_skips_all_bookkeeping(self, hass: HomeAssistant) -> None:
+        """Registered service that raises skips stats, cooldown, and initial_sent."""
+        from homeassistant.exceptions import HomeAssistantError
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+        async def _raise(*args, **kwargs):
+            msg = "Push delivery failed"
+            raise HomeAssistantError(msg)
+
+        hass.services.async_register("notify", "mobile_app_test_phone", _raise)
+
+        profile = make_profile(cooldown_seconds=60)
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        stats_received: list = []
+        async_dispatcher_connect(
+            hass,
+            f"frigate_notifications_stats_{profile.entry_id}",
+            lambda *a: stats_received.append(a),
+        )
+
+        await dispatcher.on_review_new(review)
+        await hass.async_block_till_done()
+
+        assert len(stats_received) == 0
+        assert "driveway" not in dispatcher._get_profile_state(profile.profile_id).last_sent_at
+        rs = dispatcher._get_review_state(profile.profile_id, review.review_id)
+        assert rs.initial_sent is False
 
 
 class TestDispatcherCustomActions:
@@ -575,6 +674,45 @@ class TestDispatcherInitialSentFlag:
 
         rs = dispatcher._get_review_state(profile.profile_id, review.review_id)
         assert rs.initial_sent is True
+
+
+class TestDelayedRefilter:
+    async def test_silence_during_delay_suppresses_notification(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Silence activated during delay window prevents notification."""
+        import asyncio
+
+        from custom_components.frigate_notifications.const import SILENCE_DATETIMES_KEY
+
+        profile = make_profile()
+        runtime = make_runtime([profile], initial_delay=10.0)
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        blocker: asyncio.Future[None] = hass.loop.create_future()
+
+        async def _block(delay: float) -> None:
+            await blocker
+
+        with patch("asyncio.sleep", side_effect=_block):
+            await dispatcher.on_review_new(review)
+
+            # Activate silence mid-delay.
+            from datetime import UTC, datetime, timedelta
+
+            future = (datetime.now(tz=UTC) + timedelta(hours=1)).isoformat()
+            entity_id = "datetime.test_silenced_until"
+            hass.data.setdefault(SILENCE_DATETIMES_KEY, {})[profile.profile_id] = type(
+                "E", (), {"entity_id": entity_id}
+            )()
+            hass.states.async_set(entity_id, future)
+
+            # Unblock the sleep.
+            blocker.set_result(None)
+            await hass.async_block_till_done()
+
+        assert len(notify_calls) == 0
 
 
 class TestDispatcherPendingTaskCancel:

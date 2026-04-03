@@ -23,6 +23,7 @@ from .const import (
     CLEANUP_INTERVAL,
     DEBUG_SENSOR_KEY,
     DOMAIN,
+    ENABLED_SWITCHES_KEY,
     FRIGATE_DOMAIN,
     SILENCE_DATETIMES_KEY,
     SUBENTRY_TYPE_INTEGRATION,
@@ -117,7 +118,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
         on_review_update=_on_review_update,
         on_review_end=_fire(dispatcher.on_review_end),
         on_genai=_fire(dispatcher.on_genai),
-        on_review_complete=dispatcher.cleanup_review,
+        on_review_retired=dispatcher.cleanup_review,
         on_review_message=_on_review_message,
     )
 
@@ -170,9 +171,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     domain_data.pop(f"{DEBUG_SENSOR_KEY}_{entry.entry_id}", None)
 
     silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
+    switch_map = hass.data.get(ENABLED_SWITCHES_KEY, {})
     for subentry in entry.subentries.values():
         if subentry.subentry_type == SUBENTRY_TYPE_PROFILE:
             silence_map.pop(subentry.subentry_id, None)
+            switch_map.pop(subentry.subentry_id, None)
 
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
