@@ -16,8 +16,7 @@ jobs:
         with:
           enable-cache: true
           cache-suffix: "py3.14"
-      - run: uv sync --no-install-project --prerelease=allow --no-dev --group test
-      - run: uv pip install --prerelease=allow "homeassistant==2026.3.*"
+      - run: uv sync --no-install-project
       - run: uv run pytest --cov --cov-report=xml --cov-fail-under=95
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
