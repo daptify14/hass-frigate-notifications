@@ -307,7 +307,8 @@ def resolve_presence(profile_data: dict, global_opts: Mapping) -> tuple[str, ...
     mode = PresenceMode(profile_data.get("presence_mode", PresenceMode.INHERIT))
     if mode == PresenceMode.DISABLED:
         return ()
-    return tuple(global_opts.get("presence_entities", []))
+    # inherit
+    return tuple(global_opts.get("shared_presence_entities", []))
 
 
 def resolve_state_filter(

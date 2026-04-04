@@ -159,7 +159,7 @@ class OptionsFlowHandler(OptionsFlow):
                 vol.Optional("presence"): section(
                     vol.Schema(
                         {
-                            vol.Optional("presence_entities"): EntitySelector(
+                            vol.Optional("shared_presence_entities"): EntitySelector(
                                 EntitySelectorConfig(
                                     domain=list(PRESENCE_ENTITY_DOMAINS), multiple=True
                                 )
@@ -211,8 +211,8 @@ class OptionsFlowHandler(OptionsFlow):
                 tf_suggested[key] = self._data[key]
         suggested["time_filter"] = tf_suggested
         pres_suggested: dict[str, Any] = {}
-        if "presence_entities" in self._data:
-            pres_suggested["presence_entities"] = self._data["presence_entities"]
+        if "shared_presence_entities" in self._data:
+            pres_suggested["shared_presence_entities"] = self._data["shared_presence_entities"]
         suggested["presence"] = pres_suggested
         sf_suggested: dict[str, Any] = {}
         for key in ("shared_state_entity", "shared_state_filter_states"):
@@ -252,10 +252,10 @@ class OptionsFlowHandler(OptionsFlow):
             else:
                 self._data.pop(key, None)
         pres = user_input.get("presence", {})
-        if pres.get("presence_entities"):
-            self._data["presence_entities"] = pres["presence_entities"]
+        if pres.get("shared_presence_entities"):
+            self._data["shared_presence_entities"] = pres["shared_presence_entities"]
         else:
-            self._data.pop("presence_entities", None)
+            self._data.pop("shared_presence_entities", None)
         sf = user_input.get("state_filter", {})
         if sf.get("shared_state_entity"):
             self._data["shared_state_entity"] = sf["shared_state_entity"]

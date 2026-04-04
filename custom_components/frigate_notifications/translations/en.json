@@ -98,10 +98,10 @@
           "presence": {
             "name": "Presence filter",
             "data": {
-              "presence_entities": "Presence entities"
+              "shared_presence_entities": "Presence entities"
             },
             "data_description": {
-              "presence_entities": "Notifications are suppressed when any selected entity is home."
+              "shared_presence_entities": "Notifications are suppressed when any selected entity is home."
             }
           },
           "state_filter": {

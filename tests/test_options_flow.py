@@ -133,7 +133,7 @@ class TestOptionsFlowMenu:
                     "shared_time_filter_start": "08:00:00",
                     "shared_time_filter_end": "22:00:00",
                 },
-                "presence": {"presence_entities": ["person.user"]},
+                "presence": {"shared_presence_entities": ["person.user"]},
                 "state_filter": {
                     "shared_state_entity": "binary_sensor.test",
                     "shared_state_filter_states": ["on"],
@@ -147,7 +147,7 @@ class TestOptionsFlowMenu:
         assert data["shared_guard_entity"] == "input_boolean.armed"
         assert data["shared_time_filter_mode"] == "notify_only_during"
         assert data["shared_time_filter_start"] == "08:00:00"
-        assert data["presence_entities"] == ["person.user"]
+        assert data["shared_presence_entities"] == ["person.user"]
         assert data["shared_state_entity"] == "binary_sensor.test"
         assert data["shared_state_filter_states"] == ["on"]
 
@@ -164,7 +164,7 @@ class TestOptionsFlowMenu:
                 "shared_time_filter_mode": "notify_only_during",
                 "shared_time_filter_start": "08:00:00",
                 "shared_time_filter_end": "22:00:00",
-                "presence_entities": ["person.user"],
+                "shared_presence_entities": ["person.user"],
                 "shared_state_entity": "binary_sensor.test",
                 "shared_state_filter_states": ["on"],
             },
@@ -184,7 +184,7 @@ class TestOptionsFlowMenu:
         assert "shared_time_filter_mode" not in data
         assert "shared_time_filter_start" not in data
         assert "shared_time_filter_end" not in data
-        assert "presence_entities" not in data
+        assert "shared_presence_entities" not in data
         assert "shared_state_entity" not in data
         assert "shared_state_filter_states" not in data
 
