@@ -159,7 +159,7 @@ class OptionsFlowHandler(OptionsFlow):
                 vol.Optional("presence"): section(
                     vol.Schema(
                         {
-                            vol.Optional("shared_presence_entities"): EntitySelector(
+                            vol.Optional("shared_presence_entities", default=[]): EntitySelector(
                                 EntitySelectorConfig(
                                     domain=list(PRESENCE_ENTITY_DOMAINS), multiple=True
                                 )
