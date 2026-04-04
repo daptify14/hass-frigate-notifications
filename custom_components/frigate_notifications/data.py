@@ -305,9 +305,12 @@ def resolve_guard_entity(profile_data: dict, global_opts: Mapping) -> tuple[Guar
 def resolve_presence(profile_data: dict, global_opts: Mapping) -> tuple[str, ...]:
     """Resolve presence entities from profile + global inheritance."""
     mode = PresenceMode(profile_data.get("presence_mode", PresenceMode.INHERIT))
+    if mode == PresenceMode.CUSTOM:
+        return tuple(profile_data.get("presence_entities", []))
     if mode == PresenceMode.DISABLED:
         return ()
-    return tuple(global_opts.get("presence_entities", []))
+    # inherit
+    return tuple(global_opts.get("shared_presence_entities", []))
 
 
 def resolve_state_filter(

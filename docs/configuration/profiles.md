@@ -97,7 +97,8 @@ Controls which Frigate reviews trigger notifications. For collapsed filter secti
 
 | Field | Type | Description | Default |
 |-------|------|-------------|---------|
-| **Presence mode** | Dropdown | Inherit shared presence filter, Ignore presence for this profile | Inherit shared presence filter |
+| **Presence mode** | Dropdown | Inherit shared presence filter, Use profile presence filter, Ignore presence for this profile | Inherit shared presence filter |
+| **Presence entities** | Entity picker (multi) | Person, device_tracker, or group entities to check (only used when mode is "Use profile") | (none) |
 
 ### State filter section (collapsed)
 

@@ -27,6 +27,7 @@
       "guard_entity_required": "A guard entity is required when mode is Custom.",
       "time_filter_start_required": "Start time is required for custom time filter.",
       "time_filter_end_required": "End time is required for custom time filter.",
+      "presence_entities_required": "Presence entities are required when mode is Custom.",
       "state_entity_required": "A state entity is required when mode is Custom.",
       "sub_label_overlap": "The same identity cannot be in both include and exclude lists."
     }
@@ -98,10 +99,10 @@
           "presence": {
             "name": "Presence filter",
             "data": {
-              "presence_entities": "Presence entities"
+              "shared_presence_entities": "Presence entities"
             },
             "data_description": {
-              "presence_entities": "Notifications are suppressed when any selected entity is home."
+              "shared_presence_entities": "Notifications are suppressed when any selected entity is home."
             }
           },
           "state_filter": {
@@ -265,7 +266,7 @@
                 "guard_entity": "Guard entity"
               },
               "data_description": {
-                "guard_entity": "Only used when mode is Custom."
+                "guard_entity": "Only used when the global setting is overridden."
               }
             },
             "time_filter_config": {
@@ -277,13 +278,17 @@
                 "time_filter_end": "End time"
               },
               "data_description": {
-                "time_filter_mode": "Only used when override is Custom."
+                "time_filter_mode": "Only used when the global setting is overridden."
               }
             },
             "presence_config": {
               "name": "Presence filter",
               "data": {
-                "presence_mode": "Presence mode"
+                "presence_mode": "Presence mode",
+                "presence_entities": "Presence entities"
+              },
+              "data_description": {
+                "presence_entities": "Only used when the global setting is overridden."
               }
             },
             "state_filter_config": {
@@ -294,8 +299,8 @@
                 "state_filter_states": "Required states"
               },
               "data_description": {
-                "state_entity": "Only used when mode is Custom.",
-                "state_filter_states": "Only used when mode is Custom."
+                "state_entity": "Only used when the global setting is overridden.",
+                "state_filter_states": "Only used when the global setting is overridden."
               }
             },
             "recognition_config": {
@@ -711,6 +716,7 @@
     "presence_mode": {
       "options": {
         "inherit": "Inherit shared presence filter",
+        "custom": "Use profile presence filter",
         "disabled": "Ignore presence for this profile"
       }
     },

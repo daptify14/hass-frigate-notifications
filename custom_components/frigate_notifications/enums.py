@@ -57,6 +57,7 @@ class PresenceMode(StrEnum):
     """Presence filter modes."""
 
     INHERIT = "inherit"
+    CUSTOM = "custom"
     DISABLED = "disabled"
 
 

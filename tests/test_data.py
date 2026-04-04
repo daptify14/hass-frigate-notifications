@@ -144,10 +144,29 @@ def test_resolve_guard_entity(
 @pytest.mark.parametrize(
     ("profile_data", "global_opts", "expected"),
     [
-        ({}, {"presence_entities": ["person.alice", "person.bob"]}, ("person.alice", "person.bob")),
-        ({"presence_mode": "disabled"}, {"presence_entities": ["person.x"]}, ()),
+        (
+            {},
+            {"shared_presence_entities": ["person.alice", "person.bob"]},
+            ("person.alice", "person.bob"),
+        ),
+        ({"presence_mode": "disabled"}, {"shared_presence_entities": ["person.x"]}, ()),
+        (
+            {"presence_mode": "custom", "presence_entities": ["person.alice"]},
+            {"shared_presence_entities": ["person.bob"]},
+            ("person.alice",),
+        ),
+        (
+            {"presence_mode": "custom", "presence_entities": []},
+            {"shared_presence_entities": ["person.bob"]},
+            (),
+        ),
     ],
-    ids=["inherit-uses-global", "disabled"],
+    ids=[
+        "inherit-uses-global",
+        "disabled",
+        "custom-uses-profile-entities",
+        "custom-empty-returns-empty",
+    ],
 )
 def test_resolve_presence(
     profile_data: dict,

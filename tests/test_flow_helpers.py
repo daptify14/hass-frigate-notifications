@@ -77,21 +77,8 @@ class TestHelpers:
 class TestFilteringValidation:
     """Test filtering step validation."""
 
-    def test_validate_guard_entity_required(self) -> None:
-        """Test guard entity required when mode is custom."""
-        from custom_components.frigate_notifications.flows.profile.steps.filtering import (
-            validate_filtering_input,
-        )
-
-        errors = validate_filtering_input(
-            {},
-            {"guard_config": {"guard_mode": "custom"}},
-            None,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-        )
-        assert errors["guard_entity"] == "guard_entity_required"
-
-    def test_validate_time_filter_start_required(self) -> None:
-        """Test time filter start required when mode is only_during."""
+    def test_validate_all_custom_missing_fields_errors(self) -> None:
+        """All filters set to custom with missing required fields produce all errors."""
         from custom_components.frigate_notifications.flows.profile.steps.filtering import (
             validate_filtering_input,
         )
@@ -99,35 +86,41 @@ class TestFilteringValidation:
         errors = validate_filtering_input(
             {},
             {
+                "guard_config": {"guard_mode": "custom"},
                 "time_filter_config": {
                     "time_filter_override": "custom",
                     "time_filter_mode": "notify_only_during",
                 },
+                "presence_config": {"presence_mode": "custom"},
+                "state_filter_config": {"state_filter_mode": "custom"},
             },
             None,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
         )
+        assert errors["guard_entity"] == "guard_entity_required"
         assert "time_filter_start" in errors
+        assert "time_filter_end" in errors
+        assert errors["presence_entities"] == "presence_entities_required"
+        assert errors["state_entity"] == "state_entity_required"
 
-    def test_validate_state_entity_required(self) -> None:
-        """Test state entity required when mode is custom."""
+    def test_validate_all_inherit_or_disabled_no_errors(self) -> None:
+        """All filters inherit or disabled produce no errors."""
         from custom_components.frigate_notifications.flows.profile.steps.filtering import (
             validate_filtering_input,
         )
 
         errors = validate_filtering_input(
             {},
-            {"state_filter_config": {"state_filter_mode": "custom"}},
+            {
+                "guard_config": {"guard_mode": "inherit"},
+                "time_filter_config": {
+                    "time_filter_override": "custom",
+                    "time_filter_mode": "disabled",
+                },
+                "presence_config": {"presence_mode": "disabled"},
+                "state_filter_config": {"state_filter_mode": "inherit"},
+            },
             None,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
         )
-        assert errors["state_entity"] == "state_entity_required"
-
-    def test_validate_no_errors_inherit(self) -> None:
-        """Test no errors when all modes are inherit."""
-        from custom_components.frigate_notifications.flows.profile.steps.filtering import (
-            validate_filtering_input,
-        )
-
-        errors = validate_filtering_input({}, {}, None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
         assert errors == {}
 
     def test_validate_sub_label_overlap(self) -> None:
@@ -306,54 +299,109 @@ class TestSubmissionHelpers:
 class TestFilteringSubmission:
     """Test apply_filtering_input standalone function."""
 
-    def test_submit_filtering_no_objects(self) -> None:
-        """Test filtering clears empty objects list."""
+    def test_apply_all_custom_stores_fields(self) -> None:
+        """All filters set to custom store their respective fields."""
         from custom_components.frigate_notifications.flows.profile.steps.filtering import (
             apply_filtering_input,
         )
 
-        data: dict[str, Any] = {"objects": ["person"]}
-        apply_filtering_input(data, {"objects": [], "severity": "any"}, None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-        assert "objects" not in data
+        data: dict[str, Any] = {}
+        apply_filtering_input(
+            data,
+            {
+                "objects": ["person", "car"],
+                "severity": "alert",
+                "guard_config": {
+                    "guard_mode": "custom",
+                    "guard_entity": "input_boolean.armed",
+                },
+                "time_filter_config": {
+                    "time_filter_override": "custom",
+                    "time_filter_mode": "notify_only_during",
+                    "time_filter_start": "08:00",
+                    "time_filter_end": "18:00",
+                },
+                "presence_config": {
+                    "presence_mode": "custom",
+                    "presence_entities": ["person.alice"],
+                },
+                "state_filter_config": {
+                    "state_filter_mode": "custom",
+                    "state_entity": "input_select.mode",
+                    "state_filter_states": ["away"],
+                },
+            },
+            None,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+        )
+        assert data["objects"] == ["person", "car"]
+        assert data["guard_mode"] == "custom"
+        assert data["guard_entity"] == "input_boolean.armed"
+        assert data["time_filter_override"] == "custom"
+        assert data["time_filter_mode"] == "notify_only_during"
+        assert data["time_filter_start"] == "08:00"
+        assert data["time_filter_end"] == "18:00"
+        assert data["presence_mode"] == "custom"
+        assert data["presence_entities"] == ["person.alice"]
+        assert data["state_filter_mode"] == "custom"
+        assert data["state_entity"] == "input_select.mode"
+        assert data["state_filter_states"] == ["away"]
 
-    def test_submit_filtering_time_filter_inherit_clears(self) -> None:
-        """Test inherit time filter clears stored fields."""
+    def test_apply_all_inherit_clears_stale_fields(self) -> None:
+        """All filters set to inherit/disabled clear stale stored fields."""
         from custom_components.frigate_notifications.flows.profile.steps.filtering import (
             apply_filtering_input,
         )
 
         data: dict[str, Any] = {
+            "objects": ["person"],
+            "guard_entity": "old",
             "time_filter_mode": "old",
             "time_filter_start": "old",
             "time_filter_end": "old",
+            "presence_entities": ["person.old"],
+            "state_entity": "old",
+            "state_filter_states": ["old"],
         }
         apply_filtering_input(
             data,
             {
+                "objects": [],
                 "severity": "alert",
+                "guard_config": {"guard_mode": "inherit"},
                 "time_filter_config": {"time_filter_override": "inherit"},
-            },
-            None,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-        )
-        assert "time_filter_mode" not in data
-        assert "time_filter_start" not in data
-
-    def test_submit_filtering_state_filter_disabled_clears(self) -> None:
-        """Test disabled state filter clears stored fields."""
-        from custom_components.frigate_notifications.flows.profile.steps.filtering import (
-            apply_filtering_input,
-        )
-
-        data: dict[str, Any] = {"state_entity": "old", "state_filter_states": ["old"]}
-        apply_filtering_input(
-            data,
-            {
-                "severity": "alert",
+                "presence_config": {"presence_mode": "inherit"},
                 "state_filter_config": {"state_filter_mode": "disabled"},
             },
             None,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
         )
+        assert "objects" not in data
+        assert "guard_entity" not in data
+        assert "time_filter_mode" not in data
+        assert "time_filter_start" not in data
+        assert "time_filter_end" not in data
+        assert data["presence_mode"] == "inherit"
+        assert "presence_entities" not in data
         assert "state_entity" not in data
+        assert "state_filter_states" not in data
+
+    def test_suggested_filtering_includes_presence_entities(self) -> None:
+        """Test suggested values include presence_entities when present in draft."""
+        from unittest.mock import MagicMock
+
+        from custom_components.frigate_notifications.flows.profile.steps.filtering import (
+            build_filtering_suggested,
+        )
+
+        ctx = MagicMock()
+        ctx.hass.data = {}
+        ctx.frigate_entry_id = "test_id"
+        draft = {
+            "cameras": ["driveway"],
+            "presence_mode": "custom",
+            "presence_entities": ["person.alice"],
+        }
+        suggested = build_filtering_suggested(draft, ctx)
+        assert suggested["presence_config"]["presence_entities"] == ["person.alice"]
 
 
 class TestSupportsGenai:
