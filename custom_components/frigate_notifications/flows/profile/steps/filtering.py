@@ -16,6 +16,7 @@ from homeassistant.helpers.selector import (
 )
 import voluptuous as vol
 
+from ....const import PRESENCE_ENTITY_DOMAINS
 from ....enums import (
     GuardMode,
     PresenceMode,
@@ -137,9 +138,18 @@ def build_filtering_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schem
                     {
                         vol.Optional("presence_mode", default=PresenceMode.INHERIT): SelectSelector(
                             SelectSelectorConfig(
-                                options=[PresenceMode.INHERIT, PresenceMode.DISABLED],
+                                options=[
+                                    PresenceMode.INHERIT,
+                                    PresenceMode.CUSTOM,
+                                    PresenceMode.DISABLED,
+                                ],
                                 translation_key="presence_mode",
                                 mode=SelectSelectorMode.DROPDOWN,
+                            )
+                        ),
+                        vol.Optional("presence_entities"): EntitySelector(
+                            EntitySelectorConfig(
+                                domain=list(PRESENCE_ENTITY_DOMAINS), multiple=True
                             )
                         ),
                     }
@@ -250,9 +260,12 @@ def build_filtering_suggested(draft: dict[str, Any], ctx: FlowContext) -> dict[s
         if key in draft:
             suggested["time_filter_config"][key] = draft[key]
 
-    suggested["presence_config"] = {
+    pres_suggested: dict[str, Any] = {
         "presence_mode": draft.get("presence_mode", PresenceMode.INHERIT),
     }
+    if "presence_entities" in draft:
+        pres_suggested["presence_entities"] = draft["presence_entities"]
+    suggested["presence_config"] = pres_suggested
 
     suggested["state_filter_config"] = {}
     for key in ("state_filter_mode", "state_entity", "state_filter_states"):
@@ -279,6 +292,7 @@ def validate_filtering_input(
     errors: dict[str, str] = {}
     guard_sec = user_input.get("guard_config", {})
     tf_sec = user_input.get("time_filter_config", {})
+    pres_sec = user_input.get("presence_config", {})
     sf_sec = user_input.get("state_filter_config", {})
 
     if guard_sec.get("guard_mode", GuardMode.INHERIT) == GuardMode.CUSTOM and not guard_sec.get(
@@ -293,6 +307,10 @@ def validate_filtering_input(
                 errors["time_filter_start"] = "time_filter_start_required"
             if not tf_sec.get("time_filter_end"):
                 errors["time_filter_end"] = "time_filter_end_required"
+    if pres_sec.get("presence_mode", PresenceMode.INHERIT) == PresenceMode.CUSTOM and not pres_sec.get(
+        "presence_entities"
+    ):
+        errors["presence_entities"] = "presence_entities_required"
     if sf_sec.get(
         "state_filter_mode", StateFilterMode.INHERIT
     ) == StateFilterMode.CUSTOM and not sf_sec.get("state_entity"):
@@ -349,7 +367,12 @@ def apply_filtering_input(
         draft.pop("time_filter_start", None)
         draft.pop("time_filter_end", None)
 
-    draft["presence_mode"] = pres_sec.get("presence_mode", PresenceMode.INHERIT)
+    pres_mode = pres_sec.get("presence_mode", PresenceMode.INHERIT)
+    draft["presence_mode"] = pres_mode
+    if pres_mode == PresenceMode.CUSTOM:
+        draft["presence_entities"] = pres_sec.get("presence_entities", [])
+    else:
+        draft.pop("presence_entities", None)
 
     sf_mode = sf_sec.get("state_filter_mode", StateFilterMode.INHERIT)
     draft["state_filter_mode"] = sf_mode

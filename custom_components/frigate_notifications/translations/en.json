@@ -27,6 +27,7 @@
       "guard_entity_required": "A guard entity is required when mode is Custom.",
       "time_filter_start_required": "Start time is required for custom time filter.",
       "time_filter_end_required": "End time is required for custom time filter.",
+      "presence_entities_required": "Presence entities are required when mode is Custom.",
       "state_entity_required": "A state entity is required when mode is Custom.",
       "sub_label_overlap": "The same identity cannot be in both include and exclude lists."
     }
@@ -283,7 +284,8 @@
             "presence_config": {
               "name": "Presence filter",
               "data": {
-                "presence_mode": "Presence mode"
+                "presence_mode": "Presence mode",
+                "presence_entities": "Presence entities"
               }
             },
             "state_filter_config": {
@@ -711,6 +713,7 @@
     "presence_mode": {
       "options": {
         "inherit": "Inherit shared presence filter",
+        "custom": "Use profile presence filter",
         "disabled": "Ignore presence for this profile"
       }
     },

@@ -130,6 +130,19 @@ class TestFilteringValidation:
         errors = validate_filtering_input({}, {}, None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
         assert errors == {}
 
+    def test_validate_presence_entities_required(self) -> None:
+        """Test presence entities required when mode is custom."""
+        from custom_components.frigate_notifications.flows.profile.steps.filtering import (
+            validate_filtering_input,
+        )
+
+        errors = validate_filtering_input(
+            {},
+            {"presence_config": {"presence_mode": "custom"}},
+            None,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+        )
+        assert errors["presence_entities"] == "presence_entities_required"
+
     def test_validate_sub_label_overlap(self) -> None:
         """Test overlap between include and exclude sub-labels."""
         from custom_components.frigate_notifications.flows.profile.steps.filtering import (
@@ -337,6 +350,45 @@ class TestFilteringSubmission:
         )
         assert "time_filter_mode" not in data
         assert "time_filter_start" not in data
+
+    def test_submit_filtering_presence_custom_stores_entities(self) -> None:
+        """Test custom presence mode stores presence_entities."""
+        from custom_components.frigate_notifications.flows.profile.steps.filtering import (
+            apply_filtering_input,
+        )
+
+        data: dict[str, Any] = {}
+        apply_filtering_input(
+            data,
+            {
+                "severity": "alert",
+                "presence_config": {
+                    "presence_mode": "custom",
+                    "presence_entities": ["person.alice"],
+                },
+            },
+            None,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+        )
+        assert data["presence_mode"] == "custom"
+        assert data["presence_entities"] == ["person.alice"]
+
+    def test_submit_filtering_presence_inherit_clears_entities(self) -> None:
+        """Test inherit presence mode clears stale presence_entities."""
+        from custom_components.frigate_notifications.flows.profile.steps.filtering import (
+            apply_filtering_input,
+        )
+
+        data: dict[str, Any] = {"presence_entities": ["person.old"]}
+        apply_filtering_input(
+            data,
+            {
+                "severity": "alert",
+                "presence_config": {"presence_mode": "inherit"},
+            },
+            None,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+        )
+        assert data["presence_mode"] == "inherit"
+        assert "presence_entities" not in data
 
     def test_submit_filtering_state_filter_disabled_clears(self) -> None:
         """Test disabled state filter clears stored fields."""
