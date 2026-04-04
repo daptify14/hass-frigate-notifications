@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from ...enums import GuardMode, StateFilterMode, TimeFilterOverride
+from ...enums import GuardMode, PresenceMode, StateFilterMode, TimeFilterOverride
 
 
 def normalize_profile_data(draft: dict[str, Any]) -> dict[str, Any]:
@@ -59,6 +59,9 @@ def _clean_conditional_keys(data: dict[str, Any]) -> None:
     """Ensure conditional keys only exist when their mode requires them."""
     if data.get("guard_mode") != GuardMode.CUSTOM:
         data.pop("guard_entity", None)
+
+    if data.get("presence_mode") != PresenceMode.CUSTOM:
+        data.pop("presence_entities", None)
 
     if data.get("state_filter_mode") != StateFilterMode.CUSTOM:
         data.pop("state_entity", None)

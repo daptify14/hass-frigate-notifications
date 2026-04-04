@@ -190,6 +190,9 @@ class TestNormalizeProfileData:
             # Guard: inherit -> guard_entity removed
             "guard_mode": "inherit",
             "guard_entity": "binary_sensor.alarm",
+            # Presence: inherit -> presence_entities removed
+            "presence_mode": "inherit",
+            "presence_entities": ["person.alice"],
             # State: not custom -> state fields removed
             "state_filter_mode": "inherit",
             "state_entity": "sensor.x",
@@ -205,6 +208,7 @@ class TestNormalizeProfileData:
         }
         result = normalize_profile_data(draft)
         assert "guard_entity" not in result
+        assert "presence_entities" not in result
         assert "state_entity" not in result
         assert "state_filter_states" not in result
         assert "time_filter_mode" not in result
@@ -217,9 +221,12 @@ class TestNormalizeProfileData:
             {
                 "guard_mode": "custom",
                 "guard_entity": "binary_sensor.alarm",
+                "presence_mode": "custom",
+                "presence_entities": ["person.alice"],
             }
         )
         assert custom["guard_entity"] == "binary_sensor.alarm"
+        assert custom["presence_entities"] == ["person.alice"]
 
     def test_cleans_phase_subtitle_templates(self) -> None:
         """Empty subtitle_template pruned from per-phase dicts; non-empty kept."""
