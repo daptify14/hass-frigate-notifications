@@ -114,7 +114,7 @@ Checks whether any configured `person`, `device_tracker`, or `group` entity is `
 
 Presence is **stateless** -- it is evaluated at every lifecycle phase (initial, update, end, genai). If you arrive home mid-review, later phases for that review will be suppressed even though the initial notification was sent while you were away.
 
-Presence entities are set globally. Profiles can inherit or disable: Inherit shared presence filter or Ignore presence for this profile.
+Supports [3-mode inheritance](#inheritance-pattern): Inherit shared presence filter, Use profile presence filter, or Ignore presence for this profile.
 
 ### 8. Silence
 
@@ -151,7 +151,7 @@ Filters and their supported modes:
 | Time filter | Inherit shared time filter / Use profile time filter / No time filter |
 | State filter | Inherit shared state filter / Use profile state filter / No state filter |
 | Guard entity | Inherit shared guard / Use profile guard / No guard entity |
-| Presence | Inherit shared presence filter / Ignore presence for this profile |
+| Presence | Inherit shared presence filter / Use profile presence filter / Ignore presence for this profile |
 
 ## Debugging filters
 
