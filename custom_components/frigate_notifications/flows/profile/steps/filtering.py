@@ -307,9 +307,9 @@ def validate_filtering_input(
                 errors["time_filter_start"] = "time_filter_start_required"
             if not tf_sec.get("time_filter_end"):
                 errors["time_filter_end"] = "time_filter_end_required"
-    if pres_sec.get("presence_mode", PresenceMode.INHERIT) == PresenceMode.CUSTOM and not pres_sec.get(
-        "presence_entities"
-    ):
+    if pres_sec.get(
+        "presence_mode", PresenceMode.INHERIT
+    ) == PresenceMode.CUSTOM and not pres_sec.get("presence_entities"):
         errors["presence_entities"] = "presence_entities_required"
     if sf_sec.get(
         "state_filter_mode", StateFilterMode.INHERIT
