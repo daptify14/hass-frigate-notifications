@@ -266,7 +266,7 @@
                 "guard_entity": "Guard entity"
               },
               "data_description": {
-                "guard_entity": "Only used when mode is Custom."
+                "guard_entity": "Only used when the global setting is overridden."
               }
             },
             "time_filter_config": {
@@ -278,7 +278,7 @@
                 "time_filter_end": "End time"
               },
               "data_description": {
-                "time_filter_mode": "Only used when override is Custom."
+                "time_filter_mode": "Only used when the global setting is overridden."
               }
             },
             "presence_config": {
@@ -286,6 +286,9 @@
               "data": {
                 "presence_mode": "Presence mode",
                 "presence_entities": "Presence entities"
+              },
+              "data_description": {
+                "presence_entities": "Only used when the global setting is overridden."
               }
             },
             "state_filter_config": {
@@ -296,8 +299,8 @@
                 "state_filter_states": "Required states"
               },
               "data_description": {
-                "state_entity": "Only used when mode is Custom.",
-                "state_filter_states": "Only used when mode is Custom."
+                "state_entity": "Only used when the global setting is overridden.",
+                "state_filter_states": "Only used when the global setting is overridden."
               }
             },
             "recognition_config": {
