@@ -9,7 +9,7 @@ Every notification passes through a chain of filters before dispatch. All filter
 Compares the review's severity against the profile's requirement.
 
 | Setting | Behavior |
-|---------|----------|
+| --- | --- |
 | Alert | Only alert-severity reviews pass |
 | Detection | Only detection-severity reviews pass |
 | Any | Both alert and detection pass |
@@ -29,7 +29,7 @@ Checks whether the review contains any object types the profile cares about.
 Filters notifications based on Frigate's face recognition and license plate recognition sub-labels.
 
 | Mode | Behavior |
-|------|----------|
+| --- | --- |
 | Disabled (default) | No sub-label filtering -- all reviews pass |
 | Only recognized | Hold notifications until a `-verified` object is present. Optionally restrict to specific identities. |
 | Exclude specific | Allow all notifications, but suppress once a selected identity is confirmed |
@@ -48,7 +48,7 @@ Filters notifications based on Frigate's face recognition and license plate reco
 - Useful for "stop alerting once you know it's a family member's car"
 
 > **Scope:** The config flow discovers identities from Frigate's face recognition and LPR sensors. The runtime filter operates on all sub-labels regardless of source, but identities from other sources are not discoverable in the config flow UI.
-
+>
 > **Reload rule:** Changes to Frigate's recognition setup (adding new faces, known plates) require a Frigate integration reload before they appear in this integration's config flow.
 
 ### 4. Zone
@@ -60,7 +60,7 @@ Validates the review's zones against the profile's required zones. If no require
 At least one required zone must appear in the review.
 
 | Required | Review | Result |
-|----------|--------|--------|
+| --- | --- | --- |
 | driveway, garage | driveway, yard | Pass -- driveway matches |
 | driveway, garage | yard | Fail -- no overlap |
 
@@ -69,7 +69,7 @@ At least one required zone must appear in the review.
 Every required zone must appear in the review.
 
 | Required | Review | Result |
-|----------|--------|--------|
+| --- | --- | --- |
 | driveway, garage | driveway, garage, yard | Pass -- both present |
 | driveway, garage | driveway | Fail -- garage missing |
 
@@ -78,7 +78,7 @@ Every required zone must appear in the review.
 Zones must appear in sequence, anchored by the first required zone.
 
 | Required | Review | Result |
-|----------|--------|--------|
+| --- | --- | --- |
 | A, B | A, C, B | Pass -- A first, B later |
 | A, B | B, A | Fail -- B appears before A |
 | A, B | A, C | Fail -- B never appears |
@@ -90,7 +90,7 @@ Zones must appear in sequence, anchored by the first required zone.
 Checks the current time against a configured time window.
 
 | Mode | Behavior |
-|------|----------|
+| --- | --- |
 | Notify only during this window | Notifications only fire inside the window |
 | Do not notify during this window | Notifications are suppressed inside the window |
 
@@ -139,7 +139,7 @@ Only evaluated for `new` (initial) lifecycle events. If less than `cooldown_seco
 Several filters support a 3-mode inheritance pattern configured per-profile:
 
 | Mode | Behavior |
-|------|----------|
+| --- | --- |
 | Inherit | Use the shared value from [Global Defaults](../configuration/global-defaults.md) |
 | Custom / Use profile | Use a profile-specific value |
 | Disabled / No filter | Skip this filter entirely |
@@ -147,7 +147,7 @@ Several filters support a 3-mode inheritance pattern configured per-profile:
 Filters and their supported modes:
 
 | Filter | Modes |
-|--------|-------|
+| --- | --- |
 | Time filter | Inherit shared time filter / Use profile time filter / No time filter |
 | State filter | Inherit shared state filter / Use profile state filter / No state filter |
 | Guard entity | Inherit shared guard / Use profile guard / No guard entity |

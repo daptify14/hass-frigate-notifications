@@ -4,37 +4,30 @@ on:
   workflow_call:
 
 jobs:
-  stable:
-    name: Tests (stable)
+  test:
+    name: Tests (${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - python-version: "3.14"
+            uv-project: "."
+            latest: true
+          - python-version: "3.13"
+            uv-project: "tests/env/compat"
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
-      - uses: astral-sh/setup-uv@v7
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v8.0.0
         with:
           enable-cache: true
-          cache-suffix: "py3.14"
-      - run: uv sync --no-install-project
-      - run: uv run pytest --cov --cov-report=xml --cov-fail-under=95
+          cache-suffix: ${{ matrix.python-version }}
+      - run: uv sync --project ${{ matrix.uv-project }} --no-install-project
+      - run: uv run --project ${{ matrix.uv-project }} pytest --cov --cov-report=xml --cov-fail-under=95
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        if: matrix.latest
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-
-  compat:
-    # Minimum supported: HA 2025.6.x / Py 3.13 (first HA with config subentries + read-only selectors)
-    name: Tests (compat)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-      - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-          cache-suffix: "compat"
-      - run: uv sync --project tests/env/compat
-      - run: uv run --project tests/env/compat pytest

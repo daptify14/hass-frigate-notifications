@@ -12,10 +12,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v8.0.0
         with:
           enable-cache: true
       - run: uv sync
-      - uses: pre-commit/action@v3.0.1
-        with:
-          extra_args: --all-files --show-diff-on-failure --color=always
+      - uses: j178/prek-action@v2

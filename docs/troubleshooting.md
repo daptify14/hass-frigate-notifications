@@ -4,7 +4,7 @@
 
 With [debug logging enabled](#reading-logs), you should see after loading:
 
-```
+```text
 Setup complete for Frigate: 2 profiles, topic=frigate/reviews
 ```
 
