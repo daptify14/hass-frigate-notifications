@@ -7,7 +7,7 @@ Notifications for Frigate follows each Frigate review through four lifecycle pha
 The integration maps Frigate's MQTT message types to notification phases:
 
 | MQTT message | Notification phase | Description |
-|-------------|-------------------|-------------|
+| --- | --- | --- |
 | new | **initial** | Frigate created a new review |
 | update | **update** | Frigate added objects, zones, or detections to a review |
 | end | **end** | Frigate closed the review |
@@ -90,7 +90,7 @@ Cooldown enforces a minimum interval between initial notifications for a given p
 With a 60-second cooldown on "Driveway Alerts":
 
 | Time | Event | Result |
-|------|-------|--------|
+| --- | --- | --- |
 | 3:00:00 PM | Person detected on driveway | Sent -- cooldown starts |
 | 3:00:15 PM | Update with zone info | Sent -- updates bypass cooldown |
 | 3:00:30 PM | Car detected on driveway (new review) | **Blocked** -- 30s remaining |
@@ -103,7 +103,7 @@ When enabled, only the first notification per review plays sound. Subsequent upd
 ## Silence vs cooldown
 
 | | Silence | Cooldown |
-|---|---------|----------|
+| --- | --- | --- |
 | **Triggered by** | User (action button, entity, automation) | Automatic |
 | **Scope** | Entire profile (all cameras) | Per (profile, camera) pair |
 | **Affects** | All phases | Only initial notifications |

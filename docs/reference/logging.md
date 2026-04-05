@@ -13,7 +13,7 @@ logger:
 The [filter chain](filtering.md) logs a specific rejection reason per profile. All rejections follow the pattern `Profile {name} rejected by {filter}: {reason}`:
 
 | Filter | Reason example |
-|--------|---------------|
+| --- | --- |
 | Severity | `severity detection != required alert` |
 | Object | `objects ['dog'] not in required ['person', 'car']` |
 | Sub-label (require) | `no verified objects present, recognition required` |
@@ -34,7 +34,7 @@ The [filter chain](filtering.md) logs a specific rejection reason per profile. A
 ## Other key messages
 
 | Log message | Meaning |
-|-------------|---------|
+| --- | --- |
 | `New review abc... on driveway: objects=[...] zones=[...]` | Review received from MQTT |
 | `NOTIFY new -> notify.mobile_app_... for review abc...` | Notification dispatched |
 | `Update for unknown review ..., creating` | Update arrived for unseen review (normal) |
