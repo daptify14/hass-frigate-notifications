@@ -50,10 +50,7 @@
       "description": "Zones",
       "options": [
         "driveway_approach,driveway_main",
-        "driveway_approach",
-        "driveway_main",
         "driveway_garage",
-        "porch",
         "walkway",
         "porch,walkway"
       ],
