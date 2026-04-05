@@ -163,9 +163,7 @@ def build_context(
     else:
         zone_alias = ""
 
-    zone_text = (
-        config.zone_overrides.get(first_zone, humanize_zone(first_zone)) if first_zone else ""
-    )
+    zone_text = config.zone_overrides.get(first_zone, zone_alias) if first_zone else ""
 
     before_zones_set = set(review.before_zones)
     added_zones = ", ".join(humanize_zone(z) for z in sorted(set(review.zones) - before_zones_set))

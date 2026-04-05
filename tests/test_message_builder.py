@@ -243,6 +243,23 @@ class TestBuildContextZones:
         ctx = build_context(review, make_profile(), Phase.INITIAL, Lifecycle.NEW)
         assert ctx["added_zones"] == "Back Yard"
 
+    def test_zone_text_falls_back_to_alias(self) -> None:
+        """zone_text uses zone_alias when no override is configured."""
+        review = make_review(zones=["front_yard"])
+        profile = make_profile(zone_aliases={"front_yard": "Front Door"})
+        ctx = build_context(review, profile, Phase.INITIAL, Lifecycle.NEW)
+        assert ctx["zone_text"] == ctx["zone_alias"] == "Front Door"
+
+    def test_zone_text_uses_override_when_configured(self) -> None:
+        """zone_text prefers zone_overrides over zone_alias."""
+        review = make_review(zones=["front_yard"])
+        profile = make_profile(
+            zone_aliases={"front_yard": "Front Door"},
+            zone_overrides={"front_yard": "at the front"},
+        )
+        ctx = build_context(review, profile, Phase.INITIAL, Lifecycle.NEW)
+        assert ctx["zone_text"] == "at the front"
+
 
 class TestBuildContextPhaseLifecycle:
     def test_phase_and_lifecycle_separate(self) -> None:
