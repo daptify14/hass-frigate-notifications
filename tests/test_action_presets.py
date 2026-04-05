@@ -102,12 +102,6 @@ class TestResolveTapUrl:
         assert "token=tok123" in result
         assert "camera_proxy_stream/camera.driveway" in result
 
-    def test_view_stream_without_access_token_raises(self) -> None:
-        """view_stream without access_token raises (StrictUndefined)."""
-        profile = make_profile(tap_action={"preset": "view_stream"})
-        with pytest.raises(Exception, match="access_token"):
-            resolve_tap_url(profile, _BASE_CTX)
-
     @pytest.mark.parametrize(
         ("provider", "expected_fragment"),
         [

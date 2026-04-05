@@ -514,6 +514,45 @@ class TestRenderNotification:
         assert result.subtitle.startswith("\U0001f698 ")
         assert "\U0001f464" in result.subtitle
 
+    def test_subtitle_emoji_overlay_rerenders_zone_phrase(self, hass: HomeAssistant) -> None:
+        """Emoji overlay re-renders zone_phrase when a zone override template exists."""
+        phase = PhaseConfig(
+            content=PhaseContent(
+                message_template="{{ zone_phrase }}",
+                subtitle_template="{{ zone_phrase }}",
+                emoji_message=False,
+                emoji_subtitle=True,
+            )
+        )
+        review = make_review(objects=["person"], zones=["front_yard"])
+        profile = make_profile(
+            emoji_map={"person": "\U0001f464"},
+            zone_overrides={"front_yard": "spotted by {{ emoji }}"},
+        )
+        result = render_notification(hass, profile, review, Phase.INITIAL, phase, Lifecycle.NEW)
+        # emoji key is always populated; both message and subtitle see it via zone_phrase.
+        assert "spotted by \U0001f464" in result.message
+        assert "spotted by \U0001f464" in result.subtitle
+
+    def test_subtitle_emoji_overlay_broken_zone_override_falls_back(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Broken zone override in emoji overlay falls back to default zone_phrase."""
+        phase = PhaseConfig(
+            content=PhaseContent(
+                message_template="{{ zone_phrase }}",
+                subtitle_template="{{ zone_phrase }}",
+                emoji_message=False,
+                emoji_subtitle=True,
+            )
+        )
+        review = make_review(objects=["person"], zones=["front_yard"])
+        profile = make_profile(
+            zone_overrides={"front_yard": "{% for x in %}broken{% endfor %}"},
+        )
+        result = render_notification(hass, profile, review, Phase.INITIAL, phase, Lifecycle.NEW)
+        assert result.subtitle == "detected"
+
     @pytest.mark.parametrize(
         ("field", "phase_kwargs"),
         [
