@@ -269,6 +269,47 @@ class RenderedContent:
     subtitle: str
 
 
+def _build_emoji_overlay(
+    ctx: dict[str, Any],
+    review: Review,
+    profile: ProfileRuntime,
+    *,
+    emoji_mode: bool,
+    hass: HomeAssistant | None,
+) -> dict[str, Any]:
+    """Build a shallow overlay with emoji-dependent keys recomputed."""
+    clean_objs = _clean_objects([o for o in review.objects if not o.endswith("-verified")])
+    first_obj = clean_objs[0] if clean_objs else ""
+    emoji = _get_emoji(first_obj, profile) if first_obj else ""
+
+    subjects = _build_subjects(review.objects, review.sub_labels, profile, emoji_mode=emoji_mode)
+    before_subjects = _build_subjects(
+        review.before_objects, review.before_sub_labels, profile, emoji_mode=emoji_mode
+    )
+    before_set = {s.lower() for s in before_subjects}
+    added = [s for s in subjects if s.lower() not in before_set]
+
+    overlay = {
+        **ctx,
+        "subject": subjects[0] if subjects else "",
+        "subjects": ", ".join(subjects),
+        "added_subject": ", ".join(added),
+        "emoji": emoji,
+    }
+
+    # Re-render zone_phrase if a zone override template exists.
+    first_zone = review.zones[0] if review.zones else ""
+    zone_override_tpl = profile.zone_overrides.get(first_zone, "") if first_zone else ""
+    if zone_override_tpl and hass is not None:
+        try:
+            rendered = render_template(hass, zone_override_tpl, overlay)
+            overlay["zone_phrase"] = rendered.strip() or "detected"
+        except TemplateError:
+            pass
+
+    return overlay
+
+
 def render_notification(
     hass: HomeAssistant,
     profile: ProfileRuntime,
@@ -278,21 +319,23 @@ def render_notification(
     lifecycle: Lifecycle,
     cache: TemplateCache | None = None,
     *,
+    ctx: dict[str, Any] | None = None,
     global_zone_aliases: dict[str, dict[str, str]] | None = None,
     template_id_map: dict[str, str] | None = None,
 ) -> RenderedContent:
     """Render title/message/subtitle from phase config."""
     _map = template_id_map or {}
 
-    ctx = build_context(
-        review,
-        profile,
-        phase_name,
-        lifecycle,
-        emoji_mode=phase_config.content.emoji_message,
-        hass=hass,
-        global_zone_aliases=global_zone_aliases,
-    )
+    if ctx is None:
+        ctx = build_context(
+            review,
+            profile,
+            phase_name,
+            lifecycle,
+            emoji_mode=phase_config.content.emoji_message,
+            hass=hass,
+            global_zone_aliases=global_zone_aliases,
+        )
 
     message_tpl = resolve_template(phase_config.content.message_template, _map)
     try:
@@ -312,16 +355,13 @@ def render_notification(
 
     subtitle_tpl = resolve_template(phase_config.content.subtitle_template, _map)
     if subtitle_tpl:
-        # Subtitle may use a different emoji mode than the message.
         if phase_config.content.emoji_subtitle != phase_config.content.emoji_message:
-            subtitle_ctx = build_context(
+            subtitle_ctx = _build_emoji_overlay(
+                ctx,
                 review,
                 profile,
-                phase_name,
-                lifecycle,
                 emoji_mode=phase_config.content.emoji_subtitle,
                 hass=hass,
-                global_zone_aliases=global_zone_aliases,
             )
         else:
             subtitle_ctx = ctx
