@@ -2,7 +2,6 @@
 
 import logging
 
-from homeassistant.core import HomeAssistant
 import pytest
 
 from custom_components.frigate_notifications.action_presets import (
@@ -95,16 +94,16 @@ class TestResolveTapUrl:
             in caplog.text
         )
 
-    def test_view_stream_includes_access_token(self, hass: HomeAssistant) -> None:
-        """view_stream preset resolves access_token from camera entity."""
-        hass.states.async_set("camera.driveway", "idle", {"access_token": "tok123"})
+    def test_view_stream_includes_access_token(self) -> None:
+        """view_stream preset uses access_token from pre-enriched context."""
         profile = make_profile(tap_action={"preset": "view_stream"})
-        result = resolve_tap_url(profile, _BASE_CTX, hass=hass)
+        ctx = {**_BASE_CTX, "access_token": "tok123"}
+        result = resolve_tap_url(profile, ctx)
         assert "token=tok123" in result
         assert "camera_proxy_stream/camera.driveway" in result
 
-    def test_view_stream_without_hass_falls_back(self) -> None:
-        """view_stream without hass raises on missing access_token (StrictUndefined)."""
+    def test_view_stream_without_access_token_raises(self) -> None:
+        """view_stream without access_token raises (StrictUndefined)."""
         profile = make_profile(tap_action={"preset": "view_stream"})
         with pytest.raises(Exception, match="access_token"):
             resolve_tap_url(profile, _BASE_CTX)

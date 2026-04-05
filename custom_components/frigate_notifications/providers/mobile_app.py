@@ -47,16 +47,11 @@ class MobileAppProvider:
             msg = f"Expected MobileAppConfig, got {type(profile.provider_config)}"
             raise TypeError(msg)
         cfg = profile.provider_config
-        ctx = rendered.ctx
 
-        attachment_ctx = ctx
-        if rendered.media.use_latest_detection and ctx.get("latest_detection_id"):
-            attachment_ctx = {**ctx, "detection_id": ctx["latest_detection_id"]}
-
-        ios_url, ios_content_type = self._resolve_ios_media(hass, rendered, attachment_ctx)
-        android_image = self._resolve_android_image(hass, rendered, attachment_ctx)
-        android_video = self._resolve_android_video(hass, rendered, attachment_ctx)
-        actions = self._build_actions(hass, profile, ctx)
+        ios_url, ios_content_type = self._resolve_ios_media(hass, rendered, rendered.attachment_ctx)
+        android_image = self._resolve_android_image(hass, rendered, rendered.attachment_ctx)
+        android_video = self._resolve_android_video(hass, rendered, rendered.attachment_ctx)
+        actions = self._build_actions(hass, profile, rendered.action_ctx)
 
         data: dict[str, Any] = {
             "tag": rendered.tag,
@@ -198,19 +193,10 @@ class MobileAppProvider:
         self,
         hass: HomeAssistant,
         profile: ProfileRuntime,
-        ctx: dict[str, Any],
+        action_ctx: dict[str, Any],
     ) -> list[dict[str, Any]]:
         """Build iOS/Android action buttons from action_config presets."""
         from ..action_presets import ACTION_PRESETS, resolve_uri_for_platform
-
-        camera_name = str(ctx.get("camera", ""))
-        camera_state = hass.states.get(f"camera.{camera_name}") if camera_name else None
-        enriched_ctx = {
-            **ctx,
-            "access_token": (
-                camera_state.attributes.get("access_token", "") if camera_state else ""
-            ),
-        }
 
         actions: list[dict[str, Any]] = []
         for action_cfg in profile.action_config:
@@ -234,7 +220,7 @@ class MobileAppProvider:
                     }
                 )
             elif action_type == "event":
-                review_id = str(enriched_ctx.get("review_id", ""))
+                review_id = str(action_ctx.get("review_id", ""))
                 event_id = (
                     f"custom-frigate_notifications:profile:{profile.profile_id}:review:{review_id}"
                 )
@@ -267,7 +253,7 @@ class MobileAppProvider:
                     {
                         "action": "URI",
                         "title": action_cfg.get("title", preset.get("title", "")),
-                        "uri": render_template(hass, uri_tpl, enriched_ctx),
+                        "uri": render_template(hass, uri_tpl, action_ctx),
                         "icon": action_cfg.get("icon", preset.get("icon", "")),
                         "destructive": False,
                     }

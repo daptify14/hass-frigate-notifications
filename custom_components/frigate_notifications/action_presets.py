@@ -13,7 +13,6 @@ from .const import _CAM, _DET, _FN, _REV
 from .enums import Provider, resolved_platform
 
 if TYPE_CHECKING:
-    from homeassistant.core import HomeAssistant
     from homeassistant.helpers.selector import SelectOptionDict
 
     from .data import ProfileRuntime
@@ -157,31 +156,19 @@ def resolve_uri_for_platform(
     return preset.get("uri", "")
 
 
-def _enrich_tap_ctx(hass: HomeAssistant | None, ctx: Mapping[str, Any]) -> Mapping[str, Any]:
-    """Add camera access_token to context if available."""
-    if hass is None:
-        return ctx
-    camera_name = str(ctx.get("camera", ""))
-    if not camera_name:
-        return ctx
-    camera_state = hass.states.get(f"camera.{camera_name}")
-    if camera_state is None:
-        return ctx
-    return {**ctx, "access_token": camera_state.attributes.get("access_token", "")}
-
-
 def resolve_tap_url(
     profile: ProfileRuntime,
     ctx: Mapping[str, Any],
-    hass: HomeAssistant | None = None,
 ) -> str:
-    """Resolve the tap action preset to a rendered URL string."""
+    """Resolve the tap action preset to a rendered URL string.
+
+    Caller is expected to pass a context already enriched with access_token.
+    """
     tap_cfg: dict[str, Any] = profile.tap_action or {}
     preset_id = tap_cfg.get("preset", "view_clip")
-    enriched = _enrich_tap_ctx(hass, ctx)
 
     if tap_cfg.get("uri"):
-        return _JINJA_ENV.from_string(tap_cfg["uri"]).render(enriched)
+        return _JINJA_ENV.from_string(tap_cfg["uri"]).render(ctx)
 
     preset = ACTION_PRESETS.get(preset_id)
     if preset is None:
@@ -202,4 +189,4 @@ def resolve_tap_url(
         return "noAction"
 
     uri_tpl = resolve_uri_for_platform(profile.provider, preset)
-    return _JINJA_ENV.from_string(uri_tpl).render(enriched)
+    return _JINJA_ENV.from_string(uri_tpl).render(ctx)
