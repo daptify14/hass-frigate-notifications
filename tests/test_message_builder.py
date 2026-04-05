@@ -496,19 +496,22 @@ class TestRenderNotification:
         assert "\U0001f464" not in without_emoji.message
 
     def test_subtitle_emoji_differs_from_message(self, hass: HomeAssistant) -> None:
-        """emoji_subtitle=True with emoji_message=False rebuilds context for subtitle."""
+        """Subtitle emoji mode keeps full-context emoji behavior for verified-first reviews."""
         phase = PhaseConfig(
             content=PhaseContent(
                 message_template="{{ subjects }}",
-                subtitle_template="{{ subjects }}",
+                subtitle_template="{{ emoji }} {{ subjects }}",
                 emoji_message=False,
                 emoji_subtitle=True,
             )
         )
-        review = make_review(objects=["person"])
-        profile = make_profile(emoji_map={"person": "\U0001f464"})
+        review = make_review(objects=["car-verified", "person"])
+        profile = make_profile(emoji_map={"car": "\U0001f698", "person": "\U0001f464"})
         result = render_notification(hass, profile, review, Phase.INITIAL, phase, Lifecycle.NEW)
+        assert "\U0001f698" not in result.message
         assert "\U0001f464" not in result.message
+        assert result.message == "Person"
+        assert result.subtitle.startswith("\U0001f698 ")
         assert "\U0001f464" in result.subtitle
 
     @pytest.mark.parametrize(

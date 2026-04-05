@@ -276,7 +276,7 @@ def _build_emoji_overlay(
     hass: HomeAssistant | None,
 ) -> dict[str, Any]:
     """Build a shallow overlay with emoji-dependent keys recomputed."""
-    clean_objs = _clean_objects([o for o in review.objects if not o.endswith("-verified")])
+    clean_objs = _clean_objects(review.objects)
     first_obj = clean_objs[0] if clean_objs else ""
     emoji = _get_emoji(first_obj, profile) if first_obj else ""
 
