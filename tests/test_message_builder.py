@@ -14,6 +14,7 @@ from custom_components.frigate_notifications.enums import Lifecycle, Phase
 from custom_components.frigate_notifications.message_builder import (
     RenderedContent,
     TemplateCache,
+    _format_duration,
     build_context,
     humanize_zone,
     render_notification,
@@ -81,6 +82,16 @@ class TestBuildContextTier1:
         assert ctx["zones_raw"] == "driveway_approach, driveway_main"
         # car + car-verified dedup to car, plus person = 2
         assert ctx["object_count"] == "2"
+        # Profile cameras (single default).
+        assert ctx["profile_cameras"] == "driveway"
+        assert ctx["profile_cameras_name"] == "Driveway"
+
+    def test_profile_cameras_multi(self) -> None:
+        """profile_cameras joins multiple cameras."""
+        profile = make_profile(cameras=("front_door", "back_yard"))
+        ctx = build_context(make_review(), profile, Phase.INITIAL, Lifecycle.NEW)
+        assert ctx["profile_cameras"] == "front_door, back_yard"
+        assert ctx["profile_cameras_name"] == "Front Door, Back Yard"
 
 
 class TestBuildContextObjects:
@@ -304,10 +315,14 @@ class TestBuildContextIDs:
         review = make_review(detection_ids=["det1", "det2"])
         ctx = build_context(review, make_profile(), Phase.INITIAL, Lifecycle.NEW)
         assert ctx["detection_id"] == "det1"
+        assert ctx["detection_ids"] == "det1, det2"
+        assert ctx["detection_count"] == "2"
 
         review_empty = make_review(detection_ids=[])
         ctx_empty = build_context(review_empty, make_profile(), Phase.INITIAL, Lifecycle.NEW)
         assert ctx_empty["detection_id"] == review_empty.review_id
+        assert ctx_empty["detection_ids"] == ""
+        assert ctx_empty["detection_count"] == "0"
 
     def test_url_and_id_context(self) -> None:
         """URLs, client_id, and latest_detection_id appear in context."""
@@ -322,6 +337,21 @@ class TestBuildContextIDs:
         assert ctx["frigate_url"] == "https://frigate.local"
         assert ctx["client_id"] == "/my-instance"
         assert ctx["latest_detection_id"] == "latest_det"
+
+
+class TestFormatDuration:
+    @pytest.mark.parametrize(
+        ("seconds", "expected"),
+        [
+            (0, "0s"),
+            (45, "45s"),
+            (60, "1m"),
+            (154, "2m 34s"),
+            (3600, "60m"),
+        ],
+    )
+    def test_format_duration(self, seconds: int, expected: str) -> None:
+        assert _format_duration(seconds) == expected
 
 
 class TestBuildContextTime:
@@ -339,10 +369,12 @@ class TestBuildContextTime:
         review_with = make_review(start_time=100.0, end_time=145.0)
         ctx_with = build_context(review_with, make_profile(), Phase.END, Lifecycle.END)
         assert ctx_with["duration"] == "45"
+        assert ctx_with["duration_human"] == "45s"
 
         review_without = make_review(end_time=None)
         ctx_without = build_context(review_without, make_profile(), Phase.INITIAL, Lifecycle.NEW)
         assert ctx_without["duration"] == ""
+        assert ctx_without["duration_human"] == ""
 
 
 class TestRenderNotification:

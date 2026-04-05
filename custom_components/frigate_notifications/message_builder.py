@@ -114,6 +114,16 @@ def render_template(
     return tpl.async_render(variables=ctx, parse_result=False)
 
 
+def _format_duration(seconds: int) -> str:
+    """Format seconds into human-readable duration (e.g. '2m 34s')."""
+    if seconds < 60:  # noqa: PLR2004
+        return f"{seconds}s"
+    minutes, secs = divmod(seconds, 60)
+    if secs == 0:
+        return f"{minutes}m"
+    return f"{minutes}m {secs}s"
+
+
 def build_context(
     review: Review,
     config: ProfileRuntime,
@@ -153,29 +163,6 @@ def build_context(
     else:
         zone_alias = ""
 
-    # Zone phrase: two-pass rendering (override may be Jinja2 template).
-    zone_override_tpl = config.zone_overrides.get(first_zone, "") if first_zone else ""
-    if zone_override_tpl and hass is not None:
-        partial_ctx = {
-            "object": first_obj.replace("_", " ").title() if first_obj else "",
-            "objects": ", ".join(o.replace("_", " ").title() for o in clean_objs),
-            "emoji": emoji,
-            "zone_alias": zone_alias,
-            "zone_name": humanize_zone(first_zone) if first_zone else "",
-            "sub_label": review.sub_labels[0] if review.sub_labels else "",
-            "severity": review.severity,
-            "camera_name": humanize_zone(review.camera),
-        }
-        try:
-            rendered = render_template(hass, zone_override_tpl, partial_ctx)
-            zone_phrase = rendered.strip() or "detected"
-        except TemplateError:
-            zone_phrase = "detected"
-    elif zone_override_tpl:
-        zone_phrase = zone_override_tpl
-    else:
-        zone_phrase = "detected"
-
     zone_text = (
         config.zone_overrides.get(first_zone, humanize_zone(first_zone)) if first_zone else ""
     )
@@ -193,25 +180,26 @@ def build_context(
 
     now = datetime.now(tz=dt_util.DEFAULT_TIME_ZONE)
 
-    return {
-        # Tier 1: raw.
-        "objects_raw": ", ".join(review.objects),
-        "sub_labels_raw": ", ".join(review.sub_labels),
-        "zones_raw": ", ".join(review.zones),
-        "object_count": str(len(clean_objs)),
-        # Tier 2: formatted objects.
+    ctx: dict[str, Any] = {
+        "camera": review.camera,
+        "camera_name": humanize_zone(review.camera),
+        "profile_cameras": ", ".join(config.cameras),
+        "profile_cameras_name": ", ".join(humanize_zone(c) for c in config.cameras),
         "object": first_obj.replace("_", " ").title() if first_obj else "",
         "objects": ", ".join(o.replace("_", " ").title() for o in clean_objs),
-        # Tier 2: formatted subjects.
+        "objects_raw": ", ".join(review.objects),
+        "object_count": str(len(clean_objs)),
         "subject": first_subject,
         "subjects": subjects_str,
         "added_subject": added_subject,
-        # Tier 2: sub_labels (deduped, raw form).
         "sub_label": review.sub_labels[0] if review.sub_labels else "",
         "sub_labels": ", ".join(dict.fromkeys(review.sub_labels)),
-        # Tier 2: zone.
+        "sub_labels_raw": ", ".join(review.sub_labels),
+        "emoji": emoji,
+        "severity": review.severity,
         "zone": first_zone,
         "zones": ", ".join(humanize_zone(z) for z in review.zones),
+        "zones_raw": ", ".join(review.zones),
         "first_zone": first_zone,
         "last_zone": last_zone,
         "first_zone_name": humanize_zone(first_zone) if first_zone else "",
@@ -219,24 +207,28 @@ def build_context(
         "zone_name": humanize_zone(first_zone) if first_zone else "",
         "zone_text": zone_text,
         "zone_alias": zone_alias,
-        "zone_phrase": zone_phrase,
+        "zone_phrase": "detected",
         "added_zones": added_zones,
-        # Camera and metadata.
-        "camera": review.camera,
-        "camera_name": humanize_zone(review.camera),
+        "review_id": review.review_id,
+        "detection_id": first_det_id,
+        "detection_ids": ", ".join(review.detection_ids),
+        "detection_count": str(len(review.detection_ids)),
+        "latest_detection_id": latest_det_id,
+        "start_time": str(review.start_time),
+        "end_time": str(review.end_time) if review.end_time else "",
+        "duration": str(int(review.end_time - review.start_time)) if review.end_time else "",
+        "duration_human": (
+            _format_duration(int(review.end_time - review.start_time)) if review.end_time else ""
+        ),
+        "time": now.strftime("%-I:%M %p"),
+        "time_24hr": now.strftime("%H:%M"),
         "phase": str(phase),
         "lifecycle": str(lifecycle),
         "phase_emoji": phase_emoji,
-        "severity": review.severity,
-        "emoji": emoji,
-        "time": now.strftime("%-I:%M %p"),
-        "time_24hr": now.strftime("%H:%M"),
-        # Phase flags.
         "is_initial": phase == Phase.INITIAL,
         "is_update": phase == Phase.UPDATE,
         "is_end": phase == Phase.END,
         "is_genai": phase == Phase.GENAI,
-        # GenAI.
         "genai_title": genai.title if genai else "",
         "genai_summary": genai_summary,
         "genai_scene": genai.scene if genai else "",
@@ -244,18 +236,23 @@ def build_context(
         "genai_threat_level": str(genai.threat_level) if genai else "",
         "genai_concerns": ", ".join(genai.other_concerns) if genai else "",
         "genai_time": genai.time if genai else "",
-        # Event data.
-        "start_time": str(review.start_time),
-        "end_time": str(review.end_time) if review.end_time else "",
-        "duration": str(int(review.end_time - review.start_time)) if review.end_time else "",
-        # IDs.
-        "review_id": review.review_id,
-        "detection_id": first_det_id,
-        "latest_detection_id": latest_det_id,
         "base_url": config.base_url,
         "frigate_url": config.frigate_url,
         "client_id": config.client_id,
     }
+
+    # Render zone_phrase override against full context (override may be Jinja2).
+    zone_override_tpl = config.zone_overrides.get(first_zone, "") if first_zone else ""
+    if zone_override_tpl and hass is not None:
+        try:
+            rendered = render_template(hass, zone_override_tpl, ctx)
+            ctx["zone_phrase"] = rendered.strip() or "detected"
+        except TemplateError:
+            pass
+    elif zone_override_tpl:
+        ctx["zone_phrase"] = zone_override_tpl
+
+    return ctx
 
 
 def resolve_template(id_or_jinja: str, id_map: dict[str, str]) -> str:
