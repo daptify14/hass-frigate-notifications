@@ -1,19 +1,19 @@
-files: ^(custom_components/|tests/|pyproject\.toml|\.pre-commit-config\.yaml|\.github/workflows/)
-
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+  - repo: builtin
     hooks:
       - id: check-yaml
-        args: [--unsafe]
+        priority: 0
       - id: check-json
+        priority: 0
       - id: check-toml
-      - id: check-merge-conflict
+        priority: 0
       - id: trailing-whitespace
+        priority: 0
       - id: end-of-file-fixer
+        priority: 0
       - id: check-added-large-files
         args: ['--maxkb=512']
-        files: ''
+        priority: 0
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.8
@@ -22,14 +22,17 @@ repos:
         args:
           - --fix
           - --show-fixes
+        priority: 10
       - id: ruff-format
         files: ^(custom_components/|tests/)
+        priority: 11
 
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.11
     hooks:
       - id: actionlint
         files: ^\.github/workflows/
+        priority: 20
 
   - repo: local
     hooks:
@@ -39,3 +42,4 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
+        priority: 30

@@ -5,4 +5,4 @@ set -e
 cd "$(dirname "$0")/.."
 
 uv sync
-uv run pre-commit install
+uv run prek install

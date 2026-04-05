@@ -16,6 +16,4 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync
-      - uses: pre-commit/action@v3.0.1
-        with:
-          extra_args: --all-files --show-diff-on-failure --color=always
+      - uses: j178/prek-action@v2
