@@ -40,13 +40,8 @@ class AndroidTvProvider:
             msg = f"Expected AndroidTvConfig, got {type(profile.provider_config)}"
             raise TypeError(msg)
         phase = profile.get_phase(rendered.phase_name)
-        ctx = rendered.ctx
 
-        attachment_ctx = ctx
-        if rendered.media.use_latest_detection and ctx.get("latest_detection_id"):
-            attachment_ctx = {**ctx, "detection_id": ctx["latest_detection_id"]}
-
-        image_url = self._resolve_still_image(hass, rendered, attachment_ctx)
+        image_url = self._resolve_still_image(hass, rendered, rendered.attachment_ctx)
 
         data: dict[str, Any] = {
             "image": {"url": image_url},

@@ -33,6 +33,18 @@ def _make_rendered(
     click_url: str = "noAction",
 ) -> RenderedNotification:
     """Build a RenderedNotification with minimal defaults."""
+    ctx: dict[str, str] = {
+        "base_url": "https://hass.test",
+        "client_id": "",
+        "detection_id": "det1",
+        "review_id": "rev1",
+        "camera": "driveway",
+        "latest_detection_id": "det2",
+    }
+    attachment_ctx = ctx
+    if use_latest_detection and ctx.get("latest_detection_id"):
+        attachment_ctx = {**ctx, "detection_id": ctx["latest_detection_id"]}
+    action_ctx = {**ctx, "access_token": ""}
     return RenderedNotification(
         title="Test Title",
         message="Test Message",
@@ -48,14 +60,9 @@ def _make_rendered(
             video_kind=video_kind,
             use_latest_detection=use_latest_detection,
         ),
-        ctx={
-            "base_url": "https://hass.test",
-            "client_id": "",
-            "detection_id": "det1",
-            "review_id": "rev1",
-            "camera": "driveway",
-            "latest_detection_id": "det2",
-        },
+        ctx=ctx,
+        attachment_ctx=attachment_ctx,
+        action_ctx=action_ctx,
     )
 
 

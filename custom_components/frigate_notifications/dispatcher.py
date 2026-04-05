@@ -193,6 +193,16 @@ class DispatchRequest:
 def assemble_notification(request: DispatchRequest) -> RenderedNotification:
     """Render all notification content into a provider-neutral payload."""
     r = request
+    ctx = build_context(
+        r.review,
+        r.profile,
+        r.phase,
+        r.lifecycle,
+        emoji_mode=r.phase_config.content.emoji_message,
+        hass=r.hass,
+        global_zone_aliases=r.global_zone_aliases,
+    )
+
     content = render_notification(
         r.hass,
         r.profile,
@@ -201,7 +211,7 @@ def assemble_notification(request: DispatchRequest) -> RenderedNotification:
         r.phase_config,
         r.lifecycle,
         r.template_cache,
-        global_zone_aliases=r.global_zone_aliases,
+        ctx=ctx,
         template_id_map=r.template_id_map,
     )
 
@@ -221,16 +231,18 @@ def assemble_notification(request: DispatchRequest) -> RenderedNotification:
         and not r.phase_config.delivery.critical
     )
 
-    ctx = build_context(
-        r.review,
-        r.profile,
-        r.phase,
-        r.lifecycle,
-        emoji_mode=r.phase_config.content.emoji_message,
-        hass=r.hass,
-        global_zone_aliases=r.global_zone_aliases,
-    )
-    click_url = resolve_tap_url(r.profile, ctx, hass=r.hass)
+    # Attachment context: swap detection_id when use_latest_detection is enabled.
+    attachment_ctx = ctx
+    if r.phase_config.media.use_latest_detection and ctx.get("latest_detection_id"):
+        attachment_ctx = {**ctx, "detection_id": ctx["latest_detection_id"]}
+
+    # Enrich action/tap URI context with access_token (not exposed to templates).
+    camera_name = str(ctx.get("camera", ""))
+    camera_state = r.hass.states.get(f"camera.{camera_name}") if camera_name else None
+    access_token = camera_state.attributes.get("access_token", "") if camera_state else ""
+    action_ctx = {**ctx, "access_token": access_token}
+
+    click_url = resolve_tap_url(r.profile, action_ctx)
 
     return RenderedNotification(
         title=title,
@@ -248,6 +260,8 @@ def assemble_notification(request: DispatchRequest) -> RenderedNotification:
             use_latest_detection=r.phase_config.media.use_latest_detection,
         ),
         ctx=ctx,
+        attachment_ctx=attachment_ctx,
+        action_ctx=action_ctx,
     )
 
 

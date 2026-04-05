@@ -14,6 +14,7 @@ from custom_components.frigate_notifications.enums import Lifecycle, Phase
 from custom_components.frigate_notifications.message_builder import (
     RenderedContent,
     TemplateCache,
+    _format_duration,
     build_context,
     humanize_zone,
     render_notification,
@@ -81,6 +82,16 @@ class TestBuildContextTier1:
         assert ctx["zones_raw"] == "driveway_approach, driveway_main"
         # car + car-verified dedup to car, plus person = 2
         assert ctx["object_count"] == "2"
+        # Profile cameras (single default).
+        assert ctx["profile_cameras"] == "driveway"
+        assert ctx["profile_cameras_name"] == "Driveway"
+
+    def test_profile_cameras_multi(self) -> None:
+        """profile_cameras joins multiple cameras."""
+        profile = make_profile(cameras=("front_door", "back_yard"))
+        ctx = build_context(make_review(), profile, Phase.INITIAL, Lifecycle.NEW)
+        assert ctx["profile_cameras"] == "front_door, back_yard"
+        assert ctx["profile_cameras_name"] == "Front Door, Back Yard"
 
 
 class TestBuildContextObjects:
@@ -232,6 +243,23 @@ class TestBuildContextZones:
         ctx = build_context(review, make_profile(), Phase.INITIAL, Lifecycle.NEW)
         assert ctx["added_zones"] == "Back Yard"
 
+    def test_zone_text_falls_back_to_alias(self) -> None:
+        """zone_text uses zone_alias when no override is configured."""
+        review = make_review(zones=["front_yard"])
+        profile = make_profile(zone_aliases={"front_yard": "Front Door"})
+        ctx = build_context(review, profile, Phase.INITIAL, Lifecycle.NEW)
+        assert ctx["zone_text"] == ctx["zone_alias"] == "Front Door"
+
+    def test_zone_text_uses_override_when_configured(self) -> None:
+        """zone_text prefers zone_overrides over zone_alias."""
+        review = make_review(zones=["front_yard"])
+        profile = make_profile(
+            zone_aliases={"front_yard": "Front Door"},
+            zone_overrides={"front_yard": "at the front"},
+        )
+        ctx = build_context(review, profile, Phase.INITIAL, Lifecycle.NEW)
+        assert ctx["zone_text"] == "at the front"
+
 
 class TestBuildContextPhaseLifecycle:
     def test_phase_and_lifecycle_separate(self) -> None:
@@ -304,10 +332,14 @@ class TestBuildContextIDs:
         review = make_review(detection_ids=["det1", "det2"])
         ctx = build_context(review, make_profile(), Phase.INITIAL, Lifecycle.NEW)
         assert ctx["detection_id"] == "det1"
+        assert ctx["detection_ids"] == "det1, det2"
+        assert ctx["detection_count"] == "2"
 
         review_empty = make_review(detection_ids=[])
         ctx_empty = build_context(review_empty, make_profile(), Phase.INITIAL, Lifecycle.NEW)
         assert ctx_empty["detection_id"] == review_empty.review_id
+        assert ctx_empty["detection_ids"] == ""
+        assert ctx_empty["detection_count"] == "0"
 
     def test_url_and_id_context(self) -> None:
         """URLs, client_id, and latest_detection_id appear in context."""
@@ -322,6 +354,21 @@ class TestBuildContextIDs:
         assert ctx["frigate_url"] == "https://frigate.local"
         assert ctx["client_id"] == "/my-instance"
         assert ctx["latest_detection_id"] == "latest_det"
+
+
+class TestFormatDuration:
+    @pytest.mark.parametrize(
+        ("seconds", "expected"),
+        [
+            (0, "0s"),
+            (45, "45s"),
+            (60, "1m"),
+            (154, "2m 34s"),
+            (3600, "60m"),
+        ],
+    )
+    def test_format_duration(self, seconds: int, expected: str) -> None:
+        assert _format_duration(seconds) == expected
 
 
 class TestBuildContextTime:
@@ -339,10 +386,12 @@ class TestBuildContextTime:
         review_with = make_review(start_time=100.0, end_time=145.0)
         ctx_with = build_context(review_with, make_profile(), Phase.END, Lifecycle.END)
         assert ctx_with["duration"] == "45"
+        assert ctx_with["duration_human"] == "45s"
 
         review_without = make_review(end_time=None)
         ctx_without = build_context(review_without, make_profile(), Phase.INITIAL, Lifecycle.NEW)
         assert ctx_without["duration"] == ""
+        assert ctx_without["duration_human"] == ""
 
 
 class TestRenderNotification:
@@ -447,20 +496,62 @@ class TestRenderNotification:
         assert "\U0001f464" not in without_emoji.message
 
     def test_subtitle_emoji_differs_from_message(self, hass: HomeAssistant) -> None:
-        """emoji_subtitle=True with emoji_message=False rebuilds context for subtitle."""
+        """Subtitle emoji mode keeps full-context emoji behavior for verified-first reviews."""
         phase = PhaseConfig(
             content=PhaseContent(
                 message_template="{{ subjects }}",
-                subtitle_template="{{ subjects }}",
+                subtitle_template="{{ emoji }} {{ subjects }}",
                 emoji_message=False,
                 emoji_subtitle=True,
             )
         )
-        review = make_review(objects=["person"])
-        profile = make_profile(emoji_map={"person": "\U0001f464"})
+        review = make_review(objects=["car-verified", "person"])
+        profile = make_profile(emoji_map={"car": "\U0001f698", "person": "\U0001f464"})
         result = render_notification(hass, profile, review, Phase.INITIAL, phase, Lifecycle.NEW)
+        assert "\U0001f698" not in result.message
         assert "\U0001f464" not in result.message
+        assert result.message == "Person"
+        assert result.subtitle.startswith("\U0001f698 ")
         assert "\U0001f464" in result.subtitle
+
+    def test_subtitle_emoji_overlay_rerenders_zone_phrase(self, hass: HomeAssistant) -> None:
+        """Emoji overlay re-renders zone_phrase when a zone override template exists."""
+        phase = PhaseConfig(
+            content=PhaseContent(
+                message_template="{{ zone_phrase }}",
+                subtitle_template="{{ zone_phrase }}",
+                emoji_message=False,
+                emoji_subtitle=True,
+            )
+        )
+        review = make_review(objects=["person"], zones=["front_yard"])
+        profile = make_profile(
+            emoji_map={"person": "\U0001f464"},
+            zone_overrides={"front_yard": "spotted by {{ emoji }}"},
+        )
+        result = render_notification(hass, profile, review, Phase.INITIAL, phase, Lifecycle.NEW)
+        # emoji key is always populated; both message and subtitle see it via zone_phrase.
+        assert "spotted by \U0001f464" in result.message
+        assert "spotted by \U0001f464" in result.subtitle
+
+    def test_subtitle_emoji_overlay_broken_zone_override_falls_back(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Broken zone override in emoji overlay falls back to default zone_phrase."""
+        phase = PhaseConfig(
+            content=PhaseContent(
+                message_template="{{ zone_phrase }}",
+                subtitle_template="{{ zone_phrase }}",
+                emoji_message=False,
+                emoji_subtitle=True,
+            )
+        )
+        review = make_review(objects=["person"], zones=["front_yard"])
+        profile = make_profile(
+            zone_overrides={"front_yard": "{% for x in %}broken{% endfor %}"},
+        )
+        result = render_notification(hass, profile, review, Phase.INITIAL, phase, Lifecycle.NEW)
+        assert result.subtitle == "detected"
 
     @pytest.mark.parametrize(
         ("field", "phase_kwargs"),

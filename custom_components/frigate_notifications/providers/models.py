@@ -49,6 +49,8 @@ class RenderedNotification:
     phase_name: Phase
     media: RenderedMedia
     ctx: dict[str, Any] = field(default_factory=dict)
+    attachment_ctx: dict[str, Any] = field(default_factory=dict)
+    action_ctx: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

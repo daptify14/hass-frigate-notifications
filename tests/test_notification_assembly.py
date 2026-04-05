@@ -24,6 +24,9 @@ class TestAssembleNotification:
         assert rendered.phase_name == Phase.INITIAL
         assert rendered.critical is False
         assert rendered.alert_once_silent is False
+        assert rendered.ctx
+        assert "detection_id" in rendered.attachment_ctx
+        assert "access_token" in rendered.action_ctx
 
     async def test_assemble_genai_title_prefix_applied(self, hass: HomeAssistant) -> None:
         """GenAI title prefix is prepended when conditions are met."""
