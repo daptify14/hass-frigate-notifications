@@ -8,52 +8,43 @@ default:
 test *ARGS:
     uv run pytest {{ ARGS }}
 
-# Lint with ruff (check only)
-lint:
-    uv run ruff check .
+# Run tests against oldest supported HA (2025.6 / Py 3.13)
+test-compat *ARGS:
+    uv run --python 3.13 --project tests/env/compat pytest {{ ARGS }}
 
-# Format with ruff
-fmt:
-    uv run ruff format .
+# Generate HTML coverage report
+coverage: (test "--cov" "--cov-report=html" "-q")
 
-# Auto-fix lint issues + format
-fix:
-    uv run ruff check --fix .
-    uv run ruff format .
+# Lint with ruff (pass --fix to auto-fix)
+lint *ARGS:
+    uv run ruff check {{ ARGS }} .
+
+# Format with ruff (pass --check to verify only)
+fmt *ARGS:
+    uv run ruff format {{ ARGS }} .
 
 # Type check with ty
 typecheck:
     uv run ty check --error-on-warning
 
-# Run tests against oldest supported HA (2025.6 / Py 3.13)
-test-compat *ARGS:
-    uv python install 3.13
-    uv run --project tests/env/compat --python 3.13 pytest {{ ARGS }}
-
-# Generate HTML coverage report and open in browser
-coverage:
-    uv run pytest --cov --cov-report=html -q
-    open htmlcov/index.html
-
 # Full quality gate: lint + format check + typecheck + tests (95% coverage)
-check: lint && typecheck
-    uv run ruff format --check .
+check: lint (fmt "--check") typecheck
     uv run pytest --cov --cov-report=xml --cov-fail-under=95
 
 compose := "docker compose"
 ha       := "homeassistant"
 
 # Start dev services (HA + Frigate + MQTT + webhook catcher)
-up *FLAGS:
-    {{ compose }} up -d {{ ha }} frigate mqtt webhook {{ FLAGS }}
+up *ARGS:
+    {{ compose }} up -d {{ ha }} frigate mqtt webhook {{ ARGS }}
 
 # Start with a fresh HA (skip pre-configured storage)
-up-fresh *FLAGS:
-    HA_PRECONFIG=false just up {{ FLAGS }}
+up-fresh *ARGS:
+    HA_PRECONFIG=false just up {{ ARGS }}
 
 # Stop dev services
-down *FLAGS:
-    {{ compose }} down {{ FLAGS }}
+down *ARGS:
+    {{ compose }} down {{ ARGS }}
 
 # Recreate HA dev container (re-runs preconfig)
 restart:
