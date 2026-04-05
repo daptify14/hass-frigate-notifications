@@ -85,3 +85,13 @@ asyncio_default_fixture_loop_scope = "function"
 pythonpath = "."
 testpaths = ["tests"]
 addopts = "--timeout=10"
+
+[tool.typos.files]
+extend-exclude = ["uv.lock"]
+
+[tool.typos.default.extend-words]
+hass = "hass"
+mosquitto = "mosquitto"
+
+[tool.typos.default.extend-identifiers]
+pn = "pn"

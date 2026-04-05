@@ -15,6 +15,12 @@ repos:
         args: ['--maxkb=512']
         priority: 0
 
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.45.0
+    hooks:
+      - id: typos
+        priority: 0
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.8
     hooks:
