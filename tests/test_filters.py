@@ -473,7 +473,11 @@ class TestSilenceFilter:
         ids=["future-rejects", "past-passes", "unknown-passes", "malformed-passes"],
     )
     def test_silence_entity_state(
-        self, hass: HomeAssistant, state_value: str, expected: bool
+        self,
+        hass: HomeAssistant,
+        state_value: str,
+        expected: bool,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         entity_id = "datetime.test_silenced_until"
         hass.data.setdefault(SILENCE_DATETIMES_KEY, {})["test_profile_id"] = _FakeEntity(entity_id)
@@ -483,6 +487,9 @@ class TestSilenceFilter:
         assert result.passed is expected
         if not expected:
             assert result.filter_name == "silence"
+        # Malformed datetime state should warn.
+        if state_value == "not-a-date":
+            assert "Malformed silence state" in caplog.text
 
 
 class TestSwitchEnabledFilter:

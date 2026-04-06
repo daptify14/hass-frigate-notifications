@@ -222,6 +222,35 @@ class TestSilenceDateTime:
         dt_entity = silence_map[sub_id]
         assert dt_entity.native_value is None
 
+    async def test_restore_malformed_state_warns(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry: MockConfigEntry,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Restoring a malformed datetime logs a warning and clears to None."""
+        mock_config_entry.add_to_hass(hass)
+        from homeassistant.helpers import entity_registry as er
+
+        sub_id = get_profile_subentry_id(mock_config_entry)
+        unique_id = f"{mock_config_entry.entry_id}_{sub_id}_silenced_until"
+        ent_reg = er.async_get(hass)
+        ent_entry = ent_reg.async_get_or_create(
+            "datetime",
+            DOMAIN,
+            unique_id,
+            config_entry=mock_config_entry,
+        )
+        mock_restore_cache(hass, [State(ent_entry.entity_id, "garbage-value")])
+
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
+        dt_entity = silence_map[sub_id]
+        assert dt_entity.native_value is None
+        assert "Could not restore silence state 'garbage-value'" in caplog.text
+
 
 class TestSilenceButtons:
     """Tests for silence and clear silence buttons."""

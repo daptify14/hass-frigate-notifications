@@ -398,8 +398,8 @@ class TestDispatcherFailure:
         assert "Delivery failed to" in caplog.text
 
     @pytest.mark.usefixtures("_zero_delays")
-    async def test_dispatch_failure_emits_problem_signal(self, hass: HomeAssistant) -> None:
-        """Failed dispatch emits problem signal with error message."""
+    async def test_dispatch_failure_emits_delivery_error_signal(self, hass: HomeAssistant) -> None:
+        """Failed dispatch emits problem signal tagged as delivery_error."""
         profile = make_profile(notify_target="notify.nonexistent_service")
         runtime = make_runtime([profile])
         dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
@@ -415,7 +415,32 @@ class TestDispatcherFailure:
 
         assert len(received) == 1
         assert received[0] is not None
-        assert isinstance(received[0], str)
+        assert received[0].startswith("delivery_error:")
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_render_failure_emits_render_error_signal(self, hass: HomeAssistant) -> None:
+        """TemplateError during render emits problem signal tagged as render_error."""
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+        from homeassistant.helpers.template import TemplateError
+
+        profile = make_profile()
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+
+        received: list[str | None] = []
+        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
+        async_dispatcher_connect(hass, signal, received.append)
+
+        with patch(
+            "custom_components.frigate_notifications.dispatcher.assemble_notification",
+            side_effect=TemplateError("bad template"),
+        ):
+            await dispatcher.on_review_new(make_review())
+            await hass.async_block_till_done()
+
+        assert len(received) == 1
+        assert received[0] is not None
+        assert received[0].startswith("render_error:")
 
     @pytest.mark.usefixtures("_zero_delays")
     async def test_dispatch_success_clears_problem_signal(
@@ -518,17 +543,17 @@ class TestDispatcherCustomActions:
             mock_exec.assert_awaited_once()
 
     @pytest.mark.usefixtures("_zero_delays")
-    async def test_empty_custom_actions_is_noop(self, hass: HomeAssistant) -> None:
-        """Empty actions tuple returns immediately without error."""
+    async def test_empty_custom_actions_returns_none(self, hass: HomeAssistant) -> None:
+        """Empty actions tuple returns None without error."""
         from custom_components.frigate_notifications.dispatcher import execute_custom_actions
 
-        await execute_custom_actions(hass, (), {}, "test")  # should not raise
+        assert await execute_custom_actions(hass, (), {}, "test") is None
 
     @pytest.mark.usefixtures("_zero_delays")
-    async def test_custom_actions_script_exception_logged(
+    async def test_custom_actions_script_exception_returns_error(
         self, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Script exception is logged, doesn't crash."""
+        """Script exception is logged and returns error string."""
         from custom_components.frigate_notifications.dispatcher import execute_custom_actions
 
         with (
@@ -541,8 +566,44 @@ class TestDispatcherCustomActions:
                 side_effect=RuntimeError("boom"),
             ),
         ):
-            await execute_custom_actions(hass, ({"action": "test.event"},), {}, "TestProfile")
+            result = await execute_custom_actions(
+                hass, ({"action": "test.event"},), {}, "TestProfile"
+            )
         assert "Custom action failed" in caplog.text
+        assert result is not None
+        assert "boom" in result
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_custom_action_failure_emits_problem_signal_after_delivery(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Custom action failure surfaces problem signal without rolling back delivery."""
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+        custom_phase = replace(
+            DEFAULT_PHASE_INITIAL,
+            custom_actions=({"action": "test.dummy"},),
+        )
+        profile = make_profile(phases={Phase.INITIAL: custom_phase})
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+
+        received: list[str | None] = []
+        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
+        async_dispatcher_connect(hass, signal, received.append)
+
+        with patch(
+            "custom_components.frigate_notifications.dispatcher.execute_custom_actions",
+            new_callable=AsyncMock,
+            return_value="script blew up",
+        ):
+            await dispatcher.on_review_new(make_review())
+            await hass.async_block_till_done()
+
+        # Delivery succeeded.
+        assert len(notify_calls) == 1
+        # Custom action error surfaced via problem signal.
+        assert any(r is not None and r.startswith("custom_action_error:") for r in received)
 
 
 class TestDispatcherAlertOnce:
