@@ -9,7 +9,7 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import slugify
 
 from .const import DOMAIN, SUBENTRY_TYPE_PROFILE
-from .data import get_available_frigate_cameras, get_frigate_config
+from .frigate_config import get_frigate_config_view
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -21,11 +21,10 @@ _LOGGER = logging.getLogger(__name__)
 def sync_broken_camera_issues(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Create/resolve repair issues for profiles bound to missing Frigate cameras."""
     frigate_entry_id = entry.data["frigate_entry_id"]
-    try:
-        get_frigate_config(hass, frigate_entry_id)
-    except KeyError:
+    config_view = get_frigate_config_view(hass, frigate_entry_id)
+    if config_view is None:
         return
-    available = get_available_frigate_cameras(hass, frigate_entry_id)
+    available = config_view.camera_names()
 
     active_issue_keys: set[tuple[str, str]] = set()
 
@@ -69,15 +68,13 @@ def sync_broken_camera_issues(hass: HomeAssistant, entry: ConfigEntry) -> None:
 def sync_stale_zone_issues(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Create/resolve repair issues for zone configs referencing nonexistent zones."""
     frigate_entry_id = entry.data["frigate_entry_id"]
-
-    try:
-        frigate_config = get_frigate_config(hass, frigate_entry_id)
-    except KeyError:
+    config_view = get_frigate_config_view(hass, frigate_entry_id)
+    if config_view is None:
         return
 
     all_frigate_zones: set[str] = set()
-    for cam_cfg in frigate_config["cameras"].values():
-        all_frigate_zones.update(cam_cfg["zones"])
+    for camera in config_view.cameras.values():
+        all_frigate_zones.update(camera.zones)
 
     active_subentry_ids: set[str] = set()
 
