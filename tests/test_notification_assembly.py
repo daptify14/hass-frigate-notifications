@@ -28,20 +28,40 @@ class TestAssembleNotification:
         assert "detection_id" in rendered.attachment_ctx
         assert "access_token" in rendered.action_ctx
 
-    async def test_assemble_genai_title_prefix_applied(self, hass: HomeAssistant) -> None:
-        """GenAI title prefix is prepended when conditions are met."""
+    @pytest.mark.parametrize(
+        ("threat_level", "prefixes", "expected_start", "must_not_start"),
+        [
+            (3, {0: "Info", 2: "ALERT"}, "ALERT ", None),
+            (1, {0: "Info", 2: "ALERT"}, "Info ", "ALERT"),
+            (0, {1: "!", 2: "!!"}, None, "!"),
+            (2, {1: "! ", 2: "!! "}, "!! ", "!!  "),
+        ],
+        ids=["high-selects-highest", "low-selects-lower", "zero-no-prefix", "trailing-space-ok"],
+    )
+    async def test_assemble_genai_title_prefix_threshold(
+        self,
+        hass: HomeAssistant,
+        threat_level: int,
+        prefixes: dict[int, str],
+        expected_start: str | None,
+        must_not_start: str | None,
+    ) -> None:
+        """GenAI title prefix selects by threshold and normalizes spacing."""
         rendered = assemble_notification(
             make_dispatch_request(
                 hass,
-                profile=make_profile(title_genai_prefixes={0: "Info", 2: "ALERT"}),
-                review=make_review(genai=make_genai(threat_level=3)),
+                profile=make_profile(title_genai_prefixes=prefixes),
+                review=make_review(genai=make_genai(threat_level=threat_level)),
                 phase=Phase.GENAI,
                 lifecycle=Lifecycle.GENAI,
                 is_genai=True,
                 is_initial=False,
             )
         )
-        assert rendered.title.startswith("ALERT ")
+        if expected_start:
+            assert rendered.title.startswith(expected_start)
+        if must_not_start:
+            assert not rendered.title.startswith(must_not_start)
 
     async def test_assemble_genai_prefix_skipped_when_disabled(self, hass: HomeAssistant) -> None:
         """GenAI prefix is not applied when title_prefix_enabled is False."""
