@@ -1,7 +1,9 @@
 """Shared selectors, constants, and helper functions for config flow modules."""
 
+from __future__ import annotations
+
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
@@ -29,8 +31,12 @@ from ..const import (
     format_camera_text,
     humanize_zone,
 )
-from ..data import get_available_frigate_cameras, get_frigate_config
+from ..data import get_available_frigate_cameras
 from ..enums import Provider, resolved_platform
+from ..frigate_config import get_frigate_config_view
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -115,7 +121,7 @@ _EXCLUDED_NOTIFY_PREFIXES = ("mobile_app_", "send_message")
 _EXCLUDED_NOTIFY_SERVICES = ("persistent_notification", "notify")
 
 
-def notify_service_selector(hass: Any) -> SelectSelector:
+def notify_service_selector(hass: HomeAssistant) -> SelectSelector:
     """Build a SelectSelector listing available notify services, excluding per-device ones."""
     notify_services = hass.services.async_services().get("notify", {})
     options = [
@@ -222,7 +228,7 @@ def tv_overlay_delivery_fields(
     return fields, suggested
 
 
-def normalize_interruption_level(value: Any) -> Any:
+def normalize_interruption_level(value: str) -> str:
     """Normalize interruption-level values to the current selector vocabulary."""
     if value == "time_sensitive":
         return "time-sensitive"
@@ -255,57 +261,57 @@ def profile_placeholders(data: dict[str, Any]) -> dict[str, str]:
     }
 
 
-def get_available_cameras(hass: Any, frigate_entry_id: str) -> list[str]:
+def get_available_cameras(hass: HomeAssistant, frigate_entry_id: str) -> list[str]:
     """Return available camera names from the linked Frigate instance (sorted for UI)."""
     return sorted(get_available_frigate_cameras(hass, frigate_entry_id))
 
 
-def get_camera_zones(hass: Any, frigate_entry_id: str, camera: str) -> list[str]:
+def get_camera_zones(hass: HomeAssistant, frigate_entry_id: str, camera: str) -> list[str]:
     """Return zone names for a specific camera."""
     if not camera:
         return []
-    frigate_config = get_frigate_config(hass, frigate_entry_id)
-    cam = frigate_config["cameras"].get(camera)
-    if not cam:
+    config_view = get_frigate_config_view(hass, frigate_entry_id)
+    if config_view is None:
         return []
-    return list(cam["zones"])
+    return list(config_view.get_camera_zones(camera))
 
 
-def get_tracked_objects(hass: Any, frigate_entry_id: str, camera: str) -> list[str]:
+def get_tracked_objects(hass: HomeAssistant, frigate_entry_id: str, camera: str) -> list[str]:
     """Return tracked object types for a specific camera."""
-    frigate_config = get_frigate_config(hass, frigate_entry_id)
-    cam = frigate_config["cameras"].get(camera)
-    if not cam:
+    config_view = get_frigate_config_view(hass, frigate_entry_id)
+    if config_view is None:
         return []
-    return list(cam["objects"]["track"])
+    return list(config_view.get_tracked_objects(camera))
 
 
-def camera_supports_genai(hass: Any, frigate_entry_id: str, camera: str) -> bool:
+def camera_supports_genai(hass: HomeAssistant, frigate_entry_id: str, camera: str) -> bool:
     """Check if a specific camera has GenAI review descriptions enabled."""
-    try:
-        frigate_config = get_frigate_config(hass, frigate_entry_id)
-    except KeyError:
+    config_view = get_frigate_config_view(hass, frigate_entry_id)
+    if config_view is None:
         return False
-    cam = frigate_config["cameras"].get(camera)
-    if not cam:
-        return False
-    return bool(cam["review"]["genai"]["enabled"])
+    return config_view.camera_supports_genai(camera)
 
 
-def supports_genai(hass: Any, frigate_entry_id: str) -> bool:
+def supports_genai(hass: HomeAssistant, frigate_entry_id: str) -> bool:
     """Check if the linked Frigate instance has any GenAI-enabled cameras."""
-    cameras = get_available_cameras(hass, frigate_entry_id)
-    return any(camera_supports_genai(hass, frigate_entry_id, cam) for cam in cameras)
+    config_view = get_frigate_config_view(hass, frigate_entry_id)
+    if config_view is None:
+        return False
+    return config_view.any_genai_enabled()
 
 
-def get_camera_capabilities(hass: Any, frigate_entry_id: str, camera: str) -> dict[str, bool]:
+def get_camera_capabilities(
+    hass: HomeAssistant, frigate_entry_id: str, camera: str
+) -> dict[str, bool]:
     """Return capability flags for a single camera."""
     return {
         "genai": camera_supports_genai(hass, frigate_entry_id, camera),
     }
 
 
-def get_camera_recognition(hass: Any, frigate_entry_id: str, camera: str) -> dict[str, bool]:
+def get_camera_recognition(
+    hass: HomeAssistant, frigate_entry_id: str, camera: str
+) -> dict[str, bool]:
     """Detect per-camera recognition capabilities via entity registry."""
     ent_reg = er.async_get(hass)
     prefix = f"{frigate_entry_id}:sensor_recognized"
@@ -318,7 +324,7 @@ def get_camera_recognition(hass: Any, frigate_entry_id: str, camera: str) -> dic
 
 
 def discover_typed_sub_labels(
-    hass: Any, frigate_entry_id: str, camera: str | None = None
+    hass: HomeAssistant, frigate_entry_id: str, camera: str | None = None
 ) -> list[tuple[str, str]]:
     """Discover typed sub-labels from entity registry.
 
@@ -356,7 +362,7 @@ def discover_typed_sub_labels(
 
 
 def discover_camera_sub_labels(
-    hass: Any, frigate_entry_id: str, camera: str
+    hass: HomeAssistant, frigate_entry_id: str, camera: str
 ) -> list[tuple[str, str]]:
     """Camera-scoped typed sub-labels for profile filtering step."""
     if frigate_entry_id not in hass.data.get(FRIGATE_DOMAIN, {}):
@@ -364,7 +370,7 @@ def discover_camera_sub_labels(
     return discover_typed_sub_labels(hass, frigate_entry_id, camera=camera)
 
 
-def discover_all_sub_labels(hass: Any, frigate_entry_id: str) -> list[tuple[str, str]]:
+def discover_all_sub_labels(hass: HomeAssistant, frigate_entry_id: str) -> list[tuple[str, str]]:
     """All typed sub-labels for global options flow."""
     if frigate_entry_id not in hass.data.get(FRIGATE_DOMAIN, {}):
         return []
@@ -372,7 +378,7 @@ def discover_all_sub_labels(hass: Any, frigate_entry_id: str) -> list[tuple[str,
 
 
 def build_base_url_options(
-    hass: Any, current_options: dict[str, Any]
+    hass: HomeAssistant, current_options: dict[str, Any]
 ) -> tuple[list[SelectOptionDict], str]:
     """Build selectable Home Assistant URL options and a suggested default."""
     options: list[SelectOptionDict] = []
@@ -399,7 +405,7 @@ def build_base_url_options(
 
 
 def build_frigate_url_options(
-    hass: Any, current_options: dict[str, Any], frigate_entry_id: str
+    hass: HomeAssistant, current_options: dict[str, Any], frigate_entry_id: str
 ) -> tuple[list[SelectOptionDict], str]:
     """Build selectable Frigate URL options and a suggested default."""
     options: list[SelectOptionDict] = []

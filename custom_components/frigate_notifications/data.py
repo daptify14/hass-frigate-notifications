@@ -201,11 +201,6 @@ class RuntimeConfig:
 # Shared Frigate / subentry helpers.
 
 
-def get_frigate_config(hass: HomeAssistant, frigate_entry_id: str) -> dict[str, Any]:
-    """Return the Frigate camera config stored by the Frigate integration."""
-    return hass.data["frigate"][frigate_entry_id]["config"]
-
-
 def get_available_frigate_cameras(hass: HomeAssistant, frigate_entry_id: str) -> set[str]:
     """Return the current set of cameras exposed by the selected Frigate entry."""
     config_view = get_frigate_config_view(hass, frigate_entry_id)
