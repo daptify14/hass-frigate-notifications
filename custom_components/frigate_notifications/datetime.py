@@ -91,7 +91,13 @@ class FrigateNotificationsSilenceDateTime(
                     self._schedule_clear(restored)
                 else:
                     self._attr_native_value = None
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as err:
+                _LOGGER.warning(
+                    "Could not restore silence state '%s' for %s: %s",
+                    last_state.state,
+                    self.entity_id,
+                    err,
+                )
                 self._attr_native_value = None
         else:
             self._attr_native_value = None

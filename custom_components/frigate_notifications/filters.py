@@ -270,8 +270,13 @@ class SilenceFilter:
             silenced_until = datetime.fromisoformat(state.state)
             if silenced_until > dt_util.utcnow():
                 return _reject("silence", f"silenced until {state.state}")
-        except (ValueError, TypeError):
-            pass
+        except (ValueError, TypeError) as err:
+            _LOGGER.warning(
+                "Malformed silence state '%s' for profile %s: %s",
+                state.state,
+                ctx.profile.profile_id,
+                err,
+            )
         return _PASS
 
 
