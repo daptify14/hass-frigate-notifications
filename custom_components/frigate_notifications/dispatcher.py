@@ -9,7 +9,9 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Literal
 
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.template import TemplateError
 
 from .action_presets import resolve_tap_url
 from .const import DOMAIN, SIGNAL_DISPATCH_PROBLEM
@@ -158,18 +160,20 @@ async def execute_custom_actions(
     actions: tuple[dict, ...],
     run_variables: Mapping[str, Any],
     profile_name: str,
-) -> None:
-    """Execute a custom action sequence via a transient Script instance."""
+) -> str | None:
+    """Execute a custom action sequence. Returns an error string on failure."""
     if not actions:
-        return
+        return None
     try:
         from homeassistant.helpers.script import Script, async_validate_actions_config
 
         validated = await async_validate_actions_config(hass, list(actions))
         script = Script(hass, validated, f"FN: {profile_name}", DOMAIN)
         await script.async_run(run_variables=run_variables)
-    except Exception:
+    except Exception as err:
         _LOGGER.exception("Custom action failed for profile %s", profile_name)
+        return str(err) or type(err).__name__
+    return None
 
 
 @dataclass(frozen=True)
@@ -389,7 +393,8 @@ class NotificationDispatcher:
                 await self._dispatch_for_profile(profile, review, lifecycle, rs)
             except Exception as err:
                 _LOGGER.exception(
-                    "Error processing %s for profile %s / review %s",
+                    "Unhandled %s in %s for profile %s / review %s",
+                    type(err).__name__,
                     lifecycle.value,
                     profile.profile_id,
                     review.review_id,
@@ -479,6 +484,7 @@ class NotificationDispatcher:
         phase_name = lifecycle_to_phase(lifecycle, is_initial=is_initial)
         phase_cfg = profile.get_phase(phase_name)
 
+        # Render phase
         try:
             request = DispatchRequest(
                 hass=self._hass,
@@ -495,10 +501,42 @@ class NotificationDispatcher:
                 template_id_map=self._runtime.template_id_map,
             )
             rendered = assemble_notification(request)
-            success = await deliver_notification(self._hass, profile, review, rendered)
+        except TemplateError as err:
+            _LOGGER.warning(
+                "Render failed for %s / review %s: %s",
+                profile.name,
+                review.review_id[:25],
+                err,
+            )
+            self._signal_dispatch_problem(profile, error_msg=f"render_error: {err}")
+            self._maybe_retire(profile, review, lifecycle, is_genai=is_genai)
+            return
         except Exception as err:
             _LOGGER.exception(
-                "Failed to dispatch notification to %s for review %s",
+                "Unexpected render failure for %s / review %s",
+                profile.name,
+                review.review_id[:25],
+            )
+            self._signal_dispatch_problem(profile, error_msg=str(err))
+            self._maybe_retire(profile, review, lifecycle, is_genai=is_genai)
+            return
+
+        # Delivery phase
+        try:
+            success = await deliver_notification(self._hass, profile, review, rendered)
+        except HomeAssistantError as err:
+            _LOGGER.warning(
+                "Delivery failed to %s for review %s: %s",
+                profile.notify_target or "<unset>",
+                review.review_id[:25],
+                err,
+            )
+            self._signal_dispatch_problem(profile, error_msg=f"delivery_error: {err}")
+            self._maybe_retire(profile, review, lifecycle, is_genai=is_genai)
+            return
+        except Exception as err:
+            _LOGGER.exception(
+                "Unexpected delivery failure to %s for review %s",
                 profile.notify_target or "<unset>",
                 review.review_id[:25],
             )
@@ -520,12 +558,16 @@ class NotificationDispatcher:
         self._update_stats(profile, review)
 
         if phase_cfg.custom_actions:
-            await execute_custom_actions(
+            action_error = await execute_custom_actions(
                 self._hass,
                 phase_cfg.custom_actions,
                 rendered.ctx,
                 profile.name,
             )
+            if action_error:
+                self._signal_dispatch_problem(
+                    profile, error_msg=f"custom_action_error: {action_error}"
+                )
 
         # Cooldown: GenAI doesn't extend it.
         if not is_genai:

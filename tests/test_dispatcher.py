@@ -395,7 +395,7 @@ class TestDispatcherFailure:
         dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
         await dispatcher.on_review_new(make_review())
         await hass.async_block_till_done()
-        assert "Failed to dispatch notification" in caplog.text
+        assert "Delivery failed to" in caplog.text
 
     @pytest.mark.usefixtures("_zero_delays")
     async def test_dispatch_failure_emits_problem_signal(self, hass: HomeAssistant) -> None:
