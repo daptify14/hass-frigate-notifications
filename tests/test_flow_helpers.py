@@ -478,12 +478,14 @@ class TestCameraHelperGuards:
         from custom_components.frigate_notifications.flows.helpers import get_camera_zones
 
         assert get_camera_zones(self._make_hass({"cam1": {"zones": {}}}), "fid", "nope") == []
+        assert get_camera_zones(self._make_hass(), "fid", "cam1") == []
 
     def test_get_tracked_objects_unknown_camera(self) -> None:
         """Returns empty when camera does not exist."""
         from custom_components.frigate_notifications.flows.helpers import get_tracked_objects
 
         assert get_tracked_objects(self._make_hass({"cam1": {}}), "fid", "nope") == []
+        assert get_tracked_objects(self._make_hass(), "fid", "cam1") == []
 
     def test_camera_supports_genai_missing_entry(self) -> None:
         """Returns False when Frigate entry is missing."""

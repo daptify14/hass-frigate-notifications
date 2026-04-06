@@ -32,12 +32,12 @@ from .const import (
 from .data import (
     FrigateNotificationsRuntimeData,
     build_runtime_config,
-    get_frigate_config,
     get_integration_subentry_id,
     get_profile_device_identifiers,
 )
 from .dispatcher import NotificationDispatcher
 from .filters import build_default_filter_chain
+from .frigate_config import get_frigate_config_view
 from .presets import async_ensure_preset_cache
 from .processor import ReviewProcessor
 from .repairs import (
@@ -81,11 +81,10 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConfigEntry) -> bool:
     """Set up Notifications for Frigate from a config entry."""
     frigate_entry_id = entry.data["frigate_entry_id"]
-    try:
-        frigate_config = get_frigate_config(hass, frigate_entry_id)
-    except KeyError as err:
+    config_view = get_frigate_config_view(hass, frigate_entry_id)
+    if config_view is None:
         msg = f"Frigate entry {frigate_entry_id} not ready"
-        raise ConfigEntryNotReady(msg) from err
+        raise ConfigEntryNotReady(msg)
 
     sync_broken_camera_issues(hass, entry)
     sync_stale_zone_issues(hass, entry)
@@ -122,7 +121,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
         on_review_message=_on_review_message,
     )
 
-    topic_prefix = frigate_config.get("mqtt", {}).get("topic_prefix", "frigate")
+    topic_prefix = config_view.topic_prefix
     mqtt_topic = f"{topic_prefix}/reviews"
 
     entry.runtime_data = FrigateNotificationsRuntimeData(
@@ -212,9 +211,7 @@ def _setup_frigate_device_listener(
     """Subscribe to device-registry changes and re-sync repairs when Frigate topology changes."""
 
     async def _async_sync_repairs() -> None:
-        try:
-            get_frigate_config(hass, frigate_entry_id)
-        except KeyError:
+        if get_frigate_config_view(hass, frigate_entry_id) is None:
             return
         sync_broken_camera_issues(hass, entry)
         sync_stale_zone_issues(hass, entry)

@@ -57,6 +57,7 @@ from .enums import (
     ZoneMatchMode,
     provider_family,
 )
+from .frigate_config import get_frigate_config_view
 from .providers.models import AndroidTvConfig, MobileAppConfig
 
 if TYPE_CHECKING:
@@ -200,18 +201,10 @@ class RuntimeConfig:
 # Shared Frigate / subentry helpers.
 
 
-def get_frigate_config(hass: HomeAssistant, frigate_entry_id: str) -> dict[str, Any]:
-    """Return the Frigate camera config stored by the Frigate integration."""
-    return hass.data["frigate"][frigate_entry_id]["config"]
-
-
 def get_available_frigate_cameras(hass: HomeAssistant, frigate_entry_id: str) -> set[str]:
     """Return the current set of cameras exposed by the selected Frigate entry."""
-    try:
-        frigate_config = get_frigate_config(hass, frigate_entry_id)
-    except KeyError:
-        return set()
-    return set(frigate_config["cameras"])
+    config_view = get_frigate_config_view(hass, frigate_entry_id)
+    return config_view.camera_names() if config_view is not None else set()
 
 
 def get_frigate_camera_identifier(frigate_entry_id: str, camera_name: str) -> tuple[str, str]:

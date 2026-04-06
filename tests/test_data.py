@@ -25,9 +25,7 @@ from custom_components.frigate_notifications.data import (
     build_emoji_map,
     build_phase_emoji_map,
     build_runtime_config,
-    get_available_frigate_cameras,
     get_frigate_camera_device,
-    get_frigate_config,
     resolve_guard_entity,
     resolve_presence,
     resolve_state_filter,
@@ -455,20 +453,6 @@ class TestExpandUrgency:
 
 class TestFrigateHelpers:
     """Tests for Frigate integration helpers."""
-
-    def test_frigate_config_accessors(self) -> None:
-        """Frigate config and camera list are accessible from hass.data."""
-        hass = MagicMock()
-        config = {"cameras": {"cam1": {}, "cam2": {}}}
-        hass.data = {"frigate": {"fid": {"config": config}}}
-        assert get_frigate_config(hass, "fid") is config
-        assert get_available_frigate_cameras(hass, "fid") == {"cam1", "cam2"}
-
-    def test_get_available_cameras_returns_empty_on_key_error(self) -> None:
-        """get_available_frigate_cameras returns empty set on KeyError."""
-        hass = MagicMock()
-        hass.data = {"frigate": {}}
-        assert get_available_frigate_cameras(hass, "missing") == set()
 
     @patch("custom_components.frigate_notifications.data.dr.async_get")
     def test_get_camera_device_returns_device(self, mock_dr_get: MagicMock) -> None:
