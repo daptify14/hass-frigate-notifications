@@ -67,8 +67,6 @@ def get_frigate_config_view(hass: HomeAssistant, frigate_entry_id: str) -> Friga
 
     cameras: dict[str, FrigateCameraView] = {}
     for name, cam_data in raw_cameras.items():
-        if not isinstance(name, str):
-            continue
         safe_cam = _safe_dict(cam_data)
         objects = _safe_dict(safe_cam.get("objects"))
         review = _safe_dict(safe_cam.get("review"))
