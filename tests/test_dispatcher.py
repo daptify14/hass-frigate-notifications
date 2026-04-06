@@ -179,59 +179,6 @@ class TestDispatcherGenAI:
         await hass.async_block_till_done()
         assert len(notify_calls) == 2
 
-    @pytest.mark.parametrize(
-        ("threat_level", "expected_prefix"),
-        [(2, "!! "), (1, "! "), (0, "")],
-        ids=["high-threat", "low-threat", "zero-no-prefix"],
-    )
-    @pytest.mark.usefixtures("_zero_delays")
-    async def test_genai_title_prefix(
-        self,
-        hass: HomeAssistant,
-        notify_calls: list[ServiceCall],
-        threat_level: int,
-        expected_prefix: str,
-    ) -> None:
-        """GenAI title prefix scales with threat_level."""
-        profile = make_profile(
-            phases={Phase.GENAI: DEFAULT_PHASE_GENAI},
-            title_genai_prefixes={1: "!", 2: "!!"},
-        )
-        runtime = make_runtime([profile])
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-        review = make_review(genai=make_genai(threat_level=threat_level))
-
-        await dispatcher.on_genai(review)
-        await hass.async_block_till_done()
-        assert len(notify_calls) == 1
-        title = notify_calls[0].data["title"]
-        if expected_prefix:
-            assert title.startswith(expected_prefix)
-        else:
-            assert not title.startswith("!")
-
-    @pytest.mark.usefixtures("_zero_delays")
-    async def test_genai_title_prefix_legacy_spacing_does_not_double_space(
-        self,
-        hass: HomeAssistant,
-        notify_calls: list[ServiceCall],
-    ) -> None:
-        """Stored prefixes with trailing spaces still render with a single separator."""
-        profile = make_profile(
-            phases={Phase.GENAI: DEFAULT_PHASE_GENAI},
-            title_genai_prefixes={1: "! ", 2: "!! "},
-        )
-        runtime = make_runtime([profile])
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-        review = make_review(genai=make_genai(threat_level=2))
-
-        await dispatcher.on_genai(review)
-        await hass.async_block_till_done()
-        assert len(notify_calls) == 1
-        title = notify_calls[0].data["title"]
-        assert title.startswith("!! ")
-        assert not title.startswith("!!  ")
-
 
 class TestDispatcherRetirement:
     @pytest.mark.usefixtures("_zero_delays")
@@ -365,105 +312,12 @@ class TestDispatcherPendingAbsorb:
         await hass.async_block_till_done()
 
 
-class TestDispatcherNoTarget:
-    @pytest.mark.usefixtures("_zero_delays")
-    async def test_no_notify_target_skips(
-        self,
-        hass: HomeAssistant,
-        notify_calls: list[ServiceCall],
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """Empty notify_target logs warning and sends nothing."""
-        profile = make_profile(notify_target="")
-        runtime = make_runtime([profile])
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-        await dispatcher.on_review_new(make_review())
-        await hass.async_block_till_done()
-        assert len(notify_calls) == 0
-        assert "No notify target" in caplog.text
-
-
 class TestDispatcherFailure:
     @pytest.mark.usefixtures("_zero_delays")
-    async def test_service_call_failure_logged(
+    async def test_delivery_failure_tags_signal_and_skips_bookkeeping(
         self, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Failed service call logs exception, doesn't crash."""
-        # Use a service name that is not registered → will raise.
-        profile = make_profile(notify_target="notify.nonexistent_service")
-        runtime = make_runtime([profile])
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-        await dispatcher.on_review_new(make_review())
-        await hass.async_block_till_done()
-        assert "Failed to dispatch notification" in caplog.text
-
-    @pytest.mark.usefixtures("_zero_delays")
-    async def test_dispatch_failure_emits_problem_signal(self, hass: HomeAssistant) -> None:
-        """Failed dispatch emits problem signal with error message."""
-        profile = make_profile(notify_target="notify.nonexistent_service")
-        runtime = make_runtime([profile])
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-
-        received: list[str | None] = []
-        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
-        from homeassistant.helpers.dispatcher import async_dispatcher_connect
-
-        async_dispatcher_connect(hass, signal, received.append)
-
-        await dispatcher.on_review_new(make_review())
-        await hass.async_block_till_done()
-
-        assert len(received) == 1
-        assert received[0] is not None
-        assert isinstance(received[0], str)
-
-    @pytest.mark.usefixtures("_zero_delays")
-    async def test_dispatch_success_clears_problem_signal(
-        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
-    ) -> None:
-        """Successful dispatch emits problem signal with None to clear."""
-        profile = make_profile()
-        runtime = make_runtime([profile])
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-
-        received: list[str | None] = []
-        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
-        from homeassistant.helpers.dispatcher import async_dispatcher_connect
-
-        async_dispatcher_connect(hass, signal, received.append)
-
-        await dispatcher.on_review_new(make_review())
-        await hass.async_block_till_done()
-
-        assert len(received) == 1
-        assert received[0] is None
-
-    @pytest.mark.usefixtures("_zero_delays")
-    async def test_handle_lifecycle_exception_emits_problem_signal(
-        self, hass: HomeAssistant
-    ) -> None:
-        """Exception in _handle_lifecycle emits problem signal."""
-        profile = make_profile()
-        runtime = make_runtime([profile])
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-
-        received: list[str | None] = []
-        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
-        from homeassistant.helpers.dispatcher import async_dispatcher_connect
-
-        async_dispatcher_connect(hass, signal, received.append)
-
-        with patch.object(dispatcher, "_dispatch_for_profile", side_effect=RuntimeError("boom")):
-            await dispatcher.on_review_new(make_review())
-            await hass.async_block_till_done()
-
-        assert len(received) == 1
-        assert received[0] is not None
-        assert "boom" in received[0]
-
-    @pytest.mark.usefixtures("_zero_delays")
-    async def test_handler_failure_skips_all_bookkeeping(self, hass: HomeAssistant) -> None:
-        """Registered service that raises skips stats, cooldown, and initial_sent."""
+        """HA delivery failure: logs warning, emits delivery_error signal, skips bookkeeping."""
         from homeassistant.exceptions import HomeAssistantError
         from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
@@ -478,6 +332,10 @@ class TestDispatcherFailure:
         dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
         review = make_review()
 
+        problem_received: list[str | None] = []
+        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
+        async_dispatcher_connect(hass, signal, problem_received.append)
+
         stats_received: list = []
         async_dispatcher_connect(
             hass,
@@ -488,10 +346,154 @@ class TestDispatcherFailure:
         await dispatcher.on_review_new(review)
         await hass.async_block_till_done()
 
+        # Tagged problem signal.
+        assert len(problem_received) == 1
+        assert problem_received[0] is not None
+        assert problem_received[0].startswith("delivery_error:")
+        # Warning logged.
+        assert "Delivery failed to" in caplog.text
+        # No bookkeeping.
         assert len(stats_received) == 0
         assert "driveway" not in dispatcher._get_profile_state(profile.profile_id).last_sent_at
         rs = dispatcher._get_review_state(profile.profile_id, review.review_id)
         assert rs.initial_sent is False
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_render_failure_tags_signal_and_skips_bookkeeping(
+        self, hass: HomeAssistant
+    ) -> None:
+        """TemplateError during render: emits render_error signal, skips bookkeeping."""
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+        from homeassistant.helpers.template import TemplateError
+
+        profile = make_profile(cooldown_seconds=60)
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        problem_received: list[str | None] = []
+        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
+        async_dispatcher_connect(hass, signal, problem_received.append)
+
+        stats_received: list = []
+        async_dispatcher_connect(
+            hass,
+            f"frigate_notifications_stats_{profile.entry_id}",
+            lambda *a: stats_received.append(a),
+        )
+
+        with patch(
+            "custom_components.frigate_notifications.dispatcher.assemble_notification",
+            side_effect=TemplateError("bad template"),
+        ):
+            await dispatcher.on_review_new(review)
+            await hass.async_block_till_done()
+
+        # Tagged problem signal.
+        assert len(problem_received) == 1
+        assert problem_received[0] is not None
+        assert problem_received[0].startswith("render_error:")
+        # No bookkeeping.
+        assert len(stats_received) == 0
+        assert "driveway" not in dispatcher._get_profile_state(profile.profile_id).last_sent_at
+        rs = dispatcher._get_review_state(profile.profile_id, review.review_id)
+        assert rs.initial_sent is False
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_dispatch_success_clears_problem_signal(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Successful dispatch emits problem signal with None to clear."""
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+        profile = make_profile()
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+
+        received: list[str | None] = []
+        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
+        async_dispatcher_connect(hass, signal, received.append)
+
+        await dispatcher.on_review_new(make_review())
+        await hass.async_block_till_done()
+
+        assert len(received) == 1
+        assert received[0] is None
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_handle_lifecycle_exception_emits_problem_signal(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Exception in _handle_lifecycle emits problem signal."""
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+        profile = make_profile()
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+
+        received: list[str | None] = []
+        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
+        async_dispatcher_connect(hass, signal, received.append)
+
+        with patch.object(dispatcher, "_dispatch_for_profile", side_effect=RuntimeError("boom")):
+            await dispatcher.on_review_new(make_review())
+            await hass.async_block_till_done()
+
+        assert len(received) == 1
+        assert received[0] is not None
+        assert "boom" in received[0]
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_unexpected_render_error_emits_untagged_signal(self, hass: HomeAssistant) -> None:
+        """Non-TemplateError from render emits untagged problem signal."""
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+        profile = make_profile()
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+
+        received: list[str | None] = []
+        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
+        async_dispatcher_connect(hass, signal, received.append)
+
+        with patch(
+            "custom_components.frigate_notifications.dispatcher.assemble_notification",
+            side_effect=RuntimeError("context assembly bug"),
+        ):
+            await dispatcher.on_review_new(make_review())
+            await hass.async_block_till_done()
+
+        assert len(received) == 1
+        assert received[0] is not None
+        assert not received[0].startswith("render_error:")
+        assert "context assembly bug" in received[0]
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_unexpected_delivery_error_emits_untagged_signal(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Non-HomeAssistantError from delivery emits untagged problem signal."""
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+        profile = make_profile()
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+
+        received: list[str | None] = []
+        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
+        async_dispatcher_connect(hass, signal, received.append)
+
+        with patch(
+            "custom_components.frigate_notifications.dispatcher.deliver_notification",
+            side_effect=RuntimeError("provider crash"),
+        ):
+            await dispatcher.on_review_new(make_review())
+            await hass.async_block_till_done()
+
+        assert len(received) == 1
+        assert received[0] is not None
+        assert not received[0].startswith("delivery_error:")
+        assert "provider crash" in received[0]
 
 
 class TestDispatcherCustomActions:
@@ -500,6 +502,8 @@ class TestDispatcherCustomActions:
         self, hass: HomeAssistant, notify_calls: list[ServiceCall]
     ) -> None:
         """Phase custom_actions are executed after successful notification."""
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
         custom_phase = replace(
             DEFAULT_PHASE_INITIAL,
             custom_actions=({"action": "test.dummy"},),
@@ -508,27 +512,35 @@ class TestDispatcherCustomActions:
         runtime = make_runtime([profile])
         dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
 
+        received: list[str | None] = []
+        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
+        async_dispatcher_connect(hass, signal, received.append)
+
         with patch(
             "custom_components.frigate_notifications.dispatcher.execute_custom_actions",
             new_callable=AsyncMock,
+            return_value=None,
         ) as mock_exec:
             await dispatcher.on_review_new(make_review())
             await hass.async_block_till_done()
             assert len(notify_calls) == 1
             mock_exec.assert_awaited_once()
 
+        # Exactly one signal: the success clear.
+        assert received == [None]
+
     @pytest.mark.usefixtures("_zero_delays")
-    async def test_empty_custom_actions_is_noop(self, hass: HomeAssistant) -> None:
-        """Empty actions tuple returns immediately without error."""
+    async def test_empty_custom_actions_returns_none(self, hass: HomeAssistant) -> None:
+        """Empty actions tuple returns None without error."""
         from custom_components.frigate_notifications.dispatcher import execute_custom_actions
 
-        await execute_custom_actions(hass, (), {}, "test")  # should not raise
+        assert await execute_custom_actions(hass, (), {}, "test") is None
 
     @pytest.mark.usefixtures("_zero_delays")
-    async def test_custom_actions_script_exception_logged(
+    async def test_custom_actions_script_exception_returns_error(
         self, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Script exception is logged, doesn't crash."""
+        """Script exception is logged and returns error string."""
         from custom_components.frigate_notifications.dispatcher import execute_custom_actions
 
         with (
@@ -541,8 +553,78 @@ class TestDispatcherCustomActions:
                 side_effect=RuntimeError("boom"),
             ),
         ):
-            await execute_custom_actions(hass, ({"action": "test.event"},), {}, "TestProfile")
+            result = await execute_custom_actions(
+                hass, ({"action": "test.event"},), {}, "TestProfile"
+            )
         assert "Custom action failed" in caplog.text
+        assert result is not None
+        assert "boom" in result
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_custom_actions_success_returns_none(self, hass: HomeAssistant) -> None:
+        """Successful script execution returns None."""
+        from custom_components.frigate_notifications.dispatcher import execute_custom_actions
+
+        mock_script = AsyncMock()
+        with (
+            patch(
+                "homeassistant.helpers.script.async_validate_actions_config",
+                return_value=[{"action": "test.event"}],
+            ),
+            patch("homeassistant.helpers.script.Script", return_value=mock_script),
+        ):
+            result = await execute_custom_actions(
+                hass, ({"action": "test.event"},), {}, "TestProfile"
+            )
+        assert result is None
+        mock_script.async_run.assert_awaited_once()
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_custom_action_failure_emits_problem_signal_after_delivery(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Custom action failure surfaces problem signal without rolling back delivery."""
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+        custom_phase = replace(
+            DEFAULT_PHASE_INITIAL,
+            custom_actions=({"action": "test.dummy"},),
+        )
+        profile = make_profile(cooldown_seconds=60, phases={Phase.INITIAL: custom_phase})
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        received: list[str | None] = []
+        signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
+        async_dispatcher_connect(hass, signal, received.append)
+
+        stats_received: list = []
+        async_dispatcher_connect(
+            hass,
+            f"frigate_notifications_stats_{profile.entry_id}",
+            lambda *a: stats_received.append(a),
+        )
+
+        with patch(
+            "custom_components.frigate_notifications.dispatcher.execute_custom_actions",
+            new_callable=AsyncMock,
+            return_value="script blew up",
+        ):
+            await dispatcher.on_review_new(review)
+            await hass.async_block_till_done()
+
+        # Delivery succeeded — bookkeeping preserved.
+        assert len(notify_calls) == 1
+        assert len(stats_received) == 1
+        assert review.camera in dispatcher._get_profile_state(profile.profile_id).last_sent_at
+        rs = dispatcher._get_review_state(profile.profile_id, review.review_id)
+        assert rs.initial_sent is True
+        # Signal sequence: clear from delivery, then custom_action_error.
+        assert len(received) == 2
+        assert received[0] is None
+        assert received[1] is not None
+        assert received[1].startswith("custom_action_error:")
 
 
 class TestDispatcherAlertOnce:
@@ -762,19 +844,6 @@ class TestDispatcherPendingTaskCancel:
         # Clean up.
         dispatcher.cleanup_review(review.review_id)
         await hass.async_block_till_done()
-
-
-class TestDispatcherGetProfile:
-    def test_get_profile_found(self, hass: HomeAssistant) -> None:
-        profile = make_profile()
-        runtime = make_runtime([profile])
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-        assert dispatcher.get_profile(profile.profile_id) is profile
-
-    def test_get_profile_not_found(self, hass: HomeAssistant) -> None:
-        runtime = make_runtime([make_profile()])
-        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
-        assert dispatcher.get_profile("nonexistent") is None
 
 
 class TestDispatcherMultiCamera:

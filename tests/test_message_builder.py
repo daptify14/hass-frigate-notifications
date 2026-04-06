@@ -535,9 +535,9 @@ class TestRenderNotification:
         assert "spotted by \U0001f464" in result.subtitle
 
     def test_subtitle_emoji_overlay_broken_zone_override_falls_back(
-        self, hass: HomeAssistant
+        self, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Broken zone override in emoji overlay falls back to default zone_phrase."""
+        """Broken zone override in emoji overlay falls back to default zone_phrase and warns."""
         phase = PhaseConfig(
             content=PhaseContent(
                 message_template="{{ zone_phrase }}",
@@ -552,6 +552,7 @@ class TestRenderNotification:
         )
         result = render_notification(hass, profile, review, Phase.INITIAL, phase, Lifecycle.NEW)
         assert result.subtitle == "detected"
+        assert "Zone phrase overlay template failed" in caplog.text
 
     @pytest.mark.parametrize(
         ("field", "phase_kwargs"),
@@ -577,8 +578,10 @@ class TestRenderNotification:
         )
         assert getattr(result, field) == "{% for x in %}broken{% endfor %}"
 
-    def test_subtitle_render_error_falls_back_to_subjects(self, hass: HomeAssistant) -> None:
-        """Broken subtitle template falls back to subjects string."""
+    def test_subtitle_render_error_falls_back_to_subjects(
+        self, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Broken subtitle template falls back to subjects string and warns."""
         phase = PhaseConfig(
             content=PhaseContent(
                 message_template="{{ object }}",
@@ -590,6 +593,7 @@ class TestRenderNotification:
             hass, make_profile(), review, Phase.INITIAL, phase, Lifecycle.NEW
         )
         assert "Person" in result.subtitle
+        assert "Subtitle template render failed" in caplog.text
 
     def test_id_based_phase_config_renders_via_id_map(
         self, hass: HomeAssistant, template_id_map: dict[str, str]
@@ -634,9 +638,12 @@ class TestRenderNotification:
         )
         assert result.message == "Garage custom"
 
-    def test_zone_override_render_error_falls_back_to_detected(self, hass: HomeAssistant) -> None:
-        """Broken zone_override Jinja template falls back to 'detected'."""
+    def test_zone_override_render_error_falls_back_to_detected(
+        self, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Broken zone_override Jinja template falls back to 'detected' and warns."""
         review = make_review(zones=["front_yard"])
         profile = make_profile(zone_overrides={"front_yard": "{% for x in %}broken{% endfor %}"})
         ctx = build_context(review, profile, Phase.INITIAL, Lifecycle.NEW, hass=hass)
         assert ctx["zone_phrase"] == "detected"
+        assert "Zone phrase template failed for zone 'front_yard'" in caplog.text

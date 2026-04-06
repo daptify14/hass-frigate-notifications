@@ -245,8 +245,8 @@ def build_context(
         try:
             rendered = render_template(hass, zone_override_tpl, ctx)
             ctx["zone_phrase"] = rendered.strip() or "detected"
-        except TemplateError:
-            pass
+        except TemplateError as err:
+            _LOGGER.warning("Zone phrase template failed for zone '%s': %s", first_zone, err)
     elif zone_override_tpl:
         ctx["zone_phrase"] = zone_override_tpl
 
@@ -302,8 +302,10 @@ def _build_emoji_overlay(
         try:
             rendered = render_template(hass, zone_override_tpl, overlay)
             overlay["zone_phrase"] = rendered.strip() or "detected"
-        except TemplateError:
-            pass
+        except TemplateError as err:
+            _LOGGER.warning(
+                "Zone phrase overlay template failed for zone '%s': %s", first_zone, err
+            )
 
     return overlay
 
@@ -365,7 +367,8 @@ def render_notification(
             subtitle_ctx = ctx
         try:
             subtitle = render_template(hass, subtitle_tpl, subtitle_ctx, cache)
-        except TemplateError:
+        except TemplateError as err:
+            _LOGGER.warning("Subtitle template render failed: %s", err)
             subtitle = ctx.get("subjects", "")
     else:
         subtitle = str(ctx.get("subjects", ""))
