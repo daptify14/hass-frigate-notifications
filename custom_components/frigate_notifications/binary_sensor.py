@@ -27,7 +27,7 @@ from .entity_base import (
     FrigateNotificationsIntegrationEntity,
     FrigateNotificationsProfileEntity,
 )
-from .flows.helpers import get_camera_capabilities
+from .frigate_config import get_frigate_config_view
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -227,9 +227,13 @@ class FrigateNotificationsCameraDiagnosticBinarySensor(
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return camera capability attributes."""
         frigate_entry_id = self._entry.data["frigate_entry_id"]
+        config_view = get_frigate_config_view(self._hass_ref, frigate_entry_id)
+        genai = (
+            config_view.camera_supports_genai(self._camera) if config_view is not None else False
+        )
         return {
             "camera": self._camera,
-            **get_camera_capabilities(self._hass_ref, frigate_entry_id, self._camera),
+            "genai": genai,
         }
 
 

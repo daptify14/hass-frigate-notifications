@@ -300,15 +300,6 @@ def supports_genai(hass: HomeAssistant, frigate_entry_id: str) -> bool:
     return config_view.any_genai_enabled()
 
 
-def get_camera_capabilities(
-    hass: HomeAssistant, frigate_entry_id: str, camera: str
-) -> dict[str, bool]:
-    """Return capability flags for a single camera."""
-    return {
-        "genai": camera_supports_genai(hass, frigate_entry_id, camera),
-    }
-
-
 def get_camera_recognition(
     hass: HomeAssistant, frigate_entry_id: str, camera: str
 ) -> dict[str, bool]:
