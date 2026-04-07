@@ -13,6 +13,8 @@ from .const import DOMAIN, SILENCE_DATETIMES_KEY
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant, ServiceCall
 
+    from .datetime import FrigateNotificationsSilenceDateTime
+
 _LOGGER = logging.getLogger(__name__)
 
 SILENCE_SCHEMA = vol.Schema(
@@ -29,7 +31,9 @@ CLEAR_SILENCE_SCHEMA = vol.Schema(
 )
 
 
-def _get_silence_entity(hass: HomeAssistant, profile_id: str):
+def _get_silence_entity(
+    hass: HomeAssistant, profile_id: str
+) -> FrigateNotificationsSilenceDateTime:
     """Look up the silence datetime entity for a profile, or raise."""
     silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
     entity = silence_map.get(profile_id)
