@@ -68,7 +68,7 @@ class PhaseMedia:
     """Media settings for a notification phase."""
 
     attachment: AttachmentType = AttachmentType.SNAPSHOT_CROPPED
-    video: str = VideoType.NONE
+    video: VideoType = VideoType.NONE
     use_latest_detection: bool = False
 
 
