@@ -730,26 +730,23 @@ class TestBuildRuntimeConfig:
         assert result.profiles["driveway"][0].title_template == "Global Title"
 
     @patch("custom_components.frigate_notifications.data.dr.async_get")
-    def test_unknown_tap_action_preset_raises_configuration_error(
+    def test_unknown_tap_action_preset_does_not_abort_setup(
         self,
         mock_dr: MagicMock,
     ) -> None:
-        """Unknown tap_action preset is rejected during runtime config assembly."""
+        """Unknown tap_action preset degrades gracefully at runtime."""
         mock_dr.return_value.async_get.return_value = None
         hass = _mock_hass()
         entry = _mock_entry(profiles=[_minimal_profile(tap_action={"preset": "unknown"})])
-        with pytest.raises(
-            ValueError,
-            match="Unknown tap_action for profile profile_0 preset",
-        ):
-            build_runtime_config(hass, entry)
+        result = build_runtime_config(hass, entry)
+        assert result.profiles["driveway"][0].tap_action == {"preset": "unknown"}
 
     @patch("custom_components.frigate_notifications.data.dr.async_get")
-    def test_unknown_action_config_preset_raises_configuration_error(
+    def test_unknown_action_config_preset_does_not_abort_setup(
         self,
         mock_dr: MagicMock,
     ) -> None:
-        """Unknown action button preset is rejected during runtime config assembly."""
+        """Unknown action button preset degrades gracefully at runtime."""
         mock_dr.return_value.async_get.return_value = None
         hass = _mock_hass()
         entry = _mock_entry(
@@ -757,11 +754,9 @@ class TestBuildRuntimeConfig:
                 _minimal_profile(action_config=[{"preset": "view_clip"}, {"preset": "unknown"}])
             ]
         )
-        with pytest.raises(
-            ValueError,
-            match=r"Unknown action_config\[2\] for profile profile_0 preset",
-        ):
-            build_runtime_config(hass, entry)
+        result = build_runtime_config(hass, entry)
+        actions = result.profiles["driveway"][0].action_config
+        assert actions[1] == {"preset": "unknown"}
 
     @patch("custom_components.frigate_notifications.data.dr.async_get")
     def test_client_id_resolved_for_multi_instance(self, mock_dr: MagicMock) -> None:

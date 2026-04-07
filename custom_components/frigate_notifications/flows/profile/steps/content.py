@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.data_entry_flow import SectionConfig, section
 from homeassistant.helpers.selector import BooleanSelector
+from homeassistant.helpers.template import Template, TemplateError
 import voluptuous as vol
 
 from ....const import DOMAIN
@@ -82,6 +83,42 @@ def build_content_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema:
         )
 
     return vol.Schema(schema_dict)
+
+
+def validate_content_input(
+    draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext
+) -> dict[str, str]:
+    """Validate content step input. Returns error dict (empty = valid)."""
+    template_id_map: dict[str, str] = ctx.hass.data.get(DOMAIN, {}).get("template_id_map", {})
+    candidates: list[str] = []
+
+    title = (user_input.get("title_template") or "").strip()
+    if title:
+        candidates.append(template_id_map.get(title, title))
+
+    for phase_name in PROFILE_PHASE_ORDER:
+        phase_sec = user_input.get(f"{phase_name}_content", {})
+        for key in ("message_template", "subtitle_template"):
+            val = (phase_sec.get(key) or "").strip()
+            if val:
+                candidates.append(template_id_map.get(val, val))
+
+    cameras = draft.get("cameras", [])
+    fid = ctx.frigate_entry_id
+    if len(cameras) == 1:
+        zone_sec = user_input.get("zone_overrides", {})
+        for zone in get_camera_zones(ctx.hass, fid, cameras[0]):
+            val = (zone_sec.get(zone) or "").strip()
+            if val:
+                candidates.append(val)
+
+    for candidate in candidates:
+        try:
+            Template(candidate, ctx.hass).ensure_valid()
+        except TemplateError:
+            return {"base": "invalid_template"}
+
+    return {}
 
 
 def apply_content_input(

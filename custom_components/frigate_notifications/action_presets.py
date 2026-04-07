@@ -133,13 +133,6 @@ def preset_select_options(preset_ids: list[str]) -> list[SelectOptionDict]:
     return [{"value": pid, "label": _PRESET_LABELS.get(pid, pid)} for pid in preset_ids]
 
 
-def validate_preset_id(preset_id: str, *, field_name: str) -> None:
-    """Raise ValueError when a preset id is not defined."""
-    if preset_id not in ACTION_PRESETS:
-        msg = f"Unknown {field_name} preset {preset_id!r}"
-        raise ValueError(msg)
-
-
 def resolve_uri_for_platform(
     provider: Provider,
     preset: dict[str, str],

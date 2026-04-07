@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.helpers import device_registry as dr
 from homeassistant.util import slugify
 
-from .action_presets import DEFAULT_PRESET_IDS, validate_preset_id
+from .action_presets import DEFAULT_PRESET_IDS
 from .config import (
     DEFAULT_PHASE_END,
     DEFAULT_PHASE_GENAI,
@@ -457,23 +457,6 @@ def _resolve_client_id(hass: HomeAssistant, frigate_entry_id: str) -> str:
     return f"/{cid}" if cid else ""
 
 
-def _validate_profile_presets(
-    profile_id: str,
-    tap_action: Mapping[str, Any],
-    action_config: tuple[dict[str, Any], ...],
-) -> None:
-    """Validate stored preset ids before building ProfileRuntime."""
-    validate_preset_id(
-        str(tap_action.get("preset", "view_clip")),
-        field_name=f"tap_action for profile {profile_id}",
-    )
-    for index, action in enumerate(action_config, start=1):
-        validate_preset_id(
-            str(action.get("preset", "none")),
-            field_name=f"action_config[{index}] for profile {profile_id}",
-        )
-
-
 @dataclass(frozen=True)
 class _GlobalDefaults:
     """Resolved global options used when building per-profile configs."""
@@ -571,7 +554,6 @@ def _build_profile(
         )
     )
     tap_action = dict(p.get("tap_action", {"preset": "view_clip"}))
-    _validate_profile_presets(subentry.subentry_id, tap_action, action_config)
 
     return ProfileRuntime(
         entry_id=entry_id,

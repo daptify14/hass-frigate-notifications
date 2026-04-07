@@ -73,13 +73,6 @@ def build_preset_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema:
     )
 
 
-def validate_preset_input(
-    draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext
-) -> dict[str, str]:
-    """Validate preset step input. Returns error dict (empty = valid)."""
-    return {}
-
-
 def apply_preset_input(draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext) -> None:
     """Apply preset selection to draft data."""
     profile_presets = ctx.hass.data.get(DOMAIN, {}).get("profile_presets", [])

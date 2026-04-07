@@ -16,7 +16,7 @@ from .steps.basics import (
     build_basics_suggested,
     validate_basics_input,
 )
-from .steps.content import apply_content_input, build_content_schema
+from .steps.content import apply_content_input, build_content_schema, validate_content_input
 from .steps.delivery import (
     apply_delivery_input,
     build_delivery_schema,
@@ -37,7 +37,6 @@ from .steps.preset import (
     apply_preset_input,
     build_preset_schema,
     preset_description_placeholders,
-    validate_preset_input,
 )
 
 
@@ -91,11 +90,9 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
         ctx = self._build_context()
 
         if user_input is not None:
-            errors = validate_preset_input(self._data, user_input, ctx)
-            if not errors:
-                apply_preset_input(self._data, user_input, ctx)
-                self._invalidate_context()
-                return await self.async_step_basics()
+            apply_preset_input(self._data, user_input, ctx)
+            self._invalidate_context()
+            return await self.async_step_basics()
 
         schema = build_preset_schema(self._data, ctx)
         placeholders = preset_description_placeholders(ctx)
@@ -198,16 +195,20 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
         """Step 4: message templates, subtitles, and emoji across all 4 phases."""
         await async_ensure_preset_cache(self.hass)
         ctx = self._build_context()
+        errors: dict[str, str] = {}
 
         if user_input is not None:
-            apply_content_input(self._data, user_input, ctx)
-            self._invalidate_context()
-            return await self._go_to_menu()
+            errors = validate_content_input(self._data, user_input, ctx)
+            if not errors:
+                apply_content_input(self._data, user_input, ctx)
+                self._invalidate_context()
+                return await self._go_to_menu()
 
         schema = build_content_schema(self._data, ctx)
         return self.async_show_form(
             step_id="content",
             data_schema=schema,
+            errors=errors,
             description_placeholders=self._placeholders(),
             last_step=False,
         )
