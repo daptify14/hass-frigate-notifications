@@ -14,7 +14,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.template import TemplateError
 
 from .action_presets import resolve_tap_url
-from .const import DOMAIN, SIGNAL_DISPATCH_PROBLEM
+from .const import DOMAIN, SIGNAL_DISPATCH_PROBLEM, SIGNAL_LAST_SENT, SIGNAL_STATS
 from .enums import Lifecycle, Phase
 from .filters import FilterChain, FilterContext
 from .message_builder import (
@@ -609,7 +609,7 @@ class NotificationDispatcher:
         """Signal the profile's last_sent sensor to update."""
         async_dispatcher_send(
             self._hass,
-            f"{DOMAIN}_last_sent_{profile.entry_id}_{profile.profile_id}",
+            f"{SIGNAL_LAST_SENT}_{profile.entry_id}_{profile.profile_id}",
             review.review_id,
             phase,
             title,
@@ -620,7 +620,7 @@ class NotificationDispatcher:
         """Signal the stats sensor to increment."""
         async_dispatcher_send(
             self._hass,
-            f"{DOMAIN}_stats_{profile.entry_id}",
+            f"{SIGNAL_STATS}_{profile.entry_id}",
             review.camera,
             profile.name,
         )
