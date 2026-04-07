@@ -253,7 +253,7 @@ def build_context(
     return ctx
 
 
-def resolve_template(id_or_jinja: str, id_map: dict[str, str]) -> str:
+def _resolve_template(id_or_jinja: str, id_map: dict[str, str]) -> str:
     """Resolve a template ID to Jinja, or pass raw Jinja through unchanged."""
     return id_map.get(id_or_jinja, id_or_jinja)
 
@@ -337,14 +337,14 @@ def render_notification(
             global_zone_aliases=global_zone_aliases,
         )
 
-    message_tpl = resolve_template(phase_config.content.message_template, _map)
+    message_tpl = _resolve_template(phase_config.content.message_template, _map)
     try:
         message = render_template(hass, message_tpl, ctx, cache)
     except TemplateError:
         _LOGGER.warning("Message template render failed, using raw template")
         message = message_tpl
 
-    title_tpl = resolve_template(
+    title_tpl = _resolve_template(
         phase_config.content.title_template or profile.title_template, _map
     )
     try:
@@ -353,7 +353,7 @@ def render_notification(
         _LOGGER.warning("Title template render failed, using raw template")
         title = title_tpl
 
-    subtitle_tpl = resolve_template(phase_config.content.subtitle_template, _map)
+    subtitle_tpl = _resolve_template(phase_config.content.subtitle_template, _map)
     if subtitle_tpl:
         if phase_config.content.emoji_subtitle != phase_config.content.emoji_message:
             subtitle_ctx = _build_emoji_overlay(

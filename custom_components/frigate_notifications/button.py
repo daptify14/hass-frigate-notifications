@@ -63,10 +63,6 @@ class FrigateNotificationsSilenceButton(FrigateNotificationsProfileEntity, Butto
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_silence"
         self._attr_name = "Silence"
 
-    async def async_added_to_hass(self) -> None:
-        """Reconcile profile device on startup."""
-        await super().async_added_to_hass()
-
     async def async_press(self) -> None:
         """Activate silence on the profile's datetime entity."""
         silence_map = self.hass.data.get(SILENCE_DATETIMES_KEY, {})
@@ -97,10 +93,6 @@ class FrigateNotificationsClearSilenceButton(FrigateNotificationsProfileEntity, 
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_clear_silence"
         self._attr_name = "Clear silence"
-
-    async def async_added_to_hass(self) -> None:
-        """Reconcile profile device on startup."""
-        await super().async_added_to_hass()
 
     async def async_press(self) -> None:
         """Clear silence on the profile's datetime entity."""

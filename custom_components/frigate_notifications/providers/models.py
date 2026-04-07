@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ..enums import AttachmentType, Phase
+    from ..enums import AttachmentType, Phase, VideoType
 
 
 @dataclass(frozen=True)
@@ -30,7 +30,7 @@ class RenderedMedia:
     """Resolved media settings for a rendered notification."""
 
     still_kind: AttachmentType
-    video_kind: str
+    video_kind: VideoType
     use_latest_detection: bool
 
 

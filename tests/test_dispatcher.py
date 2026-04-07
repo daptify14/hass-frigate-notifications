@@ -289,6 +289,46 @@ class TestDispatcherCleanup:
         assert len(notify_calls) == 0
 
 
+class TestDispatcherShutdown:
+    async def test_shutdown_cancels_all_pending_tasks(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """Shutdown cancels all pending tasks across all reviews."""
+        profile = make_profile()
+        runtime = make_runtime([profile], initial_delay=60.0)
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+
+        review_a = make_review(review_id="review-a")
+        review_b = make_review(review_id="review-b")
+
+        await dispatcher.on_review_new(review_a)
+        await dispatcher.on_review_new(review_b)
+
+        key_a = (profile.profile_id, "review-a")
+        key_b = (profile.profile_id, "review-b")
+        task_a = dispatcher._review_states[key_a].pending_task
+        task_b = dispatcher._review_states[key_b].pending_task
+        assert task_a is not None
+        assert not task_a.done()
+        assert task_b is not None
+        assert not task_b.done()
+
+        dispatcher.shutdown()
+        assert len(dispatcher._review_states) == 0
+        await hass.async_block_till_done()
+        assert task_a.done()
+        assert task_b.done()
+        assert len(notify_calls) == 0
+
+    async def test_shutdown_idempotent_on_empty(self, hass: HomeAssistant) -> None:
+        """Shutdown on a dispatcher with no reviews is a no-op."""
+        profile = make_profile()
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        dispatcher.shutdown()
+        assert len(dispatcher._review_states) == 0
+
+
 class TestDispatcherPendingAbsorb:
     async def test_update_absorbed_during_pending_initial(
         self, hass: HomeAssistant, notify_calls: list[ServiceCall]

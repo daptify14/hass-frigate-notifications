@@ -29,7 +29,8 @@
       "time_filter_end_required": "End time is required for custom time filter.",
       "presence_entities_required": "Presence entities are required when mode is Custom.",
       "state_entity_required": "A state entity is required when mode is Custom.",
-      "sub_label_overlap": "The same identity cannot be in both include and exclude lists."
+      "sub_label_overlap": "The same identity cannot be in both include and exclude lists.",
+      "invalid_template": "One or more templates contain invalid syntax."
     }
   },
   "options": {

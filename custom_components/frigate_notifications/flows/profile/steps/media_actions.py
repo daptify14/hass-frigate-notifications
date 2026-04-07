@@ -14,27 +14,12 @@ from homeassistant.helpers.selector import (
 )
 import voluptuous as vol
 
-from ....config import (
-    DEFAULT_PHASE_END,
-    DEFAULT_PHASE_GENAI,
-    DEFAULT_PHASE_INITIAL,
-    DEFAULT_PHASE_UPDATE,
-    PhaseConfig,
-)
 from ....const import VALID_TV_ATTACHMENTS
 from ...helpers import ATTACHMENT_SELECTOR, TV_ATTACHMENT_SELECTOR, video_selector
+from ..context import PROFILE_PHASE_DEFAULTS, PROFILE_PHASE_ORDER
 
 if TYPE_CHECKING:
     from ..context import FlowContext
-
-_PHASE_DEFAULTS: dict[str, PhaseConfig] = {
-    "initial": DEFAULT_PHASE_INITIAL,
-    "update": DEFAULT_PHASE_UPDATE,
-    "end": DEFAULT_PHASE_END,
-    "genai": DEFAULT_PHASE_GENAI,
-}
-
-_PHASE_ORDER = ("initial", "update", "end", "genai")
 
 
 def build_media_actions_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema:
@@ -44,7 +29,7 @@ def build_media_actions_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.S
 
     schema_dict: dict[Any, Any] = {}
     for phase_name in enabled:
-        defaults = _PHASE_DEFAULTS[phase_name]
+        defaults = PROFILE_PHASE_DEFAULTS[phase_name]
         phase_data = draft.get("phases", {}).get(phase_name, {})
         attachment = phase_data.get("attachment", defaults.media.attachment)
         if caps.media_variant == "android_tv" and attachment not in VALID_TV_ATTACHMENTS:
@@ -104,13 +89,6 @@ def build_media_actions_suggested(draft: dict[str, Any], ctx: FlowContext) -> di
         }
 
     return suggested
-
-
-def validate_media_actions_input(
-    draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext
-) -> dict[str, str]:
-    """Validate media/actions step input. Returns error dict (empty = valid)."""
-    return {}
 
 
 def apply_media_actions_input(
@@ -176,7 +154,7 @@ def _build_action_preset_schema(data: dict) -> dict[Any, Any]:
 
 def _submit_media_phases(data: dict, user_input: dict) -> None:
     """Extract media fields from user_input into data['phases']."""
-    for phase_name in _PHASE_ORDER:
+    for phase_name in PROFILE_PHASE_ORDER:
         phase_sec = user_input.get(f"{phase_name}_media", {})
         if not phase_sec:
             continue
@@ -194,7 +172,7 @@ def _submit_media_phases(data: dict, user_input: dict) -> None:
 def _submit_custom_actions(data: dict, user_input: dict) -> None:
     """Extract custom actions per phase from user_input."""
     custom_sec = user_input.get("custom_actions", {})
-    for phase_name in _PHASE_ORDER:
+    for phase_name in PROFILE_PHASE_ORDER:
         custom = custom_sec.get(f"{phase_name}_custom_actions")
         phases = data.setdefault("phases", {})
         phase = dict(phases.get(phase_name, {}))

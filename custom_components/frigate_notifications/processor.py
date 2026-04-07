@@ -58,6 +58,10 @@ class ReviewProcessor:
             _LOGGER.warning("Invalid JSON in review message")
             return
 
+        if not isinstance(payload, dict):
+            _LOGGER.warning("Review message payload is not a JSON object")
+            return
+
         msg_type = payload.get("type", "")
         after = payload.get("after", {})
         review_id = after.get("id", "")

@@ -7,7 +7,7 @@ from custom_components.frigate_notifications.config import (
     AndroidTvOverlay,
     PhaseConfig,
 )
-from custom_components.frigate_notifications.enums import AttachmentType, Phase, Provider
+from custom_components.frigate_notifications.enums import AttachmentType, Phase, Provider, VideoType
 from custom_components.frigate_notifications.providers.android_tv import AndroidTvProvider
 from custom_components.frigate_notifications.providers.base import get_provider
 from custom_components.frigate_notifications.providers.mobile_app import MobileAppProvider
@@ -26,7 +26,7 @@ def _make_rendered(
     *,
     phase_name: Phase = Phase.INITIAL,
     still_kind: AttachmentType = AttachmentType.SNAPSHOT_CROPPED,
-    video_kind: str = "none",
+    video_kind: VideoType = VideoType.NONE,
     use_latest_detection: bool = False,
     alert_once_silent: bool = False,
     critical: bool = False,
@@ -156,7 +156,7 @@ class TestMobileAppProvider:
 
     def test_video_kind_sets_ios_video(self, hass: HomeAssistant) -> None:
         provider = MobileAppProvider()
-        rendered = _make_rendered(video_kind="clip_mp4")
+        rendered = _make_rendered(video_kind=VideoType.CLIP_MP4)
         call = provider.build_notify_call(hass, make_profile(), make_review(), rendered)
         data = call.service_data["data"]
         assert "clip.mp4" in data["attachment"]["url"]
@@ -195,7 +195,7 @@ class TestMobileAppProvider:
     def test_review_gif_video_uses_mp4_format(self, hass: HomeAssistant) -> None:
         """review_gif_video requests MP4 from Frigate and sets mp4 content-type."""
         provider = MobileAppProvider()
-        rendered = _make_rendered(video_kind="review_gif_video")
+        rendered = _make_rendered(video_kind=VideoType.REVIEW_GIF_VIDEO)
         call = provider.build_notify_call(hass, make_profile(), make_review(), rendered)
         data = call.service_data["data"]
         # iOS: Frigate serves MP4 via ?format=mp4
@@ -216,21 +216,21 @@ class TestMobileAppProvider:
     def test_no_video_omits_android_video(self, hass: HomeAssistant) -> None:
         """video_kind=none means no 'video' key in Android data."""
         provider = MobileAppProvider()
-        rendered = _make_rendered(video_kind="none")
+        rendered = _make_rendered(video_kind=VideoType.NONE)
         call = provider.build_notify_call(hass, make_profile(), make_review(), rendered)
         assert "video" not in call.service_data["data"]
 
     def test_live_view_sets_entity_id(self, hass: HomeAssistant) -> None:
         """live_view video kind injects entity_id for iOS live camera stream."""
         provider = MobileAppProvider()
-        rendered = _make_rendered(video_kind="live_view")
+        rendered = _make_rendered(video_kind=VideoType.LIVE_VIEW)
         call = provider.build_notify_call(hass, make_profile(), make_review(), rendered)
         assert call.service_data["data"]["entity_id"] == "camera.driveway"
 
     def test_live_view_preserves_still_attachment(self, hass: HomeAssistant) -> None:
         """live_view does not override the still attachment (no URL template exists)."""
         provider = MobileAppProvider()
-        rendered = _make_rendered(video_kind="live_view")
+        rendered = _make_rendered(video_kind=VideoType.LIVE_VIEW)
         call = provider.build_notify_call(hass, make_profile(), make_review(), rendered)
         data = call.service_data["data"]
         assert data["attachment"]["content-type"] == "jpeg"
@@ -239,7 +239,7 @@ class TestMobileAppProvider:
     def test_live_view_omits_android_video(self, hass: HomeAssistant) -> None:
         """live_view has no Android video template, so no 'video' key."""
         provider = MobileAppProvider()
-        rendered = _make_rendered(video_kind="live_view")
+        rendered = _make_rendered(video_kind=VideoType.LIVE_VIEW)
         call = provider.build_notify_call(hass, make_profile(), make_review(), rendered)
         assert "video" not in call.service_data["data"]
 

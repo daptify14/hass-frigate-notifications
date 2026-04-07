@@ -14,7 +14,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.template import TemplateError
 
 from .action_presets import resolve_tap_url
-from .const import DOMAIN, SIGNAL_DISPATCH_PROBLEM
+from .const import DOMAIN, SIGNAL_DISPATCH_PROBLEM, SIGNAL_LAST_SENT, SIGNAL_STATS
 from .enums import Lifecycle, Phase
 from .filters import FilterChain, FilterContext
 from .message_builder import (
@@ -38,7 +38,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def lifecycle_to_phase(lifecycle: Lifecycle, *, is_initial: bool) -> Phase:
-    """Map a raw MQTT lifecycle type to a notification dispatch phase."""
+    """Map a lifecycle type to a notification phase."""
     if lifecycle == Lifecycle.NEW:
         return Phase.INITIAL
     if lifecycle == Lifecycle.UPDATE:
@@ -47,7 +47,8 @@ def lifecycle_to_phase(lifecycle: Lifecycle, *, is_initial: bool) -> Phase:
         return Phase.END
     if lifecycle == Lifecycle.GENAI:
         return Phase.GENAI
-    return Phase.UPDATE
+    msg = f"Unexpected lifecycle: {lifecycle!r}"
+    raise ValueError(msg)
 
 
 @dataclass(frozen=True)
@@ -195,7 +196,7 @@ class DispatchRequest:
 
 
 def assemble_notification(request: DispatchRequest) -> RenderedNotification:
-    """Render all notification content into a provider-neutral payload."""
+    """Render notification content into a provider-neutral payload."""
     r = request
     ctx = build_context(
         r.review,
@@ -291,6 +292,22 @@ async def deliver_notification(
     return True
 
 
+@dataclass
+class _DispatchContext:
+    """Mutable state for one delayed dispatch attempt."""
+
+    profile: ProfileRuntime
+    review: Review
+    lifecycle: Lifecycle
+    review_state: ReviewState
+    is_initial: bool
+    is_genai: bool
+    delay: float
+    phase: Phase | None = None
+    phase_cfg: PhaseConfig | None = None
+    rendered: RenderedNotification | None = None
+
+
 class NotificationDispatcher:
     """Dispatches notifications based on review lifecycle events."""
 
@@ -349,6 +366,13 @@ class NotificationDispatcher:
         """Handle a GenAI update."""
         await self._handle_lifecycle(review, Lifecycle.GENAI)
 
+    def shutdown(self) -> None:
+        """Cancel all pending dispatch tasks (called on integration unload)."""
+        for rs in self._review_states.values():
+            if rs.pending_task and not rs.pending_task.done():
+                rs.pending_task.cancel()
+        self._review_states.clear()
+
     def cleanup_review(self, review_id: str) -> None:
         """Cancel pending tasks and remove all states for a review (stale-timer fallback)."""
         keys = [k for k in self._review_states if k[1] == review_id]
@@ -359,13 +383,7 @@ class NotificationDispatcher:
             del self._review_states[key]
 
     def retire_profile_review(self, profile_id: str, review_id: str) -> None:
-        """Clean up dispatcher state for a single (profile, review) pair.
-
-        Called from _delayed_dispatch after the final dispatch completes —
-        the pending_task is always the currently-running task, so cancelling
-        it would be self-cancellation.  Task cancellation for abandoned
-        dispatches is handled by cleanup_review (stale-timer fallback).
-        """
+        """Remove dispatcher state for a (profile, review) pair after final dispatch."""
         key = (profile_id, review_id)
         if key in self._review_states:
             del self._review_states[key]
@@ -459,69 +477,36 @@ class NotificationDispatcher:
         delay: float,
         review_state: ReviewState,
     ) -> None:
-        """Sleep for delay then render and send the notification."""
+        """Sleep for any configured delay, then render and send the notification."""
         if delay > 0:
             try:
                 await asyncio.sleep(delay)
             except asyncio.CancelledError:
                 return
 
-        # Re-check runtime filters after delay — HA state may have changed.
-        if delay > 0:
-            ps = self._get_profile_state(profile.profile_id)
-            recheck_ctx = FilterContext(
-                profile=profile,
-                review=review,
-                lifecycle=lifecycle,
-                review_state=review_state,
-                profile_state=ps,
-                hass=self._hass,
-            )
-            result = self._filter_chain.evaluate_runtime(recheck_ctx)
-            if not result.passed:
-                return
+        ctx = _DispatchContext(
+            profile=profile,
+            review=review,
+            lifecycle=lifecycle,
+            review_state=review_state,
+            is_initial=is_initial,
+            is_genai=is_genai,
+            delay=delay,
+        )
 
-        phase_name = lifecycle_to_phase(lifecycle, is_initial=is_initial)
-        phase_cfg = profile.get_phase(phase_name)
-
-        # Render phase
-        try:
-            request = DispatchRequest(
-                hass=self._hass,
-                profile=profile,
-                review=review,
-                phase=phase_name,
-                phase_config=phase_cfg,
-                lifecycle=lifecycle,
-                is_genai=is_genai,
-                is_initial=is_initial,
-                review_state=review_state,
-                template_cache=self._template_cache,
-                global_zone_aliases=self._runtime.global_zone_aliases,
-                template_id_map=self._runtime.template_id_map,
-            )
-            rendered = assemble_notification(request)
-        except TemplateError as err:
-            _LOGGER.warning(
-                "Render failed for %s / review %s: %s",
-                profile.name,
-                review.review_id[:25],
-                err,
-            )
-            self._signal_dispatch_problem(profile, error_msg=f"render_error: {err}")
-            self._maybe_retire(profile, review, lifecycle, is_genai=is_genai)
-            return
-        except Exception as err:
-            _LOGGER.exception(
-                "Unexpected render failure for %s / review %s",
-                profile.name,
-                review.review_id[:25],
-            )
-            self._signal_dispatch_problem(profile, error_msg=str(err))
-            self._maybe_retire(profile, review, lifecycle, is_genai=is_genai)
+        if not self._passes_runtime_recheck(ctx):
             return
 
-        # Delivery phase
+        if not self._render_notification(ctx):
+            self._retire_if_final_dispatch(profile, review, lifecycle, is_genai=is_genai)
+            return
+        assert ctx.phase is not None
+        assert ctx.phase_cfg is not None
+        assert ctx.rendered is not None
+        phase = ctx.phase
+        phase_cfg = ctx.phase_cfg
+        rendered = ctx.rendered
+
         try:
             success = await deliver_notification(self._hass, profile, review, rendered)
         except HomeAssistantError as err:
@@ -532,7 +517,7 @@ class NotificationDispatcher:
                 err,
             )
             self._signal_dispatch_problem(profile, error_msg=f"delivery_error: {err}")
-            self._maybe_retire(profile, review, lifecycle, is_genai=is_genai)
+            self._retire_if_final_dispatch(profile, review, lifecycle, is_genai=is_genai)
             return
         except Exception as err:
             _LOGGER.exception(
@@ -541,9 +526,10 @@ class NotificationDispatcher:
                 review.review_id[:25],
             )
             self._signal_dispatch_problem(profile, error_msg=str(err))
-            self._maybe_retire(profile, review, lifecycle, is_genai=is_genai)
+            self._retire_if_final_dispatch(profile, review, lifecycle, is_genai=is_genai)
             return
 
+        # No notify target is configured. This is not an error and should not retire state.
         if not success:
             return
 
@@ -551,7 +537,7 @@ class NotificationDispatcher:
         self._update_last_sent(
             profile,
             review,
-            str(phase_name),
+            str(phase),
             rendered.title,
             rendered.message,
         )
@@ -569,7 +555,6 @@ class NotificationDispatcher:
                     profile, error_msg=f"custom_action_error: {action_error}"
                 )
 
-        # Cooldown: GenAI doesn't extend it.
         if not is_genai:
             self._get_profile_state(profile.profile_id).last_sent_at[review.camera] = time.time()
         if is_initial:
@@ -582,9 +567,63 @@ class NotificationDispatcher:
             review.review_id[:25],
         )
 
-        self._maybe_retire(profile, review, lifecycle, is_genai=is_genai)
+        self._retire_if_final_dispatch(profile, review, lifecycle, is_genai=is_genai)
 
-    def _maybe_retire(
+    def _passes_runtime_recheck(self, ctx: _DispatchContext) -> bool:
+        """Re-check runtime filters after a delayed wait."""
+        if ctx.delay <= 0:
+            return True
+        ps = self._get_profile_state(ctx.profile.profile_id)
+        recheck_ctx = FilterContext(
+            profile=ctx.profile,
+            review=ctx.review,
+            lifecycle=ctx.lifecycle,
+            review_state=ctx.review_state,
+            profile_state=ps,
+            hass=self._hass,
+        )
+        return self._filter_chain.evaluate_runtime(recheck_ctx).passed
+
+    def _render_notification(self, ctx: _DispatchContext) -> bool:
+        """Populate rendered notification state on the dispatch context."""
+        ctx.phase = lifecycle_to_phase(ctx.lifecycle, is_initial=ctx.is_initial)
+        ctx.phase_cfg = ctx.profile.get_phase(ctx.phase)
+        try:
+            request = DispatchRequest(
+                hass=self._hass,
+                profile=ctx.profile,
+                review=ctx.review,
+                phase=ctx.phase,
+                phase_config=ctx.phase_cfg,
+                lifecycle=ctx.lifecycle,
+                is_genai=ctx.is_genai,
+                is_initial=ctx.is_initial,
+                review_state=ctx.review_state,
+                template_cache=self._template_cache,
+                global_zone_aliases=self._runtime.global_zone_aliases,
+                template_id_map=self._runtime.template_id_map,
+            )
+            ctx.rendered = assemble_notification(request)
+        except TemplateError as err:
+            _LOGGER.warning(
+                "Render failed for %s / review %s: %s",
+                ctx.profile.name,
+                ctx.review.review_id[:25],
+                err,
+            )
+            self._signal_dispatch_problem(ctx.profile, error_msg=f"render_error: {err}")
+            return False
+        except Exception as err:
+            _LOGGER.exception(
+                "Unexpected render failure for %s / review %s",
+                ctx.profile.name,
+                ctx.review.review_id[:25],
+            )
+            self._signal_dispatch_problem(ctx.profile, error_msg=str(err))
+            return False
+        return True
+
+    def _retire_if_final_dispatch(
         self,
         profile: ProfileRuntime,
         review: Review,
@@ -609,7 +648,7 @@ class NotificationDispatcher:
         """Signal the profile's last_sent sensor to update."""
         async_dispatcher_send(
             self._hass,
-            f"{DOMAIN}_last_sent_{profile.entry_id}_{profile.profile_id}",
+            f"{SIGNAL_LAST_SENT}_{profile.entry_id}_{profile.profile_id}",
             review.review_id,
             phase,
             title,
@@ -620,7 +659,7 @@ class NotificationDispatcher:
         """Signal the stats sensor to increment."""
         async_dispatcher_send(
             self._hass,
-            f"{DOMAIN}_stats_{profile.entry_id}",
+            f"{SIGNAL_STATS}_{profile.entry_id}",
             review.camera,
             profile.name,
         )

@@ -13,13 +13,6 @@ from homeassistant.helpers.selector import (
 )
 import voluptuous as vol
 
-from ....config import (
-    DEFAULT_PHASE_END,
-    DEFAULT_PHASE_GENAI,
-    DEFAULT_PHASE_INITIAL,
-    DEFAULT_PHASE_UPDATE,
-    PhaseConfig,
-)
 from ....enums import Provider
 from ...helpers import (
     DELAY_SELECTOR,
@@ -33,18 +26,10 @@ from ...helpers import (
     normalize_interruption_level,
     tv_overlay_delivery_fields,
 )
+from ..context import PROFILE_PHASE_DEFAULTS, PROFILE_PHASE_ORDER
 
 if TYPE_CHECKING:
     from ..context import FlowContext
-
-_PHASE_DEFAULTS: dict[str, PhaseConfig] = {
-    "initial": DEFAULT_PHASE_INITIAL,
-    "update": DEFAULT_PHASE_UPDATE,
-    "end": DEFAULT_PHASE_END,
-    "genai": DEFAULT_PHASE_GENAI,
-}
-
-_PHASE_ORDER = ("initial", "update", "end", "genai")
 
 _TV_OVERLAY_KEYS = (
     "tv_fontsize",
@@ -73,7 +58,7 @@ def build_delivery_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema
 
     schema_dict: dict[Any, Any] = {}
     for phase_name in enabled:
-        defaults = _PHASE_DEFAULTS[phase_name]
+        defaults = PROFILE_PHASE_DEFAULTS[phase_name]
         phase_data = draft.get("phases", {}).get(phase_name, {})
         fields: dict[Any, Any] = {}
         if caps.delivery_variant == "mobile_app":
@@ -171,13 +156,6 @@ def build_delivery_suggested(draft: dict[str, Any], ctx: FlowContext) -> dict[st
     return suggested
 
 
-def validate_delivery_input(
-    draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext
-) -> dict[str, str]:
-    """Validate delivery step input. Returns error dict (empty = valid)."""
-    return {}
-
-
 def apply_delivery_input(
     draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext
 ) -> None:
@@ -217,7 +195,7 @@ def _build_android_delivery_schema(data: dict) -> dict[Any, Any]:
 
 def _submit_delivery_phases(data: dict, user_input: dict) -> None:
     """Extract delivery fields from user_input into data['phases']."""
-    for phase_name in _PHASE_ORDER:
+    for phase_name in PROFILE_PHASE_ORDER:
         phase_sec = user_input.get(f"{phase_name}_delivery", {})
         if not phase_sec:
             continue

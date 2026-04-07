@@ -153,8 +153,18 @@ class TestValidation:
                 ),
                 "non_list_detections",
             ),
+            (json.dumps([1, 2, 3]), "non_object_json"),
+            (json.dumps("just a string"), "non_object_string"),
         ],
-        ids=["oversized", "invalid_json", "missing_review_id", "excessive_detections", "non_list"],
+        ids=[
+            "oversized",
+            "invalid_json",
+            "missing_review_id",
+            "excessive_detections",
+            "non_list",
+            "non_object_json",
+            "non_object_string",
+        ],
     )
     async def test_invalid_payload_dropped(self, payload_str: str, reason: str) -> None:
         processor = ReviewProcessor()

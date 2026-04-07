@@ -733,8 +733,8 @@ class TestMultiCameraConfigFlow:
         assert r["data"]["cameras"] == ["backyard", "driveway"]
 
 
-class TestProfileTitleTemplate:
-    """Tests for per-profile title_template override in the content step."""
+class TestContentStep:
+    """Tests for the content step — templates, validation, and preset resolution."""
 
     async def test_content_title_template_override_stored(
         self, hass: HomeAssistant, mock_frigate_data: dict
@@ -767,3 +767,34 @@ class TestProfileTitleTemplate:
         result = await _save_from_menu(hass, flow_id)
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert "title_template" not in result["data"]
+
+    async def test_content_invalid_templates_rejected(
+        self, hass: HomeAssistant, mock_frigate_data: dict
+    ) -> None:
+        """Invalid custom templates are rejected with a content-step error."""
+        invalid_inputs = (
+            {"title_template": "{{ unclosed"},
+            {"initial_content": {"message_template": "{% if %}bad{% endif %}"}},
+        )
+
+        for user_input in invalid_inputs:
+            entry = _make_profile_entry(hass, mock_frigate_data)
+            flow_id, _ = await _advance_to_content(hass, entry)
+
+            result = await hass.config_entries.subentries.async_configure(flow_id, user_input)
+            assert result["type"] is FlowResultType.FORM
+            assert result["step_id"] == "content"
+            assert result["errors"] == {"base": "invalid_template"}
+
+    async def test_content_preset_id_in_title_accepted(
+        self, hass: HomeAssistant, mock_frigate_data: dict
+    ) -> None:
+        """Preset ID in title_template passes validation (resolved before syntax check)."""
+        entry = _make_profile_entry(hass, mock_frigate_data)
+        flow_id, _ = await _advance_to_content(hass, entry)
+        hass.data[DOMAIN]["template_id_map"]["my_title"] = "{{ camera_name }} Alert"
+
+        result = await hass.config_entries.subentries.async_configure(
+            flow_id, {"title_template": "my_title"}
+        )
+        assert result["step_id"] == "customize"
