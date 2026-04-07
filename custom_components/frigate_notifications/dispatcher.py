@@ -47,7 +47,8 @@ def lifecycle_to_phase(lifecycle: Lifecycle, *, is_initial: bool) -> Phase:
         return Phase.END
     if lifecycle == Lifecycle.GENAI:
         return Phase.GENAI
-    return Phase.UPDATE
+    msg = f"Unexpected lifecycle: {lifecycle!r}"
+    raise ValueError(msg)
 
 
 @dataclass(frozen=True)
@@ -364,6 +365,13 @@ class NotificationDispatcher:
     async def on_genai(self, review: Review) -> None:
         """Handle a GenAI update."""
         await self._handle_lifecycle(review, Lifecycle.GENAI)
+
+    def shutdown(self) -> None:
+        """Cancel all pending dispatch tasks (called on integration unload)."""
+        for rs in self._review_states.values():
+            if rs.pending_task and not rs.pending_task.done():
+                rs.pending_task.cancel()
+        self._review_states.clear()
 
     def cleanup_review(self, review_id: str) -> None:
         """Cancel pending tasks and remove all states for a review (stale-timer fallback)."""

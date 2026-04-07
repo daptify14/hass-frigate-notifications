@@ -28,6 +28,7 @@ from .const import (
     SILENCE_DATETIMES_KEY,
     SUBENTRY_TYPE_INTEGRATION,
     SUBENTRY_TYPE_PROFILE,
+    TOPIC_SUFFIX_REVIEWS,
 )
 from .data import (
     FrigateNotificationsRuntimeData,
@@ -110,6 +111,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
         return _callback
 
     def _on_review_update(review: Review, _camera: str) -> None:
+        # Processor passes (review, camera); dispatcher only needs review.
         hass.async_create_task(dispatcher.on_review_update(review))
 
     processor = ReviewProcessor(
@@ -122,7 +124,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
     )
 
     topic_prefix = config_view.topic_prefix
-    mqtt_topic = f"{topic_prefix}/reviews"
+    mqtt_topic = f"{topic_prefix}/{TOPIC_SUFFIX_REVIEWS}"
 
     entry.runtime_data = FrigateNotificationsRuntimeData(
         processor=processor,
@@ -166,6 +168,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a Notifications for Frigate config entry."""
+    entry.runtime_data.dispatcher.shutdown()
+
     domain_data = hass.data.get(DOMAIN, {})
     domain_data.pop(f"{DEBUG_SENSOR_KEY}_{entry.entry_id}", None)
 

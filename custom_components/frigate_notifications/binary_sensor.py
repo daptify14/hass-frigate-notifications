@@ -56,7 +56,7 @@ async def async_setup_entry(
     frigate_entry_id = entry.data["frigate_entry_id"]
     available_cameras = get_available_frigate_cameras(hass, frigate_entry_id)
     integration_entities.extend(
-        FrigateNotificationsCameraDiagnosticBinarySensor(hass, entry, cam)
+        FrigateNotificationsCameraDiagnosticBinarySensor(entry, cam)
         for cam in sorted(available_cameras)
     )
 
@@ -208,11 +208,10 @@ class FrigateNotificationsCameraDiagnosticBinarySensor(
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, camera: str) -> None:
+    def __init__(self, entry: ConfigEntry, camera: str) -> None:
         """Initialize camera diagnostic binary sensor."""
         super().__init__(entry)
         self._camera = camera
-        self._hass_ref = hass
         self._attr_unique_id = f"{entry.entry_id}_camera_{camera}"
         self._attr_name = f"Camera {camera}"
 
@@ -220,14 +219,14 @@ class FrigateNotificationsCameraDiagnosticBinarySensor(
     def is_on(self) -> bool:
         """Return whether the camera still exists in the linked Frigate config."""
         frigate_entry_id = self._entry.data["frigate_entry_id"]
-        available = get_available_frigate_cameras(self._hass_ref, frigate_entry_id)
+        available = get_available_frigate_cameras(self.hass, frigate_entry_id)
         return self._camera in available
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return camera capability attributes."""
         frigate_entry_id = self._entry.data["frigate_entry_id"]
-        config_view = get_frigate_config_view(self._hass_ref, frigate_entry_id)
+        config_view = get_frigate_config_view(self.hass, frigate_entry_id)
         genai = (
             config_view.camera_supports_genai(self._camera) if config_view is not None else False
         )
