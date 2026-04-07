@@ -260,10 +260,10 @@ def profile_common_fields(subentry: ConfigSubentry) -> dict[str, Any]:
     }
 
 
-# Option resolution helpers.
+# Private option resolution helpers.
 
 
-def resolve_time_filter(
+def _resolve_time_filter(
     profile_data: dict, global_opts: Mapping
 ) -> tuple[TimeFilterMode, str, str]:
     """Resolve time filter settings from profile + global inheritance."""
@@ -284,7 +284,7 @@ def resolve_time_filter(
     )
 
 
-def resolve_guard_entity(profile_data: dict, global_opts: Mapping) -> tuple[GuardMode, str | None]:
+def _resolve_guard_entity(profile_data: dict, global_opts: Mapping) -> tuple[GuardMode, str | None]:
     """Resolve guard entity settings from profile + global inheritance."""
     mode = GuardMode(profile_data.get("guard_mode", GuardMode.INHERIT))
     if mode == GuardMode.CUSTOM:
@@ -295,7 +295,7 @@ def resolve_guard_entity(profile_data: dict, global_opts: Mapping) -> tuple[Guar
     return (GuardMode.INHERIT, global_opts.get("shared_guard_entity"))
 
 
-def resolve_presence(profile_data: dict, global_opts: Mapping) -> tuple[str, ...]:
+def _resolve_presence(profile_data: dict, global_opts: Mapping) -> tuple[str, ...]:
     """Resolve presence entities from profile + global inheritance."""
     mode = PresenceMode(profile_data.get("presence_mode", PresenceMode.INHERIT))
     if mode == PresenceMode.CUSTOM:
@@ -306,7 +306,7 @@ def resolve_presence(profile_data: dict, global_opts: Mapping) -> tuple[str, ...
     return tuple(global_opts.get("shared_presence_entities", []))
 
 
-def resolve_state_filter(
+def _resolve_state_filter(
     profile_data: dict, global_opts: Mapping
 ) -> tuple[str | None, tuple[str, ...]]:
     """Resolve state filter from profile + global inheritance."""
@@ -325,7 +325,7 @@ def resolve_state_filter(
     )
 
 
-def build_emoji_map(global_opts: Mapping[str, Any]) -> dict[str, str]:
+def _build_emoji_map(global_opts: Mapping[str, Any]) -> dict[str, str]:
     """Build the emoji_map by merging defaults with global options."""
     if not global_opts.get("enable_emojis", True):
         return {}
@@ -334,7 +334,7 @@ def build_emoji_map(global_opts: Mapping[str, Any]) -> dict[str, str]:
     return base
 
 
-def build_phase_emoji_map(global_opts: Mapping[str, Any]) -> dict[str, str]:
+def _build_phase_emoji_map(global_opts: Mapping[str, Any]) -> dict[str, str]:
     """Build phase_emoji_map by merging defaults with global overrides."""
     if not global_opts.get("enable_emojis", True):
         return dict.fromkeys(DEFAULT_PHASE_EMOJI_MAP, "")
@@ -491,8 +491,8 @@ def _resolve_global_defaults(hass: HomeAssistant, entry: ConfigEntry) -> _Global
         base_url=global_opts.get("base_url", fallback_base_url),
         frigate_url=global_opts.get("frigate_url", ""),
         client_id=_resolve_client_id(hass, frigate_entry_id),
-        emoji_map=build_emoji_map(global_opts),
-        phase_emoji_map=build_phase_emoji_map(global_opts),
+        emoji_map=_build_emoji_map(global_opts),
+        phase_emoji_map=_build_phase_emoji_map(global_opts),
         default_emoji=(global_opts.get("default_emoji", DEFAULT_EMOJI) if emojis_enabled else ""),
         genai_prefixes=_build_global_genai_prefixes(global_opts),
         sub_label_overrides=(
@@ -534,12 +534,12 @@ def _build_profile(
 
     silence = p.get("silence_duration") or defaults.default_silence_duration
 
-    time_filter_mode, time_filter_start, time_filter_end = resolve_time_filter(
+    time_filter_mode, time_filter_start, time_filter_end = _resolve_time_filter(
         p, defaults.global_opts
     )
-    guard_mode, guard_entity = resolve_guard_entity(p, defaults.global_opts)
-    presence_entities = resolve_presence(p, defaults.global_opts)
-    state_entity, state_filter_states = resolve_state_filter(p, defaults.global_opts)
+    guard_mode, guard_entity = _resolve_guard_entity(p, defaults.global_opts)
+    presence_entities = _resolve_presence(p, defaults.global_opts)
+    state_entity, state_filter_states = _resolve_state_filter(p, defaults.global_opts)
 
     zone_overrides = dict(p.get("zone_overrides", {}))
     if len(valid_cameras) == 1:

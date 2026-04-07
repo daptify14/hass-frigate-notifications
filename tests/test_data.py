@@ -19,17 +19,17 @@ from custom_components.frigate_notifications.const import (
     DEFAULT_TITLE_GENAI_PREFIXES,
 )
 from custom_components.frigate_notifications.data import (
+    _build_emoji_map,
     _build_global_genai_prefixes,
+    _build_phase_emoji_map,
     _build_phases,
     _expand_urgency,
-    build_emoji_map,
-    build_phase_emoji_map,
+    _resolve_guard_entity,
+    _resolve_presence,
+    _resolve_state_filter,
+    _resolve_time_filter,
     build_runtime_config,
     get_frigate_camera_device,
-    resolve_guard_entity,
-    resolve_presence,
-    resolve_state_filter,
-    resolve_time_filter,
 )
 from custom_components.frigate_notifications.enums import (
     AttachmentType,
@@ -91,14 +91,14 @@ from .factories import make_phase, make_profile
     ],
     ids=["inherit-uses-global", "custom-uses-profile", "disabled", "missing-defaults-to-inherit"],
 )
-def test_resolve_time_filter(
+def test__resolve_time_filter(
     profile_data: dict,
     global_opts: dict,
     expected_mode: TimeFilterMode,
     expected_start: str,
     expected_end: str,
 ) -> None:
-    mode, start, end = resolve_time_filter(profile_data, global_opts)
+    mode, start, end = _resolve_time_filter(profile_data, global_opts)
     assert mode == expected_mode
     assert start == expected_start
     assert end == expected_end
@@ -128,13 +128,13 @@ def test_resolve_time_filter(
     ],
     ids=["inherit-uses-global", "custom-uses-profile", "disabled"],
 )
-def test_resolve_guard_entity(
+def test__resolve_guard_entity(
     profile_data: dict,
     global_opts: dict,
     expected_mode: GuardMode,
     expected_entity: str | None,
 ) -> None:
-    mode, entity = resolve_guard_entity(profile_data, global_opts)
+    mode, entity = _resolve_guard_entity(profile_data, global_opts)
     assert mode == expected_mode
     assert entity == expected_entity
 
@@ -166,12 +166,12 @@ def test_resolve_guard_entity(
         "custom-empty-returns-empty",
     ],
 )
-def test_resolve_presence(
+def test__resolve_presence(
     profile_data: dict,
     global_opts: dict,
     expected: tuple,
 ) -> None:
-    assert resolve_presence(profile_data, global_opts) == expected
+    assert _resolve_presence(profile_data, global_opts) == expected
 
 
 @pytest.mark.parametrize(
@@ -202,43 +202,43 @@ def test_resolve_presence(
     ],
     ids=["inherit-uses-global", "custom-uses-profile", "disabled"],
 )
-def test_resolve_state_filter(
+def test__resolve_state_filter(
     profile_data: dict,
     global_opts: dict,
     expected_entity: str | None,
     expected_states: tuple,
 ) -> None:
-    entity, states = resolve_state_filter(profile_data, global_opts)
+    entity, states = _resolve_state_filter(profile_data, global_opts)
     assert entity == expected_entity
     assert states == expected_states
 
 
 class TestBuildEmojiMap:
-    """Tests for build_emoji_map."""
+    """Tests for _build_emoji_map."""
 
     def test_default_only(self) -> None:
         """No overrides returns DEFAULT_EMOJI_MAP."""
-        result = build_emoji_map({})
+        result = _build_emoji_map({})
         assert result == DEFAULT_EMOJI_MAP
 
     def test_global_overrides_default(self) -> None:
         """Global emoji_map overrides default for same key."""
-        result = build_emoji_map({"emoji_map": {"person": "G"}})
+        result = _build_emoji_map({"emoji_map": {"person": "G"}})
         assert result["person"] == "G"
         assert result["car"] == DEFAULT_EMOJI_MAP["car"]
 
 
 class TestBuildPhaseEmojiMap:
-    """Tests for build_phase_emoji_map."""
+    """Tests for _build_phase_emoji_map."""
 
     def test_default_only(self) -> None:
         """No overrides returns DEFAULT_PHASE_EMOJI_MAP."""
-        result = build_phase_emoji_map({})
+        result = _build_phase_emoji_map({})
         assert result == DEFAULT_PHASE_EMOJI_MAP
 
     def test_global_overrides_merge(self) -> None:
         """Global phase_emoji_map overrides one key, others unchanged."""
-        result = build_phase_emoji_map({"phase_emoji_map": {"initial": "X"}})
+        result = _build_phase_emoji_map({"phase_emoji_map": {"initial": "X"}})
         assert result["initial"] == "X"
         assert result["update"] == DEFAULT_PHASE_EMOJI_MAP["update"]
         assert result["end"] == DEFAULT_PHASE_EMOJI_MAP["end"]
@@ -246,7 +246,7 @@ class TestBuildPhaseEmojiMap:
 
     def test_enable_emojis_false_suppresses(self) -> None:
         """enable_emojis=False returns all empty strings."""
-        result = build_phase_emoji_map({"enable_emojis": False})
+        result = _build_phase_emoji_map({"enable_emojis": False})
         assert all(v == "" for v in result.values())
         assert set(result.keys()) == set(DEFAULT_PHASE_EMOJI_MAP.keys())
 
@@ -254,20 +254,20 @@ class TestBuildPhaseEmojiMap:
 class TestBuildEmojiMapDisabled:
     """Tests for emoji maps when globally disabled."""
 
-    def test_build_emoji_map_disabled_returns_empty(self) -> None:
-        """build_emoji_map returns empty dict when enable_emojis=False."""
-        result = build_emoji_map({"enable_emojis": False})
+    def test__build_emoji_map_disabled_returns_empty(self) -> None:
+        """_build_emoji_map returns empty dict when enable_emojis=False."""
+        result = _build_emoji_map({"enable_emojis": False})
         assert result == {}
 
-    def test_build_phase_emoji_map_disabled_returns_blank_values(self) -> None:
-        """build_phase_emoji_map returns blank values when enable_emojis=False."""
-        result = build_phase_emoji_map({"enable_emojis": False})
+    def test__build_phase_emoji_map_disabled_returns_blank_values(self) -> None:
+        """_build_phase_emoji_map returns blank values when enable_emojis=False."""
+        result = _build_phase_emoji_map({"enable_emojis": False})
         assert all(v == "" for v in result.values())
         assert set(result.keys()) == set(DEFAULT_PHASE_EMOJI_MAP.keys())
 
-    def test_build_emoji_map_enabled_merges_custom(self) -> None:
+    def test__build_emoji_map_enabled_merges_custom(self) -> None:
         """Custom emoji_map overrides merge correctly when enabled."""
-        result = build_emoji_map({"enable_emojis": True, "emoji_map": {"person": "X"}})
+        result = _build_emoji_map({"enable_emojis": True, "emoji_map": {"person": "X"}})
         assert result["person"] == "X"
         assert result["car"] == DEFAULT_EMOJI_MAP["car"]
 
