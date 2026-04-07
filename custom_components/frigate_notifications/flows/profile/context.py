@@ -5,6 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from ...config import (
+    DEFAULT_PHASE_END,
+    DEFAULT_PHASE_GENAI,
+    DEFAULT_PHASE_INITIAL,
+    DEFAULT_PHASE_UPDATE,
+    PhaseConfig,
+)
 from ...enums import Provider
 from ...providers.base import ProviderFamilyCapabilities, get_capabilities
 from ..helpers import camera_supports_genai, get_available_cameras, supports_genai
@@ -13,7 +20,14 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
-_PHASE_ORDER = ("initial", "update", "end", "genai")
+PROFILE_PHASE_ORDER = ("initial", "update", "end", "genai")
+
+PROFILE_PHASE_DEFAULTS: dict[str, PhaseConfig] = {
+    "initial": DEFAULT_PHASE_INITIAL,
+    "update": DEFAULT_PHASE_UPDATE,
+    "end": DEFAULT_PHASE_END,
+    "genai": DEFAULT_PHASE_GENAI,
+}
 
 
 @dataclass(frozen=True)
@@ -38,7 +52,7 @@ def _derive_enabled_phases(
     phases = draft.get("phases", {})
     return tuple(
         p
-        for p in _PHASE_ORDER
+        for p in PROFILE_PHASE_ORDER
         if (p != "genai" or genai_available) and phases.get(p, {}).get("enabled", True)
     )
 

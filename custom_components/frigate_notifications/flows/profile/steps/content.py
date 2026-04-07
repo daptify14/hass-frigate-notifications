@@ -8,27 +8,12 @@ from homeassistant.data_entry_flow import SectionConfig, section
 from homeassistant.helpers.selector import BooleanSelector
 import voluptuous as vol
 
-from ....config import (
-    DEFAULT_PHASE_END,
-    DEFAULT_PHASE_GENAI,
-    DEFAULT_PHASE_INITIAL,
-    DEFAULT_PHASE_UPDATE,
-    PhaseConfig,
-)
 from ....const import DOMAIN
 from ...helpers import content_selector, get_camera_zones, title_selector, zone_phrase_selector
+from ..context import PROFILE_PHASE_DEFAULTS, PROFILE_PHASE_ORDER
 
 if TYPE_CHECKING:
     from ..context import FlowContext
-
-_PHASE_DEFAULTS: dict[str, PhaseConfig] = {
-    "initial": DEFAULT_PHASE_INITIAL,
-    "update": DEFAULT_PHASE_UPDATE,
-    "end": DEFAULT_PHASE_END,
-    "genai": DEFAULT_PHASE_GENAI,
-}
-
-_PHASE_ORDER = ("initial", "update", "end", "genai")
 
 
 def build_content_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema:
@@ -42,10 +27,10 @@ def build_content_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema:
 
     enable_emojis = ctx.entry.options.get("enable_emojis", True)
 
-    for phase_name in _PHASE_ORDER:
+    for phase_name in PROFILE_PHASE_ORDER:
         if phase_name == "genai" and not ctx.genai_available:
             continue
-        defaults = _PHASE_DEFAULTS[phase_name]
+        defaults = PROFILE_PHASE_DEFAULTS[phase_name]
         phase_data = draft.get("phases", {}).get(phase_name, {})
         fields: dict[Any, Any] = {
             vol.Optional("enabled", default=phase_data.get("enabled", True)): BooleanSelector(),
@@ -136,7 +121,7 @@ def apply_content_input(
 
 def _submit_content_phases(data: dict, user_input: dict) -> None:
     """Extract content fields from user_input into data['phases']."""
-    for phase_name in _PHASE_ORDER:
+    for phase_name in PROFILE_PHASE_ORDER:
         phase_sec = user_input.get(f"{phase_name}_content", {})
         if not phase_sec:
             continue
@@ -144,7 +129,7 @@ def _submit_content_phases(data: dict, user_input: dict) -> None:
         phase = dict(phases.get(phase_name, {}))
         phase["enabled"] = phase_sec.get("enabled", True)
         msg = (phase_sec.get("message_template") or "").strip()
-        default_msg = _PHASE_DEFAULTS[phase_name].content.message_template
+        default_msg = PROFILE_PHASE_DEFAULTS[phase_name].content.message_template
         phase["message_template"] = msg or default_msg
         phase["subtitle_template"] = (phase_sec.get("subtitle_template") or "").strip()
         if "emoji_message" in phase_sec:
