@@ -84,13 +84,6 @@ def build_content_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema:
     return vol.Schema(schema_dict)
 
 
-def validate_content_input(
-    draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext
-) -> dict[str, str]:
-    """Validate content step input. Returns error dict (empty = valid)."""
-    return {}
-
-
 def apply_content_input(
     draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext
 ) -> None:

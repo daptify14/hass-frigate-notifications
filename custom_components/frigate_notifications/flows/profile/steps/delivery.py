@@ -156,13 +156,6 @@ def build_delivery_suggested(draft: dict[str, Any], ctx: FlowContext) -> dict[st
     return suggested
 
 
-def validate_delivery_input(
-    draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext
-) -> dict[str, str]:
-    """Validate delivery step input. Returns error dict (empty = valid)."""
-    return {}
-
-
 def apply_delivery_input(
     draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext
 ) -> None:

@@ -91,13 +91,6 @@ def build_media_actions_suggested(draft: dict[str, Any], ctx: FlowContext) -> di
     return suggested
 
 
-def validate_media_actions_input(
-    draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext
-) -> dict[str, str]:
-    """Validate media/actions step input. Returns error dict (empty = valid)."""
-    return {}
-
-
 def apply_media_actions_input(
     draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext
 ) -> None:

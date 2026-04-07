@@ -16,12 +16,11 @@ from .steps.basics import (
     build_basics_suggested,
     validate_basics_input,
 )
-from .steps.content import apply_content_input, build_content_schema, validate_content_input
+from .steps.content import apply_content_input, build_content_schema
 from .steps.delivery import (
     apply_delivery_input,
     build_delivery_schema,
     build_delivery_suggested,
-    validate_delivery_input,
 )
 from .steps.filtering import (
     apply_filtering_input,
@@ -33,7 +32,6 @@ from .steps.media_actions import (
     apply_media_actions_input,
     build_media_actions_schema,
     build_media_actions_suggested,
-    validate_media_actions_input,
 )
 from .steps.preset import (
     apply_preset_input,
@@ -202,11 +200,9 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
         ctx = self._build_context()
 
         if user_input is not None:
-            errors = validate_content_input(self._data, user_input, ctx)
-            if not errors:
-                apply_content_input(self._data, user_input, ctx)
-                self._invalidate_context()
-                return await self._go_to_menu()
+            apply_content_input(self._data, user_input, ctx)
+            self._invalidate_context()
+            return await self._go_to_menu()
 
         schema = build_content_schema(self._data, ctx)
         return self.async_show_form(
@@ -221,11 +217,9 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
         ctx = self._build_context()
 
         if user_input is not None:
-            errors = validate_media_actions_input(self._data, user_input, ctx)
-            if not errors:
-                apply_media_actions_input(self._data, user_input, ctx)
-                self._invalidate_context()
-                return await self._go_to_menu()
+            apply_media_actions_input(self._data, user_input, ctx)
+            self._invalidate_context()
+            return await self._go_to_menu()
 
         schema = build_media_actions_schema(self._data, ctx)
         suggested = build_media_actions_suggested(self._data, ctx)
@@ -241,11 +235,9 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
         ctx = self._build_context()
 
         if user_input is not None:
-            errors = validate_delivery_input(self._data, user_input, ctx)
-            if not errors:
-                apply_delivery_input(self._data, user_input, ctx)
-                self._invalidate_context()
-                return await self._go_to_menu()
+            apply_delivery_input(self._data, user_input, ctx)
+            self._invalidate_context()
+            return await self._go_to_menu()
 
         schema = build_delivery_schema(self._data, ctx)
         suggested = build_delivery_suggested(self._data, ctx)
