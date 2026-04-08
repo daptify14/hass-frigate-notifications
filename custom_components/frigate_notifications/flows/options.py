@@ -57,9 +57,8 @@ class OptionsFlowHandler(OptionsFlow):
         self._reconfiguring = False
         self._frigate_entry_id = ""
 
-    async def async_step_init(self, user_input=None) -> ConfigFlowResult:
+    async def async_step_init(self, _user_input=None) -> ConfigFlowResult:
         """Start the options flow — menu if already configured, linear otherwise."""
-        del user_input
         await async_ensure_preset_cache(self.hass)
         self._data = dict(self.config_entry.options)
         self._frigate_entry_id = self.config_entry.data["frigate_entry_id"]

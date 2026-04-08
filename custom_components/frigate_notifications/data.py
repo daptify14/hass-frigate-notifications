@@ -230,11 +230,6 @@ def get_profile_device_identifiers(entry_id: str, subentry_id: str) -> set[tuple
     return {(DOMAIN, f"profile:{entry_id}:{subentry_id}")}
 
 
-def get_profile_device_name(profile_name: str) -> str:
-    """Return the human-facing device name for a notification profile."""
-    return profile_name
-
-
 def get_integration_subentry_id(entry: ConfigEntry) -> str | None:
     """Return the integration subentry ID for a config entry, if present."""
     for subentry in entry.subentries.values():

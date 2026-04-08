@@ -53,9 +53,8 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
         """Start a new profile subentry flow."""
         return await self.async_step_preset()
 
-    async def async_step_reconfigure(self, user_input=None) -> SubentryFlowResult:
+    async def async_step_reconfigure(self, _user_input=None) -> SubentryFlowResult:
         """Pre-fill from existing subentry data and show section menu."""
-        del user_input
         self._reconfiguring = True
         self._data.update(copy.deepcopy(dict(self._get_reconfigure_subentry().data)))
         self._invalidate_context()
