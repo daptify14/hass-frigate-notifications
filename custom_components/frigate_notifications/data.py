@@ -27,11 +27,9 @@ from .const import (
     DEFAULT_COOLDOWN_SECONDS,
     DEFAULT_EMOJI,
     DEFAULT_EMOJI_MAP,
-    DEFAULT_GIF_URL,
     DEFAULT_GROUP,
     DEFAULT_INITIAL_DELAY,
     DEFAULT_PHASE_EMOJI_MAP,
-    DEFAULT_SNAPSHOT_URL,
     DEFAULT_TAG,
     DEFAULT_TITLE_GENAI_PREFIXES,
     DEFAULT_TITLE_TEMPLATE,
@@ -58,6 +56,7 @@ from .enums import (
     provider_family,
 )
 from .frigate_config import get_frigate_config_view
+from .media import DEFAULT_GIF_URL, DEFAULT_SNAPSHOT_URL
 from .providers.models import AndroidTvConfig, MobileAppConfig
 
 if TYPE_CHECKING:

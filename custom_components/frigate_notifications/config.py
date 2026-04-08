@@ -6,6 +6,8 @@ from typing import Any
 from .const import DEFAULT_MESSAGE_TEMPLATE
 from .enums import AttachmentType, InterruptionLevel, VideoType
 
+VALID_INTERRUPTION_LEVELS = list(InterruptionLevel)
+
 URGENCY_DEFAULTS: dict[str, dict[str, Any]] = {
     "quiet": {
         "ios_sound": "none",

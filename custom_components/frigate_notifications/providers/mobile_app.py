@@ -9,7 +9,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from ..const import (
+from ..enums import VideoType, resolved_platform
+from ..media import (
     ANDROID_IMAGE_URL_TEMPLATES,
     ANDROID_VIDEO_URL_TEMPLATES,
     ATTACHMENT_CONTENT_TYPES,
@@ -17,7 +18,6 @@ from ..const import (
     VIDEO_CONTENT_TYPES,
     VIDEO_URL_TEMPLATES,
 )
-from ..enums import VideoType, resolved_platform
 from ..message_builder import render_template
 from .models import MobileAppConfig, NotifyCall, RenderedNotification
 

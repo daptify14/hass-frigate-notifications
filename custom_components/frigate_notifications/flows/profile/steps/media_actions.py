@@ -14,7 +14,7 @@ from homeassistant.helpers.selector import (
 )
 import voluptuous as vol
 
-from ....const import VALID_TV_ATTACHMENTS
+from ....media import VALID_TV_ATTACHMENTS
 from ...helpers import ATTACHMENT_SELECTOR, TV_ATTACHMENT_SELECTOR, video_selector
 from ..context import PROFILE_PHASE_DEFAULTS, PROFILE_PHASE_ORDER
 

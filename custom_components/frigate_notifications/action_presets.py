@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any
 from jinja2 import StrictUndefined
 from jinja2.sandbox import SandboxedEnvironment
 
-from .const import _CAM, _DET, _FN, _REV
-from .enums import Provider, resolved_platform
+from .enums import Provider, VideoType, resolved_platform
+from .media import ATTACHMENT_URL_TEMPLATES, VIDEO_URL_TEMPLATES
 
 if TYPE_CHECKING:
     from homeassistant.helpers.selector import SelectOptionDict
@@ -24,21 +24,21 @@ ACTION_PRESETS: dict[str, dict[str, str]] = {
     "view_clip": {
         "type": "uri",
         "title": "View Clip",
-        "uri_ios": f"{_FN}/{_DET}/{_CAM}/master.m3u8",
-        "uri_android": f"{_FN}/{_DET}/{_CAM}/clip.mp4",
-        "uri": f"{_FN}/{_DET}/{_CAM}/master.m3u8",
+        "uri_ios": VIDEO_URL_TEMPLATES[VideoType.CLIP_HLS],
+        "uri_android": VIDEO_URL_TEMPLATES[VideoType.CLIP_MP4],
+        "uri": VIDEO_URL_TEMPLATES[VideoType.CLIP_HLS],
         "icon": "sfsymbols:play.rectangle",
     },
     "view_snapshot": {
         "type": "uri",
         "title": "View Snapshot",
-        "uri": f"{_FN}/{_DET}/snapshot.jpg",
+        "uri": ATTACHMENT_URL_TEMPLATES["snapshot"],
         "icon": "sfsymbols:photo",
     },
     "view_gif": {
         "type": "uri",
         "title": "View GIF",
-        "uri": f"{_FN}/{_REV}/review_preview.gif",
+        "uri": ATTACHMENT_URL_TEMPLATES["review_gif"],
         "icon": "sfsymbols:photo.on.rectangle",
     },
     "view_stream": {
