@@ -353,6 +353,15 @@ class TestAsyncRemoveEntry:
             severity=ir.IssueSeverity.ERROR,
             translation_key="broken_camera_binding",
         )
+        other_entry_id = f"x{mock_config_entry.entry_id}x"
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            f"broken_camera_{other_entry_id}_test",
+            is_fixable=False,
+            severity=ir.IssueSeverity.ERROR,
+            translation_key="broken_camera_binding",
+        )
         # Foreign-domain issue should be left untouched.
         ir.async_create_issue(
             hass,
@@ -369,7 +378,7 @@ class TestAsyncRemoveEntry:
         await hass.async_block_till_done()
 
         post_issues = [iid for iid in issue_registry.issues if iid[0] == DOMAIN]
-        assert len(post_issues) == 0
+        assert post_issues == [(DOMAIN, f"broken_camera_{other_entry_id}_test")]
         # Foreign-domain issue still present.
         assert ("other_integration", "unrelated_issue") in issue_registry.issues
 

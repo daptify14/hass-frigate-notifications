@@ -221,8 +221,10 @@ class MobileAppProvider:
                 )
             elif action_type == "event":
                 review_id = str(action_ctx.get("review_id", ""))
+                camera = str(action_ctx.get("camera", ""))
                 event_id = (
-                    f"custom-frigate_notifications:profile:{profile.profile_id}:review:{review_id}"
+                    f"custom-frigate_notifications:profile:{profile.profile_id}"
+                    f":review:{review_id}:camera:{camera}"
                 )
                 actions.append(
                     {
