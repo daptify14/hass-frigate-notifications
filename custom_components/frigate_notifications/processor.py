@@ -134,9 +134,9 @@ class ReviewProcessor:
         review.update_from_review(payload)
         review.last_update = now
 
-        new_ids = set(review.detection_ids) - prev_detection_ids
+        new_ids = [det_id for det_id in review.detection_ids if det_id not in prev_detection_ids]
         if new_ids:
-            review.latest_detection_id = next(iter(new_ids))
+            review.latest_detection_id = new_ids[-1]
         new_objects = [o for o in review.objects if o not in prev_objects]
         change = "update"
         if new_ids:
@@ -168,9 +168,9 @@ class ReviewProcessor:
         review.update_from_review(payload)
         review.last_update = now
 
-        new_ids = set(review.detection_ids) - prev_detection_ids
+        new_ids = [det_id for det_id in review.detection_ids if det_id not in prev_detection_ids]
         if new_ids:
-            review.latest_detection_id = next(iter(new_ids))
+            review.latest_detection_id = new_ids[-1]
 
         _LOGGER.debug(
             "Review %s ended: objects=%s sub_labels=%s zones=%s",

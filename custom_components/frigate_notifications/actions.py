@@ -21,7 +21,6 @@ _LOGGER = logging.getLogger(__name__)
 _SILENCE_PREFIX = f"silence-{DOMAIN}:profile:"
 _CUSTOM_PREFIX = f"custom-{DOMAIN}:profile:"
 _EXPECTED_CUSTOM_PARTS = 2
-_EXPECTED_REVIEW_PARTS = 2
 
 
 def setup_action_listener(
@@ -46,7 +45,6 @@ def setup_action_listener(
                 _LOGGER.warning("Silence action for unknown profile %s", profile_id)
             return
 
-        # Custom action includes profile, review, and camera context.
         if action.startswith(_CUSTOM_PREFIX):
             parsed_action = _parse_custom_action(action)
             if parsed_action is None:
@@ -95,16 +93,12 @@ def setup_action_listener(
 def _parse_custom_action(action: str) -> tuple[str, str, str] | None:
     """Parse a custom action token."""
     remainder = action[len(_CUSTOM_PREFIX) :]
-    parts = remainder.split(":review:", 1)
-    if len(parts) != _EXPECTED_CUSTOM_PARTS:
+    try:
+        profile_id, review_part = remainder.split(":review:", 1)
+        review_id, camera = review_part.split(":camera:", 1)
+    except ValueError:
         return None
 
-    profile_id, review_part = parts
-    review_parts = review_part.split(":camera:", 1)
-    if len(review_parts) != _EXPECTED_REVIEW_PARTS:
-        return None
-
-    review_id, camera = review_parts
     return (profile_id, review_id, camera)
 
 
