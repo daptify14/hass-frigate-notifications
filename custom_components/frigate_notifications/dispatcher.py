@@ -632,9 +632,12 @@ class NotificationDispatcher:
         is_genai: bool,
     ) -> None:
         """Retire this profile's review state if this was the final dispatch."""
-        if is_genai or (
+        # A review is done for this profile after GenAI fires, or after END when
+        # GenAI notifications are disabled and no follow-up dispatch remains.
+        should_retire = is_genai or (
             lifecycle == Lifecycle.END and not profile.get_phase(Phase.GENAI).delivery.enabled
-        ):
+        )
+        if should_retire:
             self.retire_profile_review(profile.profile_id, review.review_id)
 
     def _update_last_sent(

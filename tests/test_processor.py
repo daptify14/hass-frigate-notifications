@@ -78,6 +78,9 @@ class TestHandleReviewMessage:
     ) -> None:
         await processor.handle_review_message(json.dumps(REVIEW_UPDATE_PAYLOAD))
         assert len(callbacks["update"]) == 1
+        review, change = callbacks["update"][0]
+        assert review.latest_detection_id == "det_id_2"
+        assert "det_id_2" in change
         assert processor.active_review_count == 1
 
     async def test_end_known_review_updates_and_fires_callback(
@@ -94,6 +97,8 @@ class TestHandleReviewMessage:
     ) -> None:
         await processor.handle_review_message(json.dumps(REVIEW_END_PAYLOAD))
         assert len(callbacks["end"]) == 1
+        review = callbacks["end"][0]
+        assert review.latest_detection_id == "det_id_3"
         assert processor.active_review_count == 1
 
     async def test_genai_known_review_attaches_data_and_fires_callbacks(
@@ -219,10 +224,12 @@ class TestCleanupStale:
         review = processor.get_review("1773840946.10543-review1")
         assert review is not None
         review.last_update = time.time() - 1801
+        processor._review_locks["orphan-review"] = asyncio.Lock()
 
         processor.cleanup_stale()
         assert processor.active_review_count == 0
         assert "1773840946.10543-review1" not in processor._review_locks
+        assert "orphan-review" not in processor._review_locks
 
     async def test_fires_on_review_retired_for_each_stale_review(self) -> None:
         complete_calls: list[str] = []

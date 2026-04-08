@@ -20,20 +20,22 @@ from homeassistant.helpers.selector import (
 )
 import voluptuous as vol
 
+from ..config import VALID_INTERRUPTION_LEVELS
 from ..const import (
     FRIGATE_DOMAIN,
     GUARD_ENTITY_DOMAINS,
-    VALID_ATTACHMENTS,
-    VALID_INTERRUPTION_LEVELS,
-    VALID_TV_ATTACHMENTS,
-    VALID_VIDEOS,
-    VALID_VIDEOS_NO_HLS,
     format_camera_text,
     humanize_zone,
 )
 from ..data import get_available_frigate_cameras
 from ..enums import Provider, resolved_platform
 from ..frigate_config import get_frigate_config_view
+from ..media import (
+    VALID_ATTACHMENTS,
+    VALID_TV_ATTACHMENTS,
+    VALID_VIDEOS,
+    VALID_VIDEOS_NO_HLS,
+)
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant

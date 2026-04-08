@@ -1,7 +1,5 @@
 """Constants for Notifications for Frigate."""
 
-from .enums import VideoType
-
 DOMAIN = "frigate_notifications"
 FRIGATE_DOMAIN = "frigate"
 
@@ -35,89 +33,6 @@ CLEANUP_INTERVAL = 300  # 5 minutes.
 MAX_PAYLOAD_SIZE = 65536  # 64 KB.
 MAX_DETECTION_IDS = 50
 
-_FN = "{{ base_url }}/api/frigate{{ client_id }}/notifications"
-_DET = "{{ detection_id }}"
-_REV = "{{ review_id }}"
-_CAM = "{{ camera }}"
-
-ATTACHMENT_URL_TEMPLATES: dict[str, str] = {
-    "thumbnail": f"{_FN}/{_DET}/thumbnail.jpg",
-    "snapshot": f"{_FN}/{_DET}/snapshot.jpg?bbox=0&crop=0",
-    "snapshot_bbox": f"{_FN}/{_DET}/snapshot.jpg?bbox=1&crop=0",
-    "snapshot_cropped": f"{_FN}/{_DET}/snapshot.jpg?bbox=0&crop=1",
-    "snapshot_cropped_bbox": f"{_FN}/{_DET}/snapshot.jpg?bbox=1&crop=1",
-    "review_gif": f"{_FN}/{_REV}/review_preview.gif",
-    "event_gif": f"{_FN}/{_DET}/event_preview.gif",
-}
-
-VIDEO_URL_TEMPLATES: dict[str, str] = {
-    VideoType.REVIEW_GIF_VIDEO: f"{_FN}/{_REV}/review_preview.gif?format=mp4",
-    VideoType.CLIP_MP4: f"{_FN}/{_DET}/{_CAM}/clip.mp4",
-    VideoType.CLIP_HLS: f"{_FN}/{_DET}/{_CAM}/master.m3u8",
-}
-
-ANDROID_IMAGE_URL_TEMPLATES: dict[str, str] = {
-    "thumbnail": f"{_FN}/{_DET}/thumbnail.jpg?format=android",
-    "snapshot": f"{_FN}/{_DET}/snapshot.jpg?bbox=0&crop=0&format=android",
-    "snapshot_bbox": f"{_FN}/{_DET}/snapshot.jpg?bbox=1&crop=0&format=android",
-    "snapshot_cropped": f"{_FN}/{_DET}/snapshot.jpg?bbox=0&crop=1&format=android",
-    "snapshot_cropped_bbox": f"{_FN}/{_DET}/snapshot.jpg?bbox=1&crop=1&format=android",
-    "review_gif": f"{_FN}/{_REV}/review_preview.gif",
-    "event_gif": f"{_FN}/{_DET}/event_preview.gif",
-}
-
-ATTACHMENT_CONTENT_TYPES: dict[str, str] = {
-    "thumbnail": "jpeg",
-    "snapshot": "jpeg",
-    "snapshot_bbox": "jpeg",
-    "snapshot_cropped": "jpeg",
-    "snapshot_cropped_bbox": "jpeg",
-    "review_gif": "gif",
-    "event_gif": "gif",
-}
-
-VIDEO_CONTENT_TYPES: dict[str, str] = {
-    VideoType.REVIEW_GIF_VIDEO: "mp4",
-    VideoType.CLIP_MP4: "mp4",
-    VideoType.CLIP_HLS: "application/vnd.apple.mpegurl",
-}
-
-# Android video: mp4 only (HLS falls back to mp4).
-ANDROID_VIDEO_URL_TEMPLATES: dict[str, str] = {
-    VideoType.REVIEW_GIF_VIDEO: f"{_FN}/{_REV}/review_preview.gif?format=mp4",
-    VideoType.CLIP_MP4: f"{_FN}/{_DET}/{_CAM}/clip.mp4",
-    VideoType.CLIP_HLS: f"{_FN}/{_DET}/{_CAM}/clip.mp4",  # Fallback to mp4.
-}
-
-DEFAULT_SNAPSHOT_URL = ATTACHMENT_URL_TEMPLATES["snapshot_cropped"]
-DEFAULT_GIF_URL = ATTACHMENT_URL_TEMPLATES["review_gif"]
-
-VALID_ATTACHMENTS = [
-    "thumbnail",
-    "snapshot",
-    "snapshot_bbox",
-    "snapshot_cropped",
-    "snapshot_cropped_bbox",
-    "review_gif",
-    "event_gif",
-]
-VALID_TV_ATTACHMENTS = [
-    "thumbnail",
-    "snapshot",
-    "snapshot_bbox",
-    "snapshot_cropped",
-    "snapshot_cropped_bbox",
-]
-VALID_VIDEOS = (
-    VideoType.CLIP_HLS,
-    VideoType.CLIP_MP4,
-    VideoType.LIVE_VIEW,
-    VideoType.NONE,
-    VideoType.REVIEW_GIF_VIDEO,
-)
-VALID_VIDEOS_NO_HLS = (VideoType.CLIP_MP4, VideoType.NONE, VideoType.REVIEW_GIF_VIDEO)
-VALID_INTERRUPTION_LEVELS = ["active", "passive", "time-sensitive"]
-
 GUARD_ENTITY_DOMAINS = ("input_boolean", "switch", "binary_sensor")
 
 PRESENCE_ENTITY_DOMAINS = ("device_tracker", "person", "group")
@@ -126,9 +41,6 @@ PRESENCE_ENTITY_DOMAINS = ("device_tracker", "person", "group")
 def humanize_zone(zone: str) -> str:
     """Convert a snake_case zone name to a human-readable label."""
     return zone.replace("_", " ").title()
-
-
-_CAMERA_TEXT_INLINE_LIMIT = 2
 
 
 def format_camera_text(cameras: list[str] | tuple[str, ...]) -> str:
@@ -140,9 +52,9 @@ def format_camera_text(cameras: list[str] | tuple[str, ...]) -> str:
         return ""
     count = len(cameras)
     if count <= 1:
-        return humanize_zone(cameras[0]) if cameras else ""
+        return humanize_zone(cameras[0])
     names = [humanize_zone(c) for c in cameras]
-    if count == _CAMERA_TEXT_INLINE_LIMIT:
+    if count == 2:  # Two cameras: show both inline  # noqa: PLR2004
         return f"{names[0]}, {names[1]}"
     return f"{names[0]} +{count - 1}"
 

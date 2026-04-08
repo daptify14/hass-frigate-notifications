@@ -20,7 +20,6 @@ _LOGGER = logging.getLogger(__name__)
 
 _SILENCE_PREFIX = f"silence-{DOMAIN}:profile:"
 _CUSTOM_PREFIX = f"custom-{DOMAIN}:profile:"
-_EXPECTED_CUSTOM_PARTS = 2
 
 
 def setup_action_listener(
@@ -45,14 +44,12 @@ def setup_action_listener(
                 _LOGGER.warning("Silence action for unknown profile %s", profile_id)
             return
 
-        # Custom action: custom-frigate_notifications:profile:{profile_id}:review:{review_id}
         if action.startswith(_CUSTOM_PREFIX):
-            remainder = action[len(_CUSTOM_PREFIX) :]
-            parts = remainder.split(":review:", 1)
-            if len(parts) != _EXPECTED_CUSTOM_PARTS:
+            parsed_action = _parse_custom_action(action)
+            if parsed_action is None:
                 _LOGGER.debug("Malformed custom action: %s", action)
                 return
-            profile_id, review_id = parts
+            profile_id, review_id, action_camera = parsed_action
 
             from .dispatcher import execute_custom_actions
 
@@ -67,7 +64,7 @@ def setup_action_listener(
             review = entry.runtime_data.processor.get_review(review_id) if review_id else None
             if review is None:
                 run_vars = {
-                    "camera": profile.cameras[0] if len(profile.cameras) == 1 else "",
+                    "camera": profile.cameras[0] if len(profile.cameras) == 1 else action_camera,
                     "profile_id": profile.profile_id,
                     "profile_name": profile.name,
                 }
@@ -90,6 +87,18 @@ def setup_action_listener(
             )
 
     return hass.bus.async_listen("mobile_app_notification_action", _handle_action)
+
+
+def _parse_custom_action(action: str) -> tuple[str, str, str] | None:
+    """Parse a custom action token."""
+    remainder = action[len(_CUSTOM_PREFIX) :]
+    try:
+        profile_id, review_part = remainder.split(":review:", 1)
+        review_id, camera = review_part.split(":camera:", 1)
+    except ValueError:
+        return None
+
+    return (profile_id, review_id, camera)
 
 
 def _build_button_action_run_vars(

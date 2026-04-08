@@ -27,11 +27,9 @@ from .const import (
     DEFAULT_COOLDOWN_SECONDS,
     DEFAULT_EMOJI,
     DEFAULT_EMOJI_MAP,
-    DEFAULT_GIF_URL,
     DEFAULT_GROUP,
     DEFAULT_INITIAL_DELAY,
     DEFAULT_PHASE_EMOJI_MAP,
-    DEFAULT_SNAPSHOT_URL,
     DEFAULT_TAG,
     DEFAULT_TITLE_GENAI_PREFIXES,
     DEFAULT_TITLE_TEMPLATE,
@@ -58,7 +56,15 @@ from .enums import (
     provider_family,
 )
 from .frigate_config import get_frigate_config_view
+from .media import DEFAULT_GIF_URL, DEFAULT_SNAPSHOT_URL
 from .providers.models import AndroidTvConfig, MobileAppConfig
+
+_PHASE_DEFAULTS: dict[Phase, PhaseConfig] = {
+    Phase.INITIAL: DEFAULT_PHASE_INITIAL,
+    Phase.UPDATE: DEFAULT_PHASE_UPDATE,
+    Phase.END: DEFAULT_PHASE_END,
+    Phase.GENAI: DEFAULT_PHASE_GENAI,
+}
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -174,13 +180,7 @@ class ProfileRuntime:
         # End inherits from Update when not explicitly configured.
         if phase == Phase.END and Phase.UPDATE in self.phases:
             return self.phases[Phase.UPDATE]
-        defaults = {
-            Phase.INITIAL: DEFAULT_PHASE_INITIAL,
-            Phase.UPDATE: DEFAULT_PHASE_UPDATE,
-            Phase.END: DEFAULT_PHASE_END,
-            Phase.GENAI: DEFAULT_PHASE_GENAI,
-        }
-        return defaults.get(phase, DEFAULT_PHASE_UPDATE)
+        return _PHASE_DEFAULTS.get(phase, DEFAULT_PHASE_UPDATE)
 
     @property
     def is_multi_camera(self) -> bool:
@@ -228,11 +228,6 @@ def get_frigate_camera_device(
 def get_profile_device_identifiers(entry_id: str, subentry_id: str) -> set[tuple[str, str]]:
     """Return device registry identifiers for a profile device."""
     return {(DOMAIN, f"profile:{entry_id}:{subentry_id}")}
-
-
-def get_profile_device_name(profile_name: str) -> str:
-    """Return the human-facing device name for a notification profile."""
-    return profile_name
 
 
 def get_integration_subentry_id(entry: ConfigEntry) -> str | None:

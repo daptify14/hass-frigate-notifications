@@ -13,7 +13,6 @@ from .data import (
     get_frigate_camera_device,
     get_frigate_camera_identifier,
     get_profile_device_identifiers,
-    get_profile_device_name,
 )
 from .enums import Provider
 
@@ -67,7 +66,7 @@ class FrigateNotificationsProfileEntity(Entity):
         self._cameras = cameras
         self._profile_name = profile_name
         self._frigate_entry_id = entry.data["frigate_entry_id"]
-        self._profile_device_name = get_profile_device_name(profile_name)
+        self._profile_device_name = profile_name
         self._device_model = _PROVIDER_MODEL.get(provider, "Notification Profile")
 
         device_info: DeviceInfo = DeviceInfo(

@@ -63,13 +63,18 @@ class Review:
     def from_review_mqtt(cls, payload: Mapping[str, Any]) -> Review:
         """Create from frigate/reviews MQTT payload (type: new)."""
         after = payload.get("after", {})
-        data = after.get("data", {})
+        return cls.from_snapshot(after)
+
+    @classmethod
+    def from_snapshot(cls, snapshot: Mapping[str, Any]) -> Review:
+        """Create from a single Frigate review snapshot."""
+        data = snapshot.get("data", {})
         return cls(
-            review_id=after.get("id", ""),
-            camera=after.get("camera", ""),
-            start_time=after.get("start_time", 0.0),
-            end_time=after.get("end_time"),
-            severity=after.get("severity", ""),
+            review_id=snapshot.get("id", ""),
+            camera=snapshot.get("camera", ""),
+            start_time=snapshot.get("start_time", 0.0),
+            end_time=snapshot.get("end_time"),
+            severity=snapshot.get("severity", ""),
             detection_ids=list(data.get("detections", [])),
             objects=list(data.get("objects", [])),
             sub_labels=list(data.get("sub_labels", [])),

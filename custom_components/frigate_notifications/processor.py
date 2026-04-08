@@ -66,6 +66,10 @@ class ReviewProcessor:
         after = payload.get("after", {})
         review_id = after.get("id", "")
 
+        if not review_id:
+            _LOGGER.debug("Review message missing ID, skipping")
+            return
+
         data = after.get("data", {})
         detection_ids = data.get("detections", [])
         if not isinstance(detection_ids, list) or len(detection_ids) > MAX_DETECTION_IDS:
@@ -76,10 +80,6 @@ class ReviewProcessor:
                 else len(detection_ids),
                 review_id[:25],
             )
-            return
-
-        if not review_id:
-            _LOGGER.debug("Review message missing ID, skipping")
             return
 
         now = time.time()
@@ -126,7 +126,7 @@ class ReviewProcessor:
         review = self._active_reviews.get(review_id)
         if not review:
             _LOGGER.debug("Update for unknown review %s, creating", review_id)
-            review = Review.from_review_mqtt(payload)
+            review = self._create_review_from_payload(review_id, payload)
             self._active_reviews[review_id] = review
 
         prev_objects = list(review.objects)
@@ -134,9 +134,9 @@ class ReviewProcessor:
         review.update_from_review(payload)
         review.last_update = now
 
-        new_ids = set(review.detection_ids) - prev_detection_ids
+        new_ids = [det_id for det_id in review.detection_ids if det_id not in prev_detection_ids]
         if new_ids:
-            review.latest_detection_id = next(iter(new_ids))
+            review.latest_detection_id = new_ids[-1]
         new_objects = [o for o in review.objects if o not in prev_objects]
         change = "update"
         if new_ids:
@@ -161,11 +161,16 @@ class ReviewProcessor:
         review = self._active_reviews.get(review_id)
         if not review:
             _LOGGER.debug("End for unknown review %s, creating", review_id)
-            review = Review.from_review_mqtt(payload)
+            review = self._create_review_from_payload(review_id, payload)
             self._active_reviews[review_id] = review
 
+        prev_detection_ids = set(review.detection_ids)
         review.update_from_review(payload)
         review.last_update = now
+
+        new_ids = [det_id for det_id in review.detection_ids if det_id not in prev_detection_ids]
+        if new_ids:
+            review.latest_detection_id = new_ids[-1]
 
         _LOGGER.debug(
             "Review %s ended: objects=%s sub_labels=%s zones=%s",
@@ -199,6 +204,13 @@ class ReviewProcessor:
         if self._on_genai:
             self._on_genai(review)
 
+    def _create_review_from_payload(self, review_id: str, payload: dict[str, Any]) -> Review:
+        """Create a review from the best available snapshot in a payload."""
+        before = payload.get("before")
+        if isinstance(before, dict) and before.get("id") == review_id:
+            return Review.from_snapshot(before)
+        return Review.from_review_mqtt(payload)
+
     def cleanup_stale(self) -> None:
         """Remove stale reviews and their associated locks."""
         now = time.time()
@@ -213,5 +225,10 @@ class ReviewProcessor:
             self._review_locks.pop(rid, None)
             if self._on_review_retired:
                 self._on_review_retired(rid)
+
+        orphan_locks = [rid for rid in self._review_locks if rid not in self._active_reviews]
+        for rid in orphan_locks:
+            self._review_locks.pop(rid, None)
+
         if stale_reviews:
             _LOGGER.debug("Cleaned up %d stale review(s)", len(stale_reviews))

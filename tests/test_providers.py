@@ -252,6 +252,7 @@ class TestMobileAppProvider:
         assert len(actions) == 1
         assert actions[0]["action"].startswith("custom-frigate_notifications:")
         assert ":review:" in actions[0]["action"]
+        assert ":camera:driveway" in actions[0]["action"]
 
     def test_action_type_none_skipped(self, hass: HomeAssistant) -> None:
         """Action preset 'none' produces no action entry."""
