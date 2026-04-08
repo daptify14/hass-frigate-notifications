@@ -110,8 +110,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
 
         return _callback
 
-    def _on_review_update(review: Review, _camera: str) -> None:
-        # Processor passes (review, camera); dispatcher only needs review.
+    def _on_review_update(review: Review, _change: str) -> None:
+        # Processor passes (review, change); dispatcher only needs review.
         hass.async_create_task(dispatcher.on_review_update(review))
 
     processor = ReviewProcessor(

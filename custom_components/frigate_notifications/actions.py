@@ -20,7 +20,6 @@ _LOGGER = logging.getLogger(__name__)
 
 _SILENCE_PREFIX = f"silence-{DOMAIN}:profile:"
 _CUSTOM_PREFIX = f"custom-{DOMAIN}:profile:"
-_EXPECTED_CUSTOM_PARTS = 2
 
 
 def setup_action_listener(

@@ -59,6 +59,13 @@ from .frigate_config import get_frigate_config_view
 from .media import DEFAULT_GIF_URL, DEFAULT_SNAPSHOT_URL
 from .providers.models import AndroidTvConfig, MobileAppConfig
 
+_PHASE_DEFAULTS: dict[Phase, PhaseConfig] = {
+    Phase.INITIAL: DEFAULT_PHASE_INITIAL,
+    Phase.UPDATE: DEFAULT_PHASE_UPDATE,
+    Phase.END: DEFAULT_PHASE_END,
+    Phase.GENAI: DEFAULT_PHASE_GENAI,
+}
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
@@ -173,13 +180,7 @@ class ProfileRuntime:
         # End inherits from Update when not explicitly configured.
         if phase == Phase.END and Phase.UPDATE in self.phases:
             return self.phases[Phase.UPDATE]
-        defaults = {
-            Phase.INITIAL: DEFAULT_PHASE_INITIAL,
-            Phase.UPDATE: DEFAULT_PHASE_UPDATE,
-            Phase.END: DEFAULT_PHASE_END,
-            Phase.GENAI: DEFAULT_PHASE_GENAI,
-        }
-        return defaults.get(phase, DEFAULT_PHASE_UPDATE)
+        return _PHASE_DEFAULTS.get(phase, DEFAULT_PHASE_UPDATE)
 
     @property
     def is_multi_camera(self) -> bool:

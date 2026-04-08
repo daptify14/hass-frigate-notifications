@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from ..enums import VideoType, resolved_platform
+from ..enums import ActionType, VideoType, resolved_platform
 from ..media import (
     ANDROID_IMAGE_URL_TEMPLATES,
     ANDROID_VIDEO_URL_TEMPLATES,
@@ -203,12 +203,12 @@ class MobileAppProvider:
             preset_id = action_cfg.get("preset", "none")
 
             preset = ACTION_PRESETS.get(preset_id, ACTION_PRESETS["none"])
-            action_type = preset.get("type", "uri")
+            action_type = preset.get("type", ActionType.URI)
 
-            if action_type == "none":
+            if action_type == ActionType.NONE:
                 continue
 
-            if action_type == "silence":
+            if action_type == ActionType.SILENCE:
                 silence_id = f"silence-frigate_notifications:profile:{profile.profile_id}"
                 actions.append(
                     {
@@ -219,7 +219,7 @@ class MobileAppProvider:
                         "destructive": True,
                     }
                 )
-            elif action_type == "event":
+            elif action_type == ActionType.EVENT:
                 review_id = str(action_ctx.get("review_id", ""))
                 camera = str(action_ctx.get("camera", ""))
                 event_id = (
@@ -234,7 +234,7 @@ class MobileAppProvider:
                         "destructive": True,
                     }
                 )
-            elif action_type == "no_action":
+            elif action_type == ActionType.NO_ACTION:
                 if resolved_platform(profile.provider) in ("android", "unknown"):
                     actions.append(
                         {
