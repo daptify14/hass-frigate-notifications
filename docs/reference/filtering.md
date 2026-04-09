@@ -140,7 +140,7 @@ Several filters support a 3-mode inheritance pattern configured per-profile:
 
 | Mode | Behavior |
 | --- | --- |
-| Inherit | Use the shared value from [Global Defaults](../configuration/global-defaults.md) |
+| Inherit | Use the shared value from [Global Defaults](global-defaults.md) |
 | Custom / Use profile | Use a profile-specific value |
 | Disabled / No filter | Skip this filter entirely |
 

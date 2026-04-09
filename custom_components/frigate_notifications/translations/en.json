@@ -52,7 +52,7 @@
         }
       },
       "delivery": {
-        "title": "Delivery defaults",
+        "title": "Delivery & filters",
         "description": "Configure shared delivery settings, URLs, and filter entities used by all profiles.",
         "data": {
           "base_url": "Home Assistant URL",
@@ -119,7 +119,7 @@
         }
       },
       "appearance": {
-        "title": "Appearance",
+        "title": "Appearance & formatting",
         "description": "Configure the title template, emoji settings, custom emoji mappings, and sub-label overrides.",
         "data": {
           "title_template": "Title template"

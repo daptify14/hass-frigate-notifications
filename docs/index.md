@@ -2,7 +2,7 @@
 
 ## How it works
 
-Frigate publishes camera [reviews](https://docs.frigate.video/configuration/review) over MQTT. This integration subscribes to that topic and walks each review through a notification pipeline:
+Frigate publishes camera [reviews](https://docs.frigate.video/reference/review) over MQTT. This integration subscribes to that topic and walks each review through a notification pipeline:
 
 1. **Processor** picks up the MQTT message and tracks the review's lifecycle (new, update, end)
 2. **Filter chain** decides whether to notify - object type, severity, zones, sublabels, time of day, presence, and more
@@ -28,8 +28,15 @@ Each review can trigger up to four notification phases: initial alert, update, e
 
 - [Installation](installation.md): HACS, manual install, and removal
 - [Getting Started](getting-started.md): first profile walkthrough
-- [Profiles](configuration/profiles.md): every profile field, entities, and device details
+- [Global Defaults](reference/global-defaults.md): shared options and inheritance
+- [Profiles](reference/profiles.md): every profile field, entities, and device details
+- [Presets](reference/presets.md): built-in presets and custom YAML presets
+- [Context Variables](reference/context-variables.md): all template variables
+- [Templates](reference/templates.md): built-in templates, rendering, and notification URLs
 - [Filtering](reference/filtering.md): the 11-filter chain and inheritance model
 - [Notification Lifecycle](reference/notification-lifecycle.md): phases, dispatch, silence, and cooldown
+- [Examples](examples.md): practical setup recipes
 - [Troubleshooting](troubleshooting.md): common issues, logs, known limitations
+- [Actions](reference/actions.md): action buttons, tap actions, and custom HA actions
+- [Providers](reference/providers.md): iOS, Android, Android TV, and Cross-Platform
 - [Logging Reference](reference/logging.md): filter rejection messages and key log entries
