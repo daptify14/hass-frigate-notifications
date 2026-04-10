@@ -186,10 +186,10 @@
           "base_url": "http://localhost:8123",
           "cooldown_seconds": 0,
           "default_emoji": "🔔",
-          "emoji_style": "default",
+          "enable_emojis": true,
           "frigate_url": "http://frigate:5000",
           "initial_delay": 1.0,
-          "silence_duration": 30.0,
+          "silence_duration": 30,
           "sub_label_overrides": {
             "Alice": "👧",
             "Alice's Car": "🚗",
@@ -269,7 +269,7 @@
                   "emoji_subtitle": false,
                   "enabled": true,
                   "interruption_level": "passive",
-                  "message_template": "ai_summary",
+                  "message_template": "genai_summary",
                   "sound": "default",
                   "subtitle_template": "merged_subjects",
                   "use_latest_detection": true,
@@ -317,10 +317,6 @@
                 "preset": "view_clip"
               },
               "time_filter_override": "inherit",
-              "title_genai_prefixes": {
-                "1": "⚡ ",
-                "2": "⚠️ "
-              },
               "zone_overrides": {
                 "driveway_approach": "entered",
                 "driveway_garage": "left",
@@ -396,7 +392,7 @@
                   "emoji_subtitle": false,
                   "enabled": false,
                   "interruption_level": "passive",
-                  "message_template": "phase_icon_ai_summary",
+                  "message_template": "phase_icon_genai_summary",
                   "sound": "default",
                   "subtitle_template": "merged_subjects",
                   "use_latest_detection": true,
@@ -449,11 +445,7 @@
               "tap_action": {
                 "preset": "view_clip"
               },
-              "time_filter_override": "inherit",
-              "title_genai_prefixes": {
-                "1": "⚡ ",
-                "2": "⚠️ "
-              }
+              "time_filter_override": "inherit"
             },
             "subentry_id": "01KN2FJS19S9B3T6TV2HQJKZ7G",
             "subentry_type": "profile",
@@ -505,7 +497,7 @@
                   "emoji_subtitle": false,
                   "enabled": false,
                   "interruption_level": "passive",
-                  "message_template": "ai_summary",
+                  "message_template": "genai_summary",
                   "sound": "default",
                   "subtitle_template": "merged_subjects",
                   "use_latest_detection": true,
