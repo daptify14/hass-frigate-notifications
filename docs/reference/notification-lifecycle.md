@@ -67,7 +67,7 @@ Reviews that have not received an update in 30 minutes are automatically removed
 
 ## Silence
 
-Silence temporarily mutes a [profile](../configuration/profiles.md). It is per-profile, time-based -- when the timer expires, notifications resume automatically.
+Silence temporarily mutes a [profile](profiles.md). It is per-profile, time-based -- when the timer expires, notifications resume automatically.
 
 **Triggering silence:**
 
@@ -75,7 +75,7 @@ Silence temporarily mutes a [profile](../configuration/profiles.md). It is per-p
 - Press the **Silence** button entity on the profile's device
 - Set the **Silenced Until** datetime entity directly from a dashboard or automation
 
-Silence is **persistent** -- it survives restarts. To clear immediately, press **Clear Silence** or set the datetime to a past time. See [Profiles -- Entities](../configuration/profiles.md#entities) for the full entity list.
+Silence is **persistent** -- it survives restarts. To clear immediately, press **Clear Silence** or set the datetime to a past time. See [Profiles -- Entities](profiles.md#entities) for the full entity list.
 
 ## Cooldown
 
@@ -109,4 +109,4 @@ When enabled, only the first notification per review plays sound. Subsequent upd
 | **Affects** | All phases | Only initial notifications |
 | **Survives restart** | Yes (entity-based) | No (in-memory) |
 
-Duration defaults and per-profile overrides are configured in [Delivery & timing](../configuration/profiles.md#delivery--timing).
+Duration defaults and per-profile overrides are configured in [Delivery & timing](profiles.md#delivery--timing).

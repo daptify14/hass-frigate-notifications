@@ -121,7 +121,7 @@ Shown only when any selected camera has sub-labels available (e.g., face recogni
 
 > **Note:** Changes to Frigate's recognition setup (adding new faces or known plates) require a Frigate integration reload before they appear here.
 
-See [Filtering](../reference/filtering.md) for the complete filter chain.
+See [Filtering](filtering.md) for the complete filter chain.
 
 ---
 
@@ -147,7 +147,7 @@ Each phase section contains:
 | **Emoji to message** | Boolean | Per-item emoji injection in message context |
 | **Emoji to subtitle** | Boolean | Per-item emoji injection in subtitle context |
 
-Both template fields offer built-in templates in the dropdown, or accept custom Jinja2. See [Context Variables](../reference/context-variables.md) for all available variables and [Templates](../reference/templates.md) for the built-in template list.
+Both template fields offer built-in templates in the dropdown, or accept custom Jinja2. See [Context Variables](context-variables.md) for all available variables and [Templates](templates.md) for the built-in template list.
 
 The two emoji toggles are only shown when global emojis are enabled in [Global Defaults](global-defaults.md#step-3-appearance). If global emojis are disabled, these toggles are hidden.
 
@@ -165,7 +165,7 @@ Prefix text for all three severity levels (0, 1, 2+) is configured globally. Pro
 
 Shown only for single-camera profiles where the camera has zones. One text field per zone on the selected camera. Enter an action word or phrase (e.g., "entered", "arrived at", "near") to set the `zone_phrase` template variable. Leave blank to use the default ("detected").
 
-Zone phrases can be Jinja2 templates, rendered with a partial context: `object`, `objects`, `emoji`, `zone_alias`, `zone_name`, `sub_label`, `severity`, `camera_name`.
+Zone phrases can be Jinja2 templates, rendered with the full [context variables](context-variables.md).
 
 ---
 
@@ -215,7 +215,7 @@ Options: View Clip, View Snapshot, View GIF, View Live Stream, Silence Notificat
 | --- | --- | --- | --- |
 | **Custom button action** | Action selector | HA action that fires when a button slot is set to "Custom Action" | (empty) |
 
-See [Actions](../reference/actions.md) for details.
+See [Actions](actions.md) for details.
 
 ---
 
@@ -283,7 +283,7 @@ Per-phase overlay settings:
 | **Android Auto** | Boolean | Show on Android Auto | Off |
 | **Color** | Text | Accent color (hex) | (none) |
 
-See [Lifecycle](../reference/notification-lifecycle.md) for how phases dispatch.
+See [Lifecycle](notification-lifecycle.md) for how phases dispatch.
 
 ---
 
