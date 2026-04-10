@@ -670,7 +670,35 @@
     }
   },
   "entity": {
+    "sensor": {
+      "review_debug": {
+        "name": "Review debug"
+      },
+      "stats": {
+        "name": "Notifications sent"
+      },
+      "last_sent": {
+        "name": "Last sent"
+      }
+    },
+    "binary_sensor": {
+      "mqtt_connected": {
+        "name": "MQTT connected"
+      },
+      "silenced": {
+        "name": "Silenced"
+      },
+      "dispatch_problem": {
+        "name": "Dispatch problem"
+      }
+    },
     "button": {
+      "silence": {
+        "name": "Silence"
+      },
+      "clear_silence": {
+        "name": "Clear silence"
+      },
       "reset_stats": {
         "name": "Reset stats"
       }
@@ -678,6 +706,11 @@
     "datetime": {
       "silenced_until": {
         "name": "Silenced until"
+      }
+    },
+    "switch": {
+      "enabled": {
+        "name": "Enabled"
       }
     }
   },
