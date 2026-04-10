@@ -1,21 +1,20 @@
 # Notifications for Frigate
 
-[![CI](https://github.com/daptify14/hass-frigate-notifications/actions/workflows/ci.yml/badge.svg)](https://github.com/daptify14/hass-frigate-notifications/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/daptify14/hass-frigate-notifications/graph/badge.svg?token=80TW54GVXD)](https://codecov.io/gh/daptify14/hass-frigate-notifications)
+[![CI](https://github.com/daptify14/hass-frigate-notifications/actions/workflows/ci.yml/badge.svg)](https://github.com/daptify14/hass-frigate-notifications/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/daptify14/hass-frigate-notifications/graph/badge.svg)](https://codecov.io/gh/daptify14/hass-frigate-notifications)
 
-A Home Assistant integration that sends detailed push notifications from [Frigate NVR](https://frigate.video) cameras to iOS, Android, and Android TV devices.
+A Home Assistant integration that delivers dynamic push notifications from [Frigate NVR](https://frigate.video) reviews to iOS, Android, and Android TV devices.
 
-Notifications can update in place as events progress — with configurable attachments (snapshots, GIFs, clips), zone-aware messages, and optional AI summaries. Use the included presets or fully customize each phase.
-
-Inspired by [SgtBatten's Frigate Notification Blueprint](https://github.com/SgtBatten/HA_blueprints)
+Extends the [Frigate integration](https://github.com/blakeblackshear/frigate-hass-integration). Set up notification profiles from built-in presets or customize everything through UI-based configuration flows.
 
 ## Features
 
-- Built-in notification presets, or fully customize your own profiles for single or multi-camera setups
-- 4-phase notification lifecycle: initial alert, update, end-of-review, and GenAI summary — each fully customizable
-- Configurable attachments, action buttons, tap actions, and message templates with 40+ context variables
-- Filter notifications by zone, object type, sublabel, time of day, presence, and more
-- Full Frigate Generative AI support for review summaries
-- Per-profile entities (switches, sensors, buttons) and repair issues for invalid config
+- 4-phase notification lifecycle: initial alert, update, end-of-review, and optional GenAI summary
+- Advanced filtering: zone, object type, sublabel, time of day, presence, entity state, and more
+- Rich media: snapshots, animated GIFs, and video clips attached per phase
+- Template engine: 40+ context variables for messages, titles, action buttons, and tap behaviors
+- Notification profiles for single or multi-camera setups
+- Per-profile entities (switches, sensors, buttons) and repair issues for control and diagnostics
+- Discovers GenAI review summaries, trained faces, and known plates from your Frigate config
 
 ## Requirements
 
@@ -37,12 +36,12 @@ For manual installation and more details, see [docs/installation.md](docs/instal
 
 ## Configuration
 
-All configuration is done through the UI — no YAML required. A step-by-step wizard guides you through creating notification profiles, selecting cameras, choosing a preset, and customizing each phase.
+A guided config flow walks you through creating profiles, selecting cameras, choosing presets, and customizing each phase.
 
-- [Installation](docs/installation.md) — prerequisites, HACS/manual install, and removal
-- [Getting Started](docs/getting-started.md) — first profile walkthrough
-- [Troubleshooting](docs/troubleshooting.md) — common issues, logs, and limitations
-- [Full reference](docs/index.md) — overview, features, and reference index
+- [Getting Started](docs/getting-started.md): first profile walkthrough
+- [Examples](docs/examples.md): filtering, templates, and delivery examples
+- [Troubleshooting](docs/troubleshooting.md): common issues, logs, and limitations
+- [Full reference](docs/index.md): overview, features, and reference index
 
 ## Development
 
@@ -56,6 +55,10 @@ just simulate             # send a test review lifecycle via MQTT (or use the VS
 ```
 
 Copy `.env.example` to `.env` to override versions. See `just --list` for all recipes.
+
+## Acknowledgments
+
+Inspired by [SgtBatten's Frigate Notification Blueprint](https://github.com/SgtBatten/HA_blueprints).
 
 ## License
 

@@ -1,6 +1,6 @@
 # Presets
 
-Presets are starting templates that pre-fill your [profile](profiles.md) configuration during the wizard. Every value a preset sets is fully editable afterward -- the preset is a starting point, not a constraint.
+Presets are starting templates that pre-fill your [profile](profiles.md) configuration during the wizard. All preset values are editable after profile creation.
 
 ## Built-in presets
 
