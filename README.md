@@ -44,6 +44,19 @@ All configuration is done through the UI — no YAML required. A step-by-step wi
 - [Troubleshooting](docs/troubleshooting.md) — common issues, logs, and limitations
 - [Full reference](docs/index.md) — overview, features, and reference index
 
+## Development
+
+Requires [Python 3.14+](https://www.python.org/downloads/) and [uv](https://docs.astral.sh/uv/). [Just](https://github.com/casey/just) provides recipe shortcuts but isn't required — the underlying commands (`uv run pytest`, `uv run ruff check`, etc.) work directly. Optionally use the included devcontainer.
+
+```sh
+scripts/setup.sh          # install deps + pre-commit hooks (or: uv sync && uv run prek install)
+just check                # lint, format, typecheck, test (95% coverage gate)
+just up                   # start dev stack: HA, Frigate, MQTT, webhook catcher (docker compose)
+just simulate             # send a test review lifecycle via MQTT (or use the VS Code "Test Notify" task for interactive picks)
+```
+
+Copy `.env.example` to `.env` to override versions. See `just --list` for all recipes.
+
 ## License
 
 MIT
