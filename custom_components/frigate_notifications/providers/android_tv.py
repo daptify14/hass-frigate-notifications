@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from ..const import ATTACHMENT_URL_TEMPLATES
+from ..media import ATTACHMENT_URL_TEMPLATES
 from ..message_builder import render_template
 from .models import AndroidTvConfig, NotifyCall, RenderedNotification
 

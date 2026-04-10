@@ -11,10 +11,8 @@ from typing import Any
 from custom_components.frigate_notifications.config import DEFAULT_PHASE_INITIAL, PhaseConfig
 from custom_components.frigate_notifications.const import (
     DEFAULT_EMOJI,
-    DEFAULT_GIF_URL,
     DEFAULT_GROUP,
     DEFAULT_PHASE_EMOJI_MAP,
-    DEFAULT_SNAPSHOT_URL,
     DEFAULT_TAG,
     DEFAULT_TITLE_GENAI_PREFIXES,
     DEFAULT_TITLE_TEMPLATE,
@@ -32,6 +30,7 @@ from custom_components.frigate_notifications.enums import (
     ZoneMatchMode,
 )
 from custom_components.frigate_notifications.filters import FilterContext
+from custom_components.frigate_notifications.media import DEFAULT_GIF_URL, DEFAULT_SNAPSHOT_URL
 from custom_components.frigate_notifications.message_builder import TemplateCache
 from custom_components.frigate_notifications.models import (
     GenAIData,

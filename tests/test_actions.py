@@ -119,7 +119,11 @@ class TestActionListener:
         ):
             hass.bus.async_fire(
                 "mobile_app_notification_action",
-                {"action": f"custom-{DOMAIN}:profile:{sub_id}:review:{review_id}"},
+                {
+                    "action": (
+                        f"custom-{DOMAIN}:profile:{sub_id}:review:{review_id}:camera:driveway"
+                    )
+                },
             )
             await hass.async_block_till_done()
 
@@ -160,7 +164,11 @@ class TestActionListener:
         ) as mock_exec:
             hass.bus.async_fire(
                 "mobile_app_notification_action",
-                {"action": f"custom-{DOMAIN}:profile:{sub_id}:review:some_review"},
+                {
+                    "action": (
+                        f"custom-{DOMAIN}:profile:{sub_id}:review:some_review:camera:driveway"
+                    )
+                },
             )
             await hass.async_block_till_done()
             mock_exec.assert_not_called()
@@ -192,7 +200,11 @@ class TestActionListener:
         ):
             hass.bus.async_fire(
                 "mobile_app_notification_action",
-                {"action": f"custom-{DOMAIN}:profile:{sub_id}:review:expired_review"},
+                {
+                    "action": (
+                        f"custom-{DOMAIN}:profile:{sub_id}:review:expired_review:camera:driveway"
+                    )
+                },
             )
             await hass.async_block_till_done()
 
@@ -206,7 +218,7 @@ class TestActionListener:
     async def test_custom_action_expired_review_multi_camera_empty_camera(
         self, hass: HomeAssistant, mock_frigate_data: dict[str, object]
     ) -> None:
-        """Multi-camera profile with expired review returns camera=''."""
+        """Multi-camera profile with expired review uses camera from the action token."""
         profile_data = {
             **PROFILE_SUBENTRY_DATA,
             "cameras": ["driveway", "backyard"],
@@ -246,11 +258,15 @@ class TestActionListener:
         ):
             hass.bus.async_fire(
                 "mobile_app_notification_action",
-                {"action": f"custom-{DOMAIN}:profile:{sub_id}:review:expired_review"},
+                {
+                    "action": (
+                        f"custom-{DOMAIN}:profile:{sub_id}:review:expired_review:camera:driveway"
+                    )
+                },
             )
             await hass.async_block_till_done()
 
-        assert captured["camera"] == ""
+        assert captured["camera"] == "driveway"
 
 
 class TestInferReviewPhase:

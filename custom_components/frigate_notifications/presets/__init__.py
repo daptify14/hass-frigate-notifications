@@ -10,8 +10,14 @@ from typing import TYPE_CHECKING, Any
 import voluptuous as vol
 import yaml
 
-from ..config import DEFAULT_PHASE_GENAI, DEFAULT_PHASE_INITIAL, DEFAULT_PHASE_UPDATE
-from ..const import DOMAIN, VALID_ATTACHMENTS, VALID_INTERRUPTION_LEVELS, VALID_VIDEOS
+from ..config import (
+    DEFAULT_PHASE_GENAI,
+    DEFAULT_PHASE_INITIAL,
+    DEFAULT_PHASE_UPDATE,
+    VALID_INTERRUPTION_LEVELS,
+)
+from ..const import DOMAIN
+from ..media import VALID_ATTACHMENTS, VALID_VIDEOS
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant

@@ -115,9 +115,12 @@ def sync_stale_zone_issues(hass: HomeAssistant, entry: ConfigEntry) -> None:
 def delete_all_issues_for_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Delete all repair issues associated with a config entry."""
     issue_reg = ir.async_get(hass)
-    entry_suffix = entry.entry_id
+    prefixes = (
+        f"broken_camera_{entry.entry_id}_",
+        f"stale_zone_{entry.entry_id}_",
+    )
     for issue_id, _issue in list(issue_reg.issues.items()):
         if issue_id[0] != DOMAIN:
             continue
-        if entry_suffix in issue_id[1]:
+        if issue_id[1].startswith(prefixes):
             ir.async_delete_issue(hass, DOMAIN, issue_id[1])

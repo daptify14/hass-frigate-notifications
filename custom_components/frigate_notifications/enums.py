@@ -162,3 +162,13 @@ class InterruptionLevel(StrEnum):
     ACTIVE = "active"
     PASSIVE = "passive"
     TIME_SENSITIVE = "time-sensitive"
+
+
+class ActionType(StrEnum):
+    """Notification action button types."""
+
+    URI = "uri"
+    SILENCE = "silence"
+    EVENT = "event"
+    NO_ACTION = "no_action"
+    NONE = "none"

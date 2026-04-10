@@ -9,40 +9,42 @@ from typing import TYPE_CHECKING, Any
 from jinja2 import StrictUndefined
 from jinja2.sandbox import SandboxedEnvironment
 
-from .const import _CAM, _DET, _FN, _REV
-from .enums import Provider, resolved_platform
+from .enums import ActionType, Provider, VideoType, resolved_platform
+from .media import ATTACHMENT_URL_TEMPLATES, VIDEO_URL_TEMPLATES
 
 if TYPE_CHECKING:
     from homeassistant.helpers.selector import SelectOptionDict
 
     from .data import ProfileRuntime
 
+# Separate from HA's Template engine: uses StrictUndefined so a missing
+# variable in a URI template fails loudly instead of rendering empty.
 _JINJA_ENV = SandboxedEnvironment(undefined=StrictUndefined)
 _LOGGER = logging.getLogger(__name__)
 
 ACTION_PRESETS: dict[str, dict[str, str]] = {
     "view_clip": {
-        "type": "uri",
+        "type": ActionType.URI,
         "title": "View Clip",
-        "uri_ios": f"{_FN}/{_DET}/{_CAM}/master.m3u8",
-        "uri_android": f"{_FN}/{_DET}/{_CAM}/clip.mp4",
-        "uri": f"{_FN}/{_DET}/{_CAM}/master.m3u8",
+        "uri_ios": VIDEO_URL_TEMPLATES[VideoType.CLIP_HLS],
+        "uri_android": VIDEO_URL_TEMPLATES[VideoType.CLIP_MP4],
+        "uri": VIDEO_URL_TEMPLATES[VideoType.CLIP_HLS],
         "icon": "sfsymbols:play.rectangle",
     },
     "view_snapshot": {
-        "type": "uri",
+        "type": ActionType.URI,
         "title": "View Snapshot",
-        "uri": f"{_FN}/{_DET}/snapshot.jpg",
+        "uri": ATTACHMENT_URL_TEMPLATES["snapshot"],
         "icon": "sfsymbols:photo",
     },
     "view_gif": {
-        "type": "uri",
+        "type": ActionType.URI,
         "title": "View GIF",
-        "uri": f"{_FN}/{_REV}/review_preview.gif",
+        "uri": ATTACHMENT_URL_TEMPLATES["review_gif"],
         "icon": "sfsymbols:photo.on.rectangle",
     },
     "view_stream": {
-        "type": "uri",
+        "type": ActionType.URI,
         "title": "View Live Stream",
         "uri": (
             "{{ base_url }}/api/camera_proxy_stream/camera.{{ camera }}?token={{ access_token }}"
@@ -50,38 +52,38 @@ ACTION_PRESETS: dict[str, dict[str, str]] = {
         "icon": "sfsymbols:video.fill",
     },
     "silence": {
-        "type": "silence",
+        "type": ActionType.SILENCE,
         "title": "Silence Notifications",
     },
     "open_ha_app": {
-        "type": "uri",
+        "type": ActionType.URI,
         "title": "Open HA (App)",
         "uri": "/lovelace",
         "icon": "sfsymbols:house.fill",
     },
     "open_ha_web": {
-        "type": "uri",
+        "type": ActionType.URI,
         "title": "Open HA (Browser)",
         "uri": "{{ base_url }}/lovelace",
         "icon": "sfsymbols:house",
     },
     "open_frigate": {
-        "type": "uri",
+        "type": ActionType.URI,
         "title": "Open Frigate",
         "uri": "{{ frigate_url }}",
         "icon": "sfsymbols:video",
     },
     "custom_action": {
-        "type": "event",
+        "type": ActionType.EVENT,
         "title": "Custom Action",
         "icon": "sfsymbols:bolt",
     },
     "no_action": {
-        "type": "no_action",
+        "type": ActionType.NO_ACTION,
         "title": "",
     },
     "none": {
-        "type": "none",
+        "type": ActionType.NONE,
         "title": "",
     },
 }
@@ -168,12 +170,12 @@ def resolve_tap_url(
         _LOGGER.warning("Unknown tap_action preset %s; using noAction", preset_id)
         return "noAction"
 
-    action_type = preset.get("type", "uri")
+    action_type = preset.get("type", ActionType.URI)
 
-    if action_type == "no_action":
+    if action_type == ActionType.NO_ACTION:
         return "noAction"
 
-    if action_type != "uri":
+    if action_type != ActionType.URI:
         _LOGGER.warning(
             "Unsupported tap_action preset type %s for preset %s; using noAction",
             action_type,

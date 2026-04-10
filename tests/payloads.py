@@ -96,7 +96,7 @@ REVIEW_END_PAYLOAD: dict = {
         "end_time": 1773840991.854811,
         "severity": "alert",
         "data": {
-            "detections": ["det_id_1", "det_id_2"],
+            "detections": ["det_id_1", "det_id_2", "det_id_3"],
             "objects": ["person", "car"],
             "sub_labels": [],
             "zones": ["driveway_approach", "driveway_main"],
@@ -115,7 +115,7 @@ REVIEW_GENAI_PAYLOAD: dict = {
         "end_time": 1773840991.854811,
         "severity": "alert",
         "data": {
-            "detections": ["det_id_1", "det_id_2"],
+            "detections": ["det_id_1", "det_id_2", "det_id_3"],
             "objects": ["person", "car"],
             "sub_labels": [],
             "zones": ["driveway_approach", "driveway_main"],
@@ -130,7 +130,7 @@ REVIEW_GENAI_PAYLOAD: dict = {
         "end_time": 1773840991.854811,
         "severity": "alert",
         "data": {
-            "detections": ["det_id_1", "det_id_2"],
+            "detections": ["det_id_1", "det_id_2", "det_id_3"],
             "objects": ["person", "car"],
             "sub_labels": [],
             "zones": ["driveway_approach", "driveway_main"],
