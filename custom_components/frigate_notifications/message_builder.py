@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -176,7 +175,7 @@ def build_context(
 
     phase_emoji = config.phase_emoji_map.get(phase.value, "")
 
-    now = datetime.now(tz=dt_util.DEFAULT_TIME_ZONE)
+    now = dt_util.now()
 
     ctx: dict[str, Any] = {
         "camera": review.camera,
