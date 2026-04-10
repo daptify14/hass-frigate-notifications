@@ -38,8 +38,11 @@ def _get_silence_entity(
     silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
     entity = silence_map.get(profile_id)
     if entity is None:
-        msg = f"Profile '{profile_id}' not found or not loaded"
-        raise ServiceValidationError(msg)
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="profile_not_found",
+            translation_placeholders={"profile_id": profile_id},
+        )
     return entity
 
 
@@ -54,8 +57,10 @@ async def _handle_silence_profile(call: ServiceCall) -> None:
         entity.activate(duration_minutes=duration)
     except Exception as err:
         _LOGGER.exception("Failed to silence profile %s", profile_id)
-        msg = f"Failed to silence profile: {err}"
-        raise HomeAssistantError(msg) from err
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="silence_failed",
+        ) from err
 
 
 async def _handle_clear_silence(call: ServiceCall) -> None:
@@ -68,8 +73,10 @@ async def _handle_clear_silence(call: ServiceCall) -> None:
         entity.clear()
     except Exception as err:
         _LOGGER.exception("Failed to clear silence for profile %s", profile_id)
-        msg = f"Failed to clear silence: {err}"
-        raise HomeAssistantError(msg) from err
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="clear_silence_failed",
+        ) from err
 
 
 def register_services(hass: HomeAssistant) -> None:

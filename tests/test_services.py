@@ -65,16 +65,18 @@ class TestSilenceProfileService:
     async def test_silence_profile_invalid_raises(
         self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
     ) -> None:
-        """Silencing an invalid profile_id raises ServiceValidationError."""
+        """Silencing an invalid profile_id raises ServiceValidationError with translation key."""
         await setup_integration(hass, mock_config_entry)
 
-        with pytest.raises(ServiceValidationError):
+        with pytest.raises(ServiceValidationError) as exc_info:
             await hass.services.async_call(
                 DOMAIN,
                 "silence_profile",
                 {"profile_id": "nonexistent_profile"},
                 blocking=True,
             )
+        assert exc_info.value.translation_key == "profile_not_found"
+        assert exc_info.value.translation_domain == DOMAIN
 
     async def test_silence_entity_error_raises_ha_error(
         self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
@@ -87,7 +89,7 @@ class TestSilenceProfileService:
         dt_entity = silence_map[sub_id]
         with (
             patch.object(dt_entity, "activate", side_effect=RuntimeError("boom")),
-            pytest.raises(HomeAssistantError, match="Failed to silence"),
+            pytest.raises(HomeAssistantError) as exc_info,
         ):
             await hass.services.async_call(
                 DOMAIN,
@@ -95,6 +97,8 @@ class TestSilenceProfileService:
                 {"profile_id": sub_id, "duration": 15},
                 blocking=True,
             )
+        assert exc_info.value.translation_key == "silence_failed"
+        assert exc_info.value.translation_domain == DOMAIN
 
 
 class TestClearSilenceService:
@@ -134,7 +138,7 @@ class TestClearSilenceService:
         dt_entity = silence_map[sub_id]
         with (
             patch.object(dt_entity, "clear", side_effect=RuntimeError("boom")),
-            pytest.raises(HomeAssistantError, match="Failed to clear"),
+            pytest.raises(HomeAssistantError) as exc_info,
         ):
             await hass.services.async_call(
                 DOMAIN,
@@ -142,17 +146,21 @@ class TestClearSilenceService:
                 {"profile_id": sub_id},
                 blocking=True,
             )
+        assert exc_info.value.translation_key == "clear_silence_failed"
+        assert exc_info.value.translation_domain == DOMAIN
 
     async def test_clear_silence_invalid_raises(
         self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
     ) -> None:
-        """Clearing silence for invalid profile_id raises."""
+        """Clearing silence for invalid profile_id raises with translation key."""
         await setup_integration(hass, mock_config_entry)
 
-        with pytest.raises(ServiceValidationError):
+        with pytest.raises(ServiceValidationError) as exc_info:
             await hass.services.async_call(
                 DOMAIN,
                 "clear_silence",
                 {"profile_id": "bad_id"},
                 blocking=True,
             )
+        assert exc_info.value.translation_key == "profile_not_found"
+        assert exc_info.value.translation_domain == DOMAIN

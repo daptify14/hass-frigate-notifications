@@ -658,6 +658,17 @@
       }
     }
   },
+  "exceptions": {
+    "profile_not_found": {
+      "message": "Profile '{profile_id}' not found or not loaded"
+    },
+    "silence_failed": {
+      "message": "Failed to silence profile"
+    },
+    "clear_silence_failed": {
+      "message": "Failed to clear silence"
+    }
+  },
   "entity": {
     "button": {
       "reset_stats": {
