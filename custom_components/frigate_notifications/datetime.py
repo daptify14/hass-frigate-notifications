@@ -14,7 +14,7 @@ from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
-from .const import SIGNAL_SILENCE_STATE, SILENCE_DATETIMES_KEY
+from .const import SIGNAL_SILENCE_STATE
 from .data import iter_profile_subentries, profile_common_fields
 from .entity_base import FrigateNotificationsProfileEntity
 
@@ -78,11 +78,10 @@ class FrigateNotificationsSilenceDateTime(
         self._cancel_timer: CALLBACK_TYPE | None = None
 
     async def async_added_to_hass(self) -> None:
-        """Restore state and register in hass.data for cross-component access."""
+        """Restore state and register in runtime_data for cross-component access."""
         await super().async_added_to_hass()
 
-        hass = self.hass
-        hass.data.setdefault(SILENCE_DATETIMES_KEY, {})[self._subentry_id] = self
+        self._entry.runtime_data.silence_datetimes[self._subentry_id] = self
 
         last_state = await self.async_get_last_state()
         if last_state and last_state.state not in ("unknown", "unavailable"):
@@ -106,10 +105,9 @@ class FrigateNotificationsSilenceDateTime(
         self._signal_state_update()
 
     async def async_will_remove_from_hass(self) -> None:
-        """Clean up timer and hass.data reference."""
+        """Clean up timer and runtime_data reference."""
         self._cancel_scheduled_timer()
-        silence_map = self.hass.data.get(SILENCE_DATETIMES_KEY, {})
-        silence_map.pop(self._subentry_id, None)
+        self._entry.runtime_data.silence_datetimes.pop(self._subentry_id, None)
 
     async def async_set_value(self, value: datetime) -> None:
         """Set the silence-until datetime."""

@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from homeassistant.components.button import ButtonEntity
 from homeassistant.const import EntityCategory
 
-from .const import SILENCE_DATETIMES_KEY, STATS_SENSOR_KEY
 from .data import get_integration_subentry_id, iter_profile_subentries, profile_common_fields
 from .entity_base import FrigateNotificationsIntegrationEntity, FrigateNotificationsProfileEntity
 
@@ -66,8 +65,7 @@ class FrigateNotificationsSilenceButton(FrigateNotificationsProfileEntity, Butto
 
     async def async_press(self) -> None:
         """Activate silence on the profile's datetime entity."""
-        silence_map = self.hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map.get(self._subentry_id)
+        dt_entity = self._entry.runtime_data.silence_datetimes.get(self._subentry_id)
         if dt_entity is not None:
             dt_entity.activate()
         else:
@@ -96,8 +94,7 @@ class FrigateNotificationsClearSilenceButton(FrigateNotificationsProfileEntity, 
 
     async def async_press(self) -> None:
         """Clear silence on the profile's datetime entity."""
-        silence_map = self.hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map.get(self._subentry_id)
+        dt_entity = self._entry.runtime_data.silence_datetimes.get(self._subentry_id)
         if dt_entity is not None:
             dt_entity.clear()
         else:
@@ -117,8 +114,7 @@ class FrigateNotificationsResetStatsButton(FrigateNotificationsIntegrationEntity
 
     async def async_press(self) -> None:
         """Reset the stats sensor for this config entry."""
-        stats_map = self.hass.data.get(STATS_SENSOR_KEY, {})
-        sensor = stats_map.get(self._entry.entry_id)
+        sensor = self._entry.runtime_data.stats_sensor
         if sensor is not None:
             sensor.reset()
         else:

@@ -12,10 +12,7 @@ from pytest_homeassistant_custom_component.common import (
     mock_restore_cache,
 )
 
-from custom_components.frigate_notifications.const import (
-    DOMAIN,
-    SILENCE_DATETIMES_KEY,
-)
+from custom_components.frigate_notifications.const import DOMAIN
 
 from .conftest import get_profile_subentry_id, setup_integration
 
@@ -49,8 +46,7 @@ class TestSilenceDateTime:
         await setup_integration(hass, mock_config_entry)
         sub_id = get_profile_subentry_id(mock_config_entry)
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
 
         now = dt_util.utcnow()
         with patch(
@@ -72,8 +68,7 @@ class TestSilenceDateTime:
         await setup_integration(hass, mock_config_entry)
         sub_id = get_profile_subentry_id(mock_config_entry)
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
 
         dt_entity.activate(duration_minutes=10)
         await hass.async_block_till_done()
@@ -89,8 +84,7 @@ class TestSilenceDateTime:
         await setup_integration(hass, mock_config_entry)
         sub_id = get_profile_subentry_id(mock_config_entry)
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
 
         dt_entity.activate(duration_minutes=1)
         await hass.async_block_till_done()
@@ -110,8 +104,7 @@ class TestSilenceDateTime:
         await setup_integration(hass, mock_config_entry)
         sub_id = get_profile_subentry_id(mock_config_entry)
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
 
         dt_entity.activate(duration_minutes=1)
         await hass.async_block_till_done()
@@ -136,8 +129,7 @@ class TestSilenceDateTime:
         await setup_integration(hass, mock_config_entry)
         sub_id = get_profile_subentry_id(mock_config_entry)
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
 
         target = dt_util.utcnow() + timedelta(minutes=10)
         await dt_entity.async_set_value(target)
@@ -191,8 +183,7 @@ class TestSilenceDateTime:
         await hass.config_entries.async_setup(mock_config_entry.entry_id)
         await hass.async_block_till_done()
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         assert dt_entity.native_value is not None
 
     async def test_restore_past_datetime_clears(
@@ -218,8 +209,7 @@ class TestSilenceDateTime:
         await hass.config_entries.async_setup(mock_config_entry.entry_id)
         await hass.async_block_till_done()
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         assert dt_entity.native_value is None
 
     async def test_restore_malformed_state_warns(
@@ -246,8 +236,7 @@ class TestSilenceDateTime:
         await hass.config_entries.async_setup(mock_config_entry.entry_id)
         await hass.async_block_till_done()
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         assert dt_entity.native_value is None
         assert "Could not restore silence state 'garbage-value'" in caplog.text
 
@@ -272,8 +261,7 @@ class TestSilenceButtons:
         await hass.services.async_call("button", "press", {"entity_id": entity_id}, blocking=True)
         await hass.async_block_till_done()
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         assert dt_entity.native_value is not None
 
     async def test_clear_silence_button_clears_datetime(
@@ -284,8 +272,7 @@ class TestSilenceButtons:
         sub_id = get_profile_subentry_id(mock_config_entry)
 
         # First silence.
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         dt_entity.activate()
         await hass.async_block_till_done()
         assert dt_entity.native_value is not None
@@ -364,8 +351,7 @@ class TestSilencedBinarySensor:
 
         # Activate silence — datetime broadcasts SIGNAL_SILENCE_STATE,
         # binary sensor picks it up via async_dispatcher_connect.
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         dt_entity.activate(duration_minutes=30)
         await hass.async_block_till_done()
 
@@ -395,8 +381,7 @@ class TestSilencedBinarySensor:
         bs_entity_id = ent_reg.async_get_entity_id("binary_sensor", DOMAIN, bs_unique_id)
         assert bs_entity_id is not None
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         dt_entity.activate(duration_minutes=1)
         await hass.async_block_till_done()
 

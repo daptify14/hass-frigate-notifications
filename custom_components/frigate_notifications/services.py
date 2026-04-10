@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 import voluptuous as vol
 
-from .const import DOMAIN, SILENCE_DATETIMES_KEY
+from .const import DOMAIN
+from .data import find_entry_for_profile
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant, ServiceCall
@@ -35,15 +36,16 @@ def _get_silence_entity(
     hass: HomeAssistant, profile_id: str
 ) -> FrigateNotificationsSilenceDateTime:
     """Look up the silence datetime entity for a profile, or raise."""
-    silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-    entity = silence_map.get(profile_id)
-    if entity is None:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="profile_not_found",
-            translation_placeholders={"profile_id": profile_id},
-        )
-    return entity
+    entry = find_entry_for_profile(hass, profile_id)
+    if entry is not None:
+        entity = entry.runtime_data.silence_datetimes.get(profile_id)
+        if entity is not None:
+            return entity
+    raise ServiceValidationError(
+        translation_domain=DOMAIN,
+        translation_key="profile_not_found",
+        translation_placeholders={"profile_id": profile_id},
+    )
 
 
 async def _handle_silence_profile(call: ServiceCall) -> None:

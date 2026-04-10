@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from .const import DOMAIN, SILENCE_DATETIMES_KEY
+from .const import DOMAIN
+from .data import find_entry_for_profile
 from .enums import Lifecycle, Phase
 from .message_builder import build_context
 
@@ -35,8 +36,12 @@ def setup_action_listener(
         # Silence action: silence-frigate_notifications:profile:{profile_id}
         if action.startswith(_SILENCE_PREFIX):
             profile_id = action[len(_SILENCE_PREFIX) :]
-            silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-            dt_entity = silence_map.get(profile_id)
+            matched_entry = find_entry_for_profile(hass, profile_id)
+            dt_entity = (
+                matched_entry.runtime_data.silence_datetimes.get(profile_id)
+                if matched_entry is not None
+                else None
+            )
             if dt_entity is not None:
                 dt_entity.activate()
                 _LOGGER.debug("Silence activated via action for profile %s", profile_id)

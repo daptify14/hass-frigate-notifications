@@ -16,7 +16,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.util import dt as dt_util
 
-from .const import SIGNAL_DISPATCH_PROBLEM, SIGNAL_SILENCE_STATE, SILENCE_DATETIMES_KEY
+from .const import SIGNAL_DISPATCH_PROBLEM, SIGNAL_SILENCE_STATE
 from .data import (
     get_available_frigate_cameras,
     get_integration_subentry_id,
@@ -146,7 +146,7 @@ class FrigateNotificationsSilencedBinarySensor(
         signal = f"{SIGNAL_SILENCE_STATE}_{self._entry.entry_id}_{self._subentry_id}"
         self.async_on_remove(async_dispatcher_connect(self.hass, signal, self._on_silence_state))
 
-        dt_entity = self.hass.data.get(SILENCE_DATETIMES_KEY, {}).get(self._subentry_id)
+        dt_entity = self._entry.runtime_data.silence_datetimes.get(self._subentry_id)
         self._update_from_datetime_value(None if dt_entity is None else dt_entity.native_value)
 
     @callback

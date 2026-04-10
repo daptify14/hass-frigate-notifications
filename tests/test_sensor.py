@@ -14,12 +14,10 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.frigate_notifications.const import (
-    DEBUG_SENSOR_KEY,
     DOMAIN,
     SIGNAL_DISPATCH_PROBLEM,
     SIGNAL_LAST_SENT,
     SIGNAL_STATS,
-    STATS_SENSOR_KEY,
 )
 
 from .conftest import FRIGATE_DOMAIN, FRIGATE_ENTRY_ID, get_profile_subentry_id, setup_integration
@@ -33,11 +31,10 @@ class TestReviewDebugSensor:
     async def test_debug_sensor_disabled_by_default(
         self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
     ) -> None:
-        """Debug sensor is disabled by default and not registered in hass.data."""
+        """Debug sensor is disabled by default and not registered in runtime_data."""
         await setup_integration(hass, mock_config_entry)
-        key = f"{DEBUG_SENSOR_KEY}_{mock_config_entry.entry_id}"
-        # Disabled entities don't run async_added_to_hass, so no hass.data ref.
-        assert key not in hass.data.get(DOMAIN, {})
+        # Disabled entities don't run async_added_to_hass, so no runtime_data ref.
+        assert mock_config_entry.runtime_data.debug_sensor is None
 
     async def test_debug_sensor_enabled_receives_updates(
         self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
@@ -57,10 +54,9 @@ class TestReviewDebugSensor:
         await hass.config_entries.async_reload(mock_config_entry.entry_id)
         await hass.async_block_till_done()
 
-        # After reload, the sensor should be registered in hass.data.
-        key = f"{DEBUG_SENSOR_KEY}_{mock_config_entry.entry_id}"
-        assert key in hass.data.get(DOMAIN, {})
-        sensor = hass.data[DOMAIN][key]
+        # After reload, the sensor should be registered in runtime_data.
+        sensor = mock_config_entry.runtime_data.debug_sensor
+        assert sensor is not None
 
         payload: dict[str, Any] = {
             "after": {
@@ -275,17 +271,12 @@ class TestStatsSensor:
         assert state.attributes["by_camera"] == {}
         assert state.attributes["by_profile"] == {}
 
-    async def test_stats_sensor_cleanup_on_unload(
+    async def test_stats_sensor_registered_in_runtime_data(
         self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
     ) -> None:
-        """Stats sensor is removed from hass.data on entry unload."""
+        """Stats sensor is registered in runtime_data after setup."""
         await setup_integration(hass, mock_config_entry)
-        assert mock_config_entry.entry_id in hass.data.get(STATS_SENSOR_KEY, {})
-
-        await hass.config_entries.async_unload(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
-
-        assert mock_config_entry.entry_id not in hass.data.get(STATS_SENSOR_KEY, {})
+        assert mock_config_entry.runtime_data.stats_sensor is not None
 
 
 class TestLastSentSensor:

@@ -10,7 +10,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.frigate_notifications.actions import _infer_review_phase
-from custom_components.frigate_notifications.const import DOMAIN, SILENCE_DATETIMES_KEY
+from custom_components.frigate_notifications.const import DOMAIN
 from custom_components.frigate_notifications.enums import Lifecycle, Phase
 
 from .conftest import (
@@ -70,8 +70,7 @@ class TestActionListener:
         )
         await hass.async_block_till_done()
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         assert dt_entity.native_value is not None
 
     async def test_silence_action_unknown_profile(

@@ -7,7 +7,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.frigate_notifications.const import DOMAIN, SILENCE_DATETIMES_KEY
+from custom_components.frigate_notifications.const import DOMAIN
 
 from .conftest import get_profile_subentry_id, setup_integration
 
@@ -47,8 +47,7 @@ class TestSilenceProfileService:
         )
         await hass.async_block_till_done()
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         assert dt_entity.native_value is not None
 
         # Default duration also activates successfully.
@@ -85,8 +84,7 @@ class TestSilenceProfileService:
         await setup_integration(hass, mock_config_entry)
         sub_id = get_profile_subentry_id(mock_config_entry)
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         with (
             patch.object(dt_entity, "activate", side_effect=RuntimeError("boom")),
             pytest.raises(HomeAssistantError) as exc_info,
@@ -112,8 +110,7 @@ class TestClearSilenceService:
         sub_id = get_profile_subentry_id(mock_config_entry)
 
         # First silence.
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         dt_entity.activate()
         await hass.async_block_till_done()
 
@@ -134,8 +131,7 @@ class TestClearSilenceService:
         await setup_integration(hass, mock_config_entry)
         sub_id = get_profile_subentry_id(mock_config_entry)
 
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        dt_entity = silence_map[sub_id]
+        dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         with (
             patch.object(dt_entity, "clear", side_effect=RuntimeError("boom")),
             pytest.raises(HomeAssistantError) as exc_info,
