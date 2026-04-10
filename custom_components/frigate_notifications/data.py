@@ -72,12 +72,35 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry, ConfigSubentry
     from homeassistant.core import HomeAssistant
 
+    from .datetime import FrigateNotificationsSilenceDateTime
     from .dispatcher import NotificationDispatcher
     from .processor import ReviewProcessor
+    from .sensor import FrigateNotificationsReviewDebugSensor, FrigateNotificationsStatsSensor
+    from .switch import FrigateNotificationsSwitch
 
 _LOGGER = logging.getLogger(__name__)
 
 type FrigateNotificationsConfigEntry = ConfigEntry[FrigateNotificationsRuntimeData]
+
+
+def iter_loaded_entries(hass: HomeAssistant) -> Iterator[FrigateNotificationsConfigEntry]:
+    """Yield all loaded config entries for this domain."""
+    from homeassistant.config_entries import ConfigEntryState
+
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        if entry.state is ConfigEntryState.LOADED:
+            yield entry  # type: ignore[misc]
+
+
+def find_entry_for_profile(
+    hass: HomeAssistant, profile_id: str
+) -> FrigateNotificationsConfigEntry | None:
+    """Find the loaded config entry that owns a given profile subentry ID."""
+    for entry in iter_loaded_entries(hass):
+        if profile_id in entry.subentries:
+            return entry
+    return None
+
 
 # Runtime types.
 
@@ -90,6 +113,10 @@ class FrigateNotificationsRuntimeData:
     dispatcher: NotificationDispatcher
     mqtt_topic: str = ""
     integration_subentry_id: str | None = None
+    debug_sensor: FrigateNotificationsReviewDebugSensor | None = None
+    stats_sensor: FrigateNotificationsStatsSensor | None = None
+    silence_datetimes: dict[str, FrigateNotificationsSilenceDateTime] = field(default_factory=dict)
+    enabled_switches: dict[str, FrigateNotificationsSwitch] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

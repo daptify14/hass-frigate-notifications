@@ -11,11 +11,8 @@ from homeassistant.core import callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
-    DEBUG_SENSOR_KEY,
-    DOMAIN,
     SIGNAL_LAST_SENT,
     SIGNAL_STATS,
-    STATS_SENSOR_KEY,
 )
 from .data import get_integration_subentry_id, iter_profile_subentries, profile_common_fields
 from .entity_base import (
@@ -70,13 +67,13 @@ class FrigateNotificationsReviewDebugSensor(FrigateNotificationsIntegrationEntit
         self._review_attrs: dict[str, Any] = {}
 
     async def async_added_to_hass(self) -> None:
-        """Register in hass.data so processor can push updates."""
+        """Register in runtime_data so processor can push updates."""
         await super().async_added_to_hass()
-        self.hass.data.setdefault(DOMAIN, {})[f"{DEBUG_SENSOR_KEY}_{self._entry.entry_id}"] = self
+        self._entry.runtime_data.debug_sensor = self
 
     async def async_will_remove_from_hass(self) -> None:
-        """Remove hass.data reference."""
-        self.hass.data.get(DOMAIN, {}).pop(f"{DEBUG_SENSOR_KEY}_{self._entry.entry_id}", None)
+        """Clear runtime_data reference."""
+        self._entry.runtime_data.debug_sensor = None
 
     def update_from_review(self, msg_type: str, payload: dict[str, Any]) -> None:
         """Push a review message into the sensor (called by processor callback)."""
@@ -133,14 +130,14 @@ class FrigateNotificationsStatsSensor(FrigateNotificationsIntegrationEntity, Res
             self._by_camera = dict(attrs.get("by_camera", {}))
             self._by_profile = dict(attrs.get("by_profile", {}))
 
-        self.hass.data.setdefault(STATS_SENSOR_KEY, {})[self._entry.entry_id] = self
+        self._entry.runtime_data.stats_sensor = self
 
         signal = f"{SIGNAL_STATS}_{self._entry.entry_id}"
         self.async_on_remove(async_dispatcher_connect(self.hass, signal, self._on_stats_signal))
 
     async def async_will_remove_from_hass(self) -> None:
-        """Remove hass.data reference."""
-        self.hass.data.get(STATS_SENSOR_KEY, {}).pop(self._entry.entry_id, None)
+        """Clear runtime_data reference."""
+        self._entry.runtime_data.stats_sensor = None
 
     @callback
     def reset(self) -> None:

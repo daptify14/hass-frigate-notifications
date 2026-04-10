@@ -8,10 +8,6 @@ from homeassistant.const import STATE_HOME, STATE_NOT_HOME, STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 import pytest
 
-from custom_components.frigate_notifications.const import (
-    ENABLED_SWITCHES_KEY,
-    SILENCE_DATETIMES_KEY,
-)
 from custom_components.frigate_notifications.enums import (
     Lifecycle,
     RecognitionMode,
@@ -480,10 +476,16 @@ class TestSilenceFilter:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         entity_id = "datetime.test_silenced_until"
-        hass.data.setdefault(SILENCE_DATETIMES_KEY, {})["test_profile_id"] = _FakeEntity(entity_id)
+        fake_entity = _FakeEntity(entity_id)
+        fake_runtime = type("R", (), {"silence_datetimes": {"test_profile_id": fake_entity}})()
+        fake_entry = type("E", (), {"runtime_data": fake_runtime})()
         hass.states.async_set(entity_id, state_value)
         ctx = make_filter_context(hass=hass)
-        result = SilenceFilter().check(ctx)
+        with patch(
+            "custom_components.frigate_notifications.filters.find_entry_for_profile",
+            return_value=fake_entry,
+        ):
+            result = SilenceFilter().check(ctx)
         assert result.passed is expected
         if not expected:
             assert result.filter_name == "silence"
@@ -499,17 +501,29 @@ class TestSwitchEnabledFilter:
 
     def test_switch_on_passes(self, hass: HomeAssistant) -> None:
         entity_id = "switch.test_enabled"
-        hass.data.setdefault(ENABLED_SWITCHES_KEY, {})["test_profile_id"] = _FakeEntity(entity_id)
+        fake_entity = _FakeEntity(entity_id)
+        fake_runtime = type("R", (), {"enabled_switches": {"test_profile_id": fake_entity}})()
+        fake_entry = type("E", (), {"runtime_data": fake_runtime})()
         hass.states.async_set(entity_id, STATE_ON)
         ctx = make_filter_context(hass=hass)
-        assert SwitchEnabledFilter().check(ctx).passed is True
+        with patch(
+            "custom_components.frigate_notifications.filters.find_entry_for_profile",
+            return_value=fake_entry,
+        ):
+            assert SwitchEnabledFilter().check(ctx).passed is True
 
     def test_switch_off_rejects(self, hass: HomeAssistant) -> None:
         entity_id = "switch.test_enabled"
-        hass.data.setdefault(ENABLED_SWITCHES_KEY, {})["test_profile_id"] = _FakeEntity(entity_id)
+        fake_entity = _FakeEntity(entity_id)
+        fake_runtime = type("R", (), {"enabled_switches": {"test_profile_id": fake_entity}})()
+        fake_entry = type("E", (), {"runtime_data": fake_runtime})()
         hass.states.async_set(entity_id, STATE_OFF)
         ctx = make_filter_context(hass=hass)
-        result = SwitchEnabledFilter().check(ctx)
+        with patch(
+            "custom_components.frigate_notifications.filters.find_entry_for_profile",
+            return_value=fake_entry,
+        ):
+            result = SwitchEnabledFilter().check(ctx)
         assert result.passed is False
         assert result.filter_name == "switch_enabled"
 

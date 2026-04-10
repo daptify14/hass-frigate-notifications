@@ -5,7 +5,8 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry, ConfigSubentryFlow, SubentryFlowResult
 
-from ...const import FRIGATE_DOMAIN, SUBENTRY_TYPE_PROFILE
+from ...const import SUBENTRY_TYPE_PROFILE
+from ...frigate_config import is_frigate_entry_loaded
 from ...presets import async_ensure_preset_cache
 from ..helpers import profile_placeholders, profile_title
 from .context import FlowContext, build_flow_context
@@ -263,7 +264,7 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
 
     def _frigate_loaded(self, entry: ConfigEntry) -> bool:
         """Check that the linked Frigate entry is loaded."""
-        return entry.data["frigate_entry_id"] in self.hass.data.get(FRIGATE_DOMAIN, {})
+        return is_frigate_entry_loaded(self.hass, entry.data["frigate_entry_id"])
 
     def _build_context(self) -> FlowContext:
         """Construct a FlowContext from current handler state, caching until data changes."""

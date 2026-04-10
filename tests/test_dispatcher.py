@@ -804,8 +804,7 @@ class TestDelayedRefilter:
     ) -> None:
         """Silence activated during delay window prevents notification."""
         import asyncio
-
-        from custom_components.frigate_notifications.const import SILENCE_DATETIMES_KEY
+        from datetime import UTC, datetime, timedelta
 
         profile = make_profile()
         runtime = make_runtime([profile], initial_delay=10.0)
@@ -817,17 +816,22 @@ class TestDelayedRefilter:
         async def _block(delay: float) -> None:
             await blocker
 
-        with patch("asyncio.sleep", side_effect=_block):
+        entity_id = "datetime.test_silenced_until"
+        fake_entity = type("E", (), {"entity_id": entity_id})()
+        fake_runtime = type("R", (), {"silence_datetimes": {profile.profile_id: fake_entity}})()
+        fake_entry = type("C", (), {"runtime_data": fake_runtime})()
+
+        with (
+            patch("asyncio.sleep", side_effect=_block),
+            patch(
+                "custom_components.frigate_notifications.filters.find_entry_for_profile",
+                return_value=fake_entry,
+            ),
+        ):
             await dispatcher.on_review_new(review)
 
             # Activate silence mid-delay.
-            from datetime import UTC, datetime, timedelta
-
             future = (datetime.now(tz=UTC) + timedelta(hours=1)).isoformat()
-            entity_id = "datetime.test_silenced_until"
-            hass.data.setdefault(SILENCE_DATETIMES_KEY, {})[profile.profile_id] = type(
-                "E", (), {"entity_id": entity_id}
-            )()
             hass.states.async_set(entity_id, future)
 
             # Unblock the sleep.
