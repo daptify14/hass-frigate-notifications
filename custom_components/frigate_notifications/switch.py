@@ -56,7 +56,6 @@ class FrigateNotificationsSwitch(FrigateNotificationsProfileEntity, SwitchEntity
         """Initialize profile enabled switch."""
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_enabled"
-        self._attr_name = "Enabled"
         self._attr_is_on = True
 
     async def async_added_to_hass(self) -> None:
