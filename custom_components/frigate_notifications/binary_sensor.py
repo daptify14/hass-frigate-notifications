@@ -88,7 +88,6 @@ class FrigateNotificationsMqttConnectedBinarySensor(
         """Initialize MQTT connection binary sensor."""
         super().__init__(entry)
         self._attr_unique_id = f"{entry.entry_id}_mqtt_connected"
-        self._attr_name = "MQTT connected"
         self._mqtt_topic = mqtt_topic
         self._attr_is_on = False
 
@@ -138,7 +137,6 @@ class FrigateNotificationsSilencedBinarySensor(
         """Initialize silence binary sensor."""
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_silenced"
-        self._attr_name = "Silenced"
         self._attr_is_on = False
         self._cancel_timer: CALLBACK_TYPE | None = None
 
@@ -260,7 +258,6 @@ class FrigateNotificationsDispatchProblemBinarySensor(
         """Initialize dispatch problem binary sensor."""
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_dispatch_problem"
-        self._attr_name = "Dispatch problem"
         self._attr_is_on = False
         self._last_error: str | None = None
 

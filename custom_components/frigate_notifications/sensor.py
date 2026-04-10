@@ -66,7 +66,6 @@ class FrigateNotificationsReviewDebugSensor(FrigateNotificationsIntegrationEntit
         """Initialize review debug sensor."""
         super().__init__(entry)
         self._attr_unique_id = f"{entry.entry_id}_review_debug"
-        self._attr_name = "Review debug"
         self._attr_native_value: str | None = None
         self._review_attrs: dict[str, Any] = {}
 
@@ -112,7 +111,6 @@ class FrigateNotificationsStatsSensor(FrigateNotificationsIntegrationEntity, Res
         """Initialize notifications-sent counter sensor."""
         super().__init__(entry)
         self._attr_unique_id = f"{entry.entry_id}_stats"
-        self._attr_name = "Notifications sent"
         self._attr_native_value: int = 0
         self._by_camera: dict[str, int] = {}
         self._by_profile: dict[str, int] = {}
@@ -187,7 +185,6 @@ class FrigateNotificationsLastSentSensor(FrigateNotificationsProfileEntity, Rest
         """Initialize last-sent sensor."""
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_last_sent"
-        self._attr_name = "Last sent"
         self._attr_native_value: str | None = None
         self._last_sent_attrs: dict[str, Any] = {}
 
