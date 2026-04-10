@@ -6,11 +6,6 @@ FRIGATE_DOMAIN = "frigate"
 SUBENTRY_TYPE_PROFILE = "profile"
 SUBENTRY_TYPE_INTEGRATION = "integration"
 
-SILENCE_DATETIMES_KEY = f"{DOMAIN}_silence_datetimes"
-ENABLED_SWITCHES_KEY = f"{DOMAIN}_enabled_switches"
-DEBUG_SENSOR_KEY = f"{DOMAIN}_debug_sensor"
-STATS_SENSOR_KEY = f"{DOMAIN}_stats_sensor"
-
 SIGNAL_DISPATCH_PROBLEM = f"{DOMAIN}_dispatch_problem"
 SIGNAL_LAST_SENT = f"{DOMAIN}_last_sent"
 SIGNAL_SILENCE_STATE = f"{DOMAIN}_silence_state"

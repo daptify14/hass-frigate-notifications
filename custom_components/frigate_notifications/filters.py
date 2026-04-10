@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 from homeassistant.const import STATE_HOME, STATE_OFF
 from homeassistant.util import dt as dt_util
 
-from .const import ENABLED_SWITCHES_KEY, SILENCE_DATETIMES_KEY
+from .data import find_entry_for_profile
 from .enums import Lifecycle, RecognitionMode, Severity, TimeFilterMode, ZoneMatchMode
 
 if TYPE_CHECKING:
@@ -259,8 +259,12 @@ class SilenceFilter:
 
     def check(self, ctx: FilterContext) -> FilterResult:
         """Evaluate the filter."""
-        silence_map = ctx.hass.data.get(SILENCE_DATETIMES_KEY, {})
-        entity = silence_map.get(ctx.profile.profile_id)
+        entry = find_entry_for_profile(ctx.hass, ctx.profile.profile_id)
+        entity = (
+            entry.runtime_data.silence_datetimes.get(ctx.profile.profile_id)
+            if entry is not None
+            else None
+        )
         if entity is None:
             return _PASS
         state = ctx.hass.states.get(entity.entity_id)
@@ -287,8 +291,12 @@ class SwitchEnabledFilter:
 
     def check(self, ctx: FilterContext) -> FilterResult:
         """Evaluate the filter."""
-        switch_map = ctx.hass.data.get(ENABLED_SWITCHES_KEY, {})
-        entity = switch_map.get(ctx.profile.profile_id)
+        entry = find_entry_for_profile(ctx.hass, ctx.profile.profile_id)
+        entity = (
+            entry.runtime_data.enabled_switches.get(ctx.profile.profile_id)
+            if entry is not None
+            else None
+        )
         if entity is None:
             return _PASS
         state = ctx.hass.states.get(entity.entity_id)

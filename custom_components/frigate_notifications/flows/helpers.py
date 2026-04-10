@@ -29,7 +29,7 @@ from ..const import (
 )
 from ..data import get_available_frigate_cameras
 from ..enums import Provider, resolved_platform
-from ..frigate_config import get_frigate_config_view
+from ..frigate_config import get_frigate_config_view, is_frigate_entry_loaded
 from ..media import (
     VALID_ATTACHMENTS,
     VALID_TV_ATTACHMENTS,
@@ -358,14 +358,14 @@ def discover_camera_sub_labels(
     hass: HomeAssistant, frigate_entry_id: str, camera: str
 ) -> list[tuple[str, str]]:
     """Camera-scoped typed sub-labels for profile filtering step."""
-    if frigate_entry_id not in hass.data.get(FRIGATE_DOMAIN, {}):
+    if not is_frigate_entry_loaded(hass, frigate_entry_id):
         return []
     return discover_typed_sub_labels(hass, frigate_entry_id, camera=camera)
 
 
 def discover_all_sub_labels(hass: HomeAssistant, frigate_entry_id: str) -> list[tuple[str, str]]:
     """All typed sub-labels for global options flow."""
-    if frigate_entry_id not in hass.data.get(FRIGATE_DOMAIN, {}):
+    if not is_frigate_entry_loaded(hass, frigate_entry_id):
         return []
     return discover_typed_sub_labels(hass, frigate_entry_id, camera=None)
 

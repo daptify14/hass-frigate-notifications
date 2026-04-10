@@ -9,7 +9,6 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
 from homeassistant.helpers.restore_state import RestoreEntity
 
-from .const import ENABLED_SWITCHES_KEY
 from .data import iter_profile_subentries, profile_common_fields
 from .entity_base import FrigateNotificationsProfileEntity
 
@@ -59,9 +58,9 @@ class FrigateNotificationsSwitch(FrigateNotificationsProfileEntity, SwitchEntity
         self._attr_is_on = True
 
     async def async_added_to_hass(self) -> None:
-        """Restore state and register in hass.data for cross-component access."""
+        """Restore state and register in runtime_data for cross-component access."""
         await super().async_added_to_hass()
-        self.hass.data.setdefault(ENABLED_SWITCHES_KEY, {})[self._subentry_id] = self
+        self._entry.runtime_data.enabled_switches[self._subentry_id] = self
         last_state = await self.async_get_last_state()
         if last_state is not None:
             self._attr_is_on = last_state.state == "on"
@@ -69,9 +68,8 @@ class FrigateNotificationsSwitch(FrigateNotificationsProfileEntity, SwitchEntity
             self._attr_is_on = True
 
     async def async_will_remove_from_hass(self) -> None:
-        """Clean up hass.data reference."""
-        switch_map = self.hass.data.get(ENABLED_SWITCHES_KEY, {})
-        switch_map.pop(self._subentry_id, None)
+        """Clear runtime_data reference."""
+        self._entry.runtime_data.enabled_switches.pop(self._subentry_id, None)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the profile."""

@@ -17,7 +17,6 @@ from custom_components.frigate_notifications import async_remove_config_entry_de
 from custom_components.frigate_notifications.const import (
     DOMAIN,
     FRIGATE_DOMAIN,
-    SILENCE_DATETIMES_KEY,
     SUBENTRY_TYPE_INTEGRATION,
 )
 from custom_components.frigate_notifications.data import get_profile_device_identifiers
@@ -247,21 +246,19 @@ class TestAsyncUnloadEntry:
         result = await hass.config_entries.async_unload(mock_config_entry.entry_id)
         assert result is True
 
-    async def test_unload_cleans_hass_data(
+    async def test_unload_clears_runtime_entity_refs(
         self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
     ) -> None:
-        """Unload removes silence map from hass.data."""
+        """Unload clears entity refs from runtime_data via platform teardown."""
         await setup_integration(hass, mock_config_entry)
         sub_id = get_profile_subentry_id(mock_config_entry)
 
-        # Verify silence map has entry.
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        assert sub_id in silence_map
+        # Verify runtime_data has entity refs.
+        assert sub_id in mock_config_entry.runtime_data.silence_datetimes
+        assert sub_id in mock_config_entry.runtime_data.enabled_switches
 
         await hass.config_entries.async_unload(mock_config_entry.entry_id)
-
-        silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-        assert sub_id not in silence_map
+        await hass.async_block_till_done()
 
 
 class TestMqttCallback:

@@ -55,6 +55,11 @@ class FrigateConfigView:
         return any(camera.genai_enabled for camera in self.cameras.values())
 
 
+def is_frigate_entry_loaded(hass: HomeAssistant, frigate_entry_id: str) -> bool:
+    """Return True when the linked Frigate entry is loaded and has config in hass.data."""
+    return frigate_entry_id in hass.data.get("frigate", {})
+
+
 def get_frigate_config_view(hass: HomeAssistant, frigate_entry_id: str) -> FrigateConfigView | None:
     """Build a typed view over the Frigate config stored in hass.data."""
     raw = hass.data.get("frigate", {}).get(frigate_entry_id, {}).get("config")

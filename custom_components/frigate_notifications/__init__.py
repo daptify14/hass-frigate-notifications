@@ -21,11 +21,8 @@ from homeassistant.helpers.event import async_track_time_interval
 from .actions import setup_action_listener
 from .const import (
     CLEANUP_INTERVAL,
-    DEBUG_SENSOR_KEY,
     DOMAIN,
-    ENABLED_SWITCHES_KEY,
     FRIGATE_DOMAIN,
-    SILENCE_DATETIMES_KEY,
     SUBENTRY_TYPE_INTEGRATION,
     SUBENTRY_TYPE_PROFILE,
     TOPIC_SUFFIX_REVIEWS,
@@ -98,7 +95,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
     dispatcher = NotificationDispatcher(hass, runtime_config, filter_chain)
 
     def _on_review_message(msg_type: str, payload: dict[str, Any]) -> None:
-        sensor = hass.data.get(DOMAIN, {}).get(f"{DEBUG_SENSOR_KEY}_{entry.entry_id}")
+        sensor = entry.runtime_data.debug_sensor
         if sensor is not None:
             sensor.update_from_review(msg_type, payload)
 
@@ -169,17 +166,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a Notifications for Frigate config entry."""
     entry.runtime_data.dispatcher.shutdown()
-
-    domain_data = hass.data.get(DOMAIN, {})
-    domain_data.pop(f"{DEBUG_SENSOR_KEY}_{entry.entry_id}", None)
-
-    silence_map = hass.data.get(SILENCE_DATETIMES_KEY, {})
-    switch_map = hass.data.get(ENABLED_SWITCHES_KEY, {})
-    for subentry in entry.subentries.values():
-        if subentry.subentry_type == SUBENTRY_TYPE_PROFILE:
-            silence_map.pop(subentry.subentry_id, None)
-            switch_map.pop(subentry.subentry_id, None)
-
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
