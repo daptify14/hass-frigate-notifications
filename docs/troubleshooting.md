@@ -123,7 +123,4 @@ If the Frigate instance was replaced entirely (new server, different camera set)
 - **Android TV: still images only**: Android TV notifications support static images (snapshot/thumbnail). GIF and video attachments are not supported
 - **GenAI text is pre-rendered**: AI summary text comes from Frigate's GenAI metadata and is not processed through the template engine. Template variables do not apply inside GenAI content
 - **Android video: HLS to MP4 fallback**: when HLS is configured for a phase, Android devices receive `clip.mp4` instead since Android does not support HLS in notifications
-
-## Known issues
-
 - **Datetime picker overflow on device page**: the "Silenced until" datetime picker may overflow its container on the device page, especially on narrow screens

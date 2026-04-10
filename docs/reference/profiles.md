@@ -8,7 +8,7 @@
 
 ## Preset
 
-Select a starting template. [Presets](presets.md) pre-fill phase configs, templates, and defaults for common notification patterns. Every value is fully editable afterward.
+Select a starting template. [Presets](presets.md) pre-fill phase configs, templates, and defaults for common notification patterns. All values are editable after creation.
 
 | Field | Type | Description | Default |
 | --- | --- | --- | --- |
