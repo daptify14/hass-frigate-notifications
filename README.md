@@ -1,6 +1,6 @@
 # Notifications for Frigate
 
-[![CI](https://github.com/daptify14/hass-frigate-notifications/actions/workflows/ci.yml/badge.svg)](https://github.com/daptify14/hass-frigate-notifications/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/daptify14/hass-frigate-notifications/graph/badge.svg?token=80TW54GVXD)](https://codecov.io/gh/daptify14/hass-frigate-notifications)
+[![CI](https://github.com/daptify14/hass-frigate-notifications/actions/workflows/ci.yml/badge.svg)](https://github.com/daptify14/hass-frigate-notifications/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/daptify14/hass-frigate-notifications/graph/badge.svg)](https://codecov.io/gh/daptify14/hass-frigate-notifications)
 
 A Home Assistant integration that delivers dynamic push notifications from [Frigate NVR](https://frigate.video) reviews to iOS, Android, and Android TV devices.
 
