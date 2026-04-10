@@ -14,8 +14,8 @@ services:
       - HA_PRECONFIG=${HA_PRECONFIG:-true}
       - FN_PRECONFIG=${FN_PRECONFIG:-true}
     ports:
-      - "8123:8123"
-      - "5678:5678"
+      - "127.0.0.1:8123:8123"
+      - "127.0.0.1:5678:5678"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ./dev/preconfig.sh:/etc/cont-init.d/preconfig.sh:ro
@@ -50,7 +50,7 @@ services:
     image: "ghcr.io/blakeblackshear/frigate:${FRIGATE_VERSION:-0.17.1}"
     restart: unless-stopped
     ports:
-      - "5001:5000"
+      - "127.0.0.1:5001:5000"
     volumes:
       - ./dev/config/frigate/config.yml:/config/config.yml:ro
 
@@ -58,7 +58,7 @@ services:
     image: eclipse-mosquitto:2
     restart: unless-stopped
     ports:
-      - "1883:1883"
+      - "127.0.0.1:1883:1883"
     volumes:
       - ./dev/config/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
 
@@ -69,7 +69,7 @@ services:
       - LOG_WITHOUT_NEWLINE=true
       - ECHO_BACK_TO_CLIENT=false
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
 
 volumes:
   frigate-integration:
