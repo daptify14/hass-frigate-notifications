@@ -10,16 +10,16 @@ Extends the [Frigate integration](https://github.com/blakeblackshear/frigate-has
 
 - 4-phase notification lifecycle: initial alert, update, end-of-review, and optional GenAI summary
 - Advanced filtering: zone, object type, sublabel, time of day, presence, entity state, and more
-- Rich media: snapshots, animated GIFs, and video clips attached per phase
+- Rich media: thumbnails, snapshots, event/review animated GIFs, video clips, or iOS live view attached per phase
 - Template engine: 40+ context variables for messages, titles, action buttons, and tap behaviors
 - Notification profiles for single or multi-camera setups
 - Per-profile entities (switches, sensors, buttons) and repair issues for control and diagnostics
-- Discovers GenAI review summaries, trained faces, and known plates from your Frigate config
+- Detects Generative AI support, trained faces, and known plates from your Frigate config
 
 ## Requirements
 
 - Home Assistant 2025.6 or newer
-- Frigate NVR with reviews enabled
+- Frigate NVR v0.16.0+ (v0.17.0+ for Generative AI summaries)
 - MQTT configured in Home Assistant
 - [Frigate integration](https://github.com/blakeblackshear/frigate-hass-integration) installed in Home Assistant
 - iOS or Android Companion App (or Android TV / Fire TV integration for TV overlays)
