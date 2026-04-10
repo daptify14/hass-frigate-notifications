@@ -14,7 +14,7 @@ dev = [
     "homeassistant==2026.4.1",
     "paho-mqtt==2.1.0",
     "prek>=0.3.8",
-    "ruff==0.15.9",
+    "ruff==0.15.10",
     "ty==0.0.29",
     "voluptuous-stubs==0.1.1",
 ]
