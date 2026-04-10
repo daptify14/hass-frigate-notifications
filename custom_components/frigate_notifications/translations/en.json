@@ -660,7 +660,7 @@
   },
   "exceptions": {
     "profile_not_found": {
-      "message": "Profile '{profile_id}' not found or not loaded"
+      "message": "Profile {profile_id} not found or not loaded"
     },
     "silence_failed": {
       "message": "Failed to silence profile"
