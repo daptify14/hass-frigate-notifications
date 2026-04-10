@@ -1,6 +1,6 @@
 # Notification Lifecycle
 
-Notifications for Frigate follows each Frigate review through four lifecycle phases. Each phase can trigger a notification with independently configured behavior.
+Notifications for Frigate follows each Frigate review through four lifecycle phases. Each phase is independently configurable.
 
 ## Lifecycle phases
 
@@ -17,7 +17,7 @@ The initial phase fires on the **first message that passes filters** for a revie
 
 > **Tip:** Templates receive the phase value via `{{ phase }}`, not the raw MQTT message type. So the first notification always uses `phase = "initial"`, even if it was triggered by an `update` message.
 
-The descriptions below reflect the default preset behavior. Each phase is fully configurable -- sound, attachment, video, delay, interruption level, and more can be changed per phase in your profile settings.
+The descriptions below reflect the default preset behavior. Sound, attachment, video, delay, interruption level, and more can be changed per phase in your profile settings.
 
 ### Initial
 

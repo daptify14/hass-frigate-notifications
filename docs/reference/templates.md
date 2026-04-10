@@ -50,7 +50,7 @@ All examples below assume a person detected on a camera named "Driveway" in a zo
 | `rich_update` | Rich update (new line) | `{{ phase_emoji }} {{ object }} ... / {{ added_subject }} detected` | update, end | 🔄 Person entered the Driveway / Car detected |
 | `zone_info` | Zone info | `{{ zone_alias }}` | all | the Driveway |
 | `update_delta` | Update delta | `{{ added_subject }} detected` | update, end | Car detected |
-| `camera_zone` | Camera + zone | `{{ camera_name }} {{ zone_alias }}` | all | Driveway the Driveway |
+| `camera_zone` | Camera + zone | `{{ camera_name }} {{ zone_alias }}` | all | Driveway the Driveway (works best when camera and zone names differ) |
 | `camera_only_content` | Camera only | `{{ camera_name }}` | all | Driveway |
 | `duration_summary` | Duration summary | `Duration: {{ duration }}s` | end | Duration: 12s |
 | `genai_summary` | GenAI summary | `{{ genai_summary }}` | genai | A person pushes a stroller down the driveway, passing a parked white SUV, and exits the scene. |

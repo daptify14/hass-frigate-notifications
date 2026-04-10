@@ -10,7 +10,7 @@ Frigate publishes camera [reviews](https://docs.frigate.video/reference/review) 
 4. **Provider** formats the payload for your platform (iOS, Android, or Android TV)
 5. **Dispatcher** sends the notification via HA's notify service
 
-Each review can trigger up to four notification phases: initial alert, update, end-of-review, and an optional GenAI summary with each notification fully customizable.
+Each review can trigger up to four notification phases: initial alert, update, end-of-review, and an optional GenAI summary.
 
 ## Core concepts
 
@@ -18,7 +18,7 @@ Each review can trigger up to four notification phases: initial alert, update, e
 
 **Global defaults & inheritance**: Shared settings that profiles can inherit from. Each option in a profile can inherit the global value, override it, or disable it entirely. Set your baseline in the integration options flow (reconfigure any time), then only customize what differs per profile.
 
-**Presets**: Starting templates that pre-fill a profile's configuration during the wizard. The integration ships with six (Live Alerts, Rich Alerts, End Only, Snapshot Only, Latest Only, Silent Log). Every value a preset sets is fully editable afterward, the preset is a starting point, not a constraint.
+**Presets**: Starting templates that pre-fill a profile's configuration during the wizard. The integration ships with six (Live Alerts, Rich Alerts, End Only, Snapshot Only, Latest Only, Silent Log). All preset values are editable after profile creation.
 
 **Templates**: Notification titles, messages, and subtitles are Jinja2 templates with access to 40+ context variables (camera name, detected objects, zones, severity, AI summaries, and more). Built-in templates cover common patterns; override at the profile or phase level for full control.
 
@@ -26,17 +26,25 @@ Each review can trigger up to four notification phases: initial alert, update, e
 
 ## Full reference
 
+### Setup
+
 - [Installation](installation.md): HACS, manual install, and removal
 - [Getting Started](getting-started.md): first profile walkthrough
+- [Examples](examples.md): filtering, templates, and delivery examples
+- [Troubleshooting](troubleshooting.md): common issues, logs, known limitations
+
+### Configuration
+
 - [Global Defaults](reference/global-defaults.md): shared options and inheritance
 - [Profiles](reference/profiles.md): every profile field, entities, and device details
 - [Presets](reference/presets.md): built-in presets and custom YAML presets
+- [Filtering](reference/filtering.md): the filter pipeline and profile inheritance model
+
+### Notifications
+
+- [Notification Lifecycle](reference/notification-lifecycle.md): phases, dispatch, silence, and cooldown
 - [Context Variables](reference/context-variables.md): all template variables
 - [Templates](reference/templates.md): built-in templates, rendering, and notification URLs
-- [Filtering](reference/filtering.md): the 11-filter chain and inheritance model
-- [Notification Lifecycle](reference/notification-lifecycle.md): phases, dispatch, silence, and cooldown
-- [Examples](examples.md): practical setup recipes
-- [Troubleshooting](troubleshooting.md): common issues, logs, known limitations
 - [Actions](reference/actions.md): action buttons, tap actions, and custom HA actions
 - [Providers](reference/providers.md): iOS, Android, Android TV, and Cross-Platform
 - [Logging Reference](reference/logging.md): filter rejection messages and key log entries

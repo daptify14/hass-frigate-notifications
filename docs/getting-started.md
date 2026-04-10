@@ -21,7 +21,7 @@ Before creating a profile, make sure your Home Assistant and Frigate URLs are se
 
 ### Preset
 
-Pick a starting template. **Live Alerts** is the recommended default: instant alert with a snapshot, GIF follow-up, and optional AI summary. Every value the preset sets is fully editable afterward.
+Pick a starting template. **Live Alerts** is the recommended default: instant alert with a snapshot, GIF follow-up, and optional AI summary. All values are editable after creation.
 
 ### Basics
 
