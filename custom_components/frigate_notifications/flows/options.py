@@ -28,11 +28,11 @@ from ..const import (
     DEFAULT_TITLE_GENAI_PREFIXES,
     DEFAULT_TITLE_TEMPLATE,
     DOMAIN,
-    FRIGATE_DOMAIN,
     PRESENCE_ENTITY_DOMAINS,
     humanize_zone,
 )
 from ..enums import TimeFilterMode
+from ..frigate_config import is_frigate_entry_loaded
 from ..presets import async_ensure_preset_cache
 from .helpers import (
     GUARD_ENTITY_SELECTOR,
@@ -448,7 +448,7 @@ class OptionsFlowHandler(OptionsFlow):
 
     async def async_step_zone_aliases(self, user_input=None) -> ConfigFlowResult:
         """Zone aliases — one collapsed section per camera with zones."""
-        if self._frigate_entry_id not in self.hass.data.get(FRIGATE_DOMAIN, {}):
+        if not is_frigate_entry_loaded(self.hass, self._frigate_entry_id):
             return await self._finish_or_menu()
 
         cameras_with_zones = self._cameras_with_zones()
