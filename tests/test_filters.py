@@ -478,14 +478,9 @@ class TestSilenceFilter:
         entity_id = "datetime.test_silenced_until"
         fake_entity = _FakeEntity(entity_id)
         fake_runtime = type("R", (), {"silence_datetimes": {"test_profile_id": fake_entity}})()
-        fake_entry = type("E", (), {"runtime_data": fake_runtime})()
         hass.states.async_set(entity_id, state_value)
-        ctx = make_filter_context(hass=hass)
-        with patch(
-            "custom_components.frigate_notifications.filters.find_entry_for_profile",
-            return_value=fake_entry,
-        ):
-            result = SilenceFilter().check(ctx)
+        ctx = make_filter_context(hass=hass, runtime_data=fake_runtime)
+        result = SilenceFilter().check(ctx)
         assert result.passed is expected
         if not expected:
             assert result.filter_name == "silence"
@@ -503,27 +498,17 @@ class TestSwitchEnabledFilter:
         entity_id = "switch.test_enabled"
         fake_entity = _FakeEntity(entity_id)
         fake_runtime = type("R", (), {"enabled_switches": {"test_profile_id": fake_entity}})()
-        fake_entry = type("E", (), {"runtime_data": fake_runtime})()
         hass.states.async_set(entity_id, STATE_ON)
-        ctx = make_filter_context(hass=hass)
-        with patch(
-            "custom_components.frigate_notifications.filters.find_entry_for_profile",
-            return_value=fake_entry,
-        ):
-            assert SwitchEnabledFilter().check(ctx).passed is True
+        ctx = make_filter_context(hass=hass, runtime_data=fake_runtime)
+        assert SwitchEnabledFilter().check(ctx).passed is True
 
     def test_switch_off_rejects(self, hass: HomeAssistant) -> None:
         entity_id = "switch.test_enabled"
         fake_entity = _FakeEntity(entity_id)
         fake_runtime = type("R", (), {"enabled_switches": {"test_profile_id": fake_entity}})()
-        fake_entry = type("E", (), {"runtime_data": fake_runtime})()
         hass.states.async_set(entity_id, STATE_OFF)
-        ctx = make_filter_context(hass=hass)
-        with patch(
-            "custom_components.frigate_notifications.filters.find_entry_for_profile",
-            return_value=fake_entry,
-        ):
-            result = SwitchEnabledFilter().check(ctx)
+        ctx = make_filter_context(hass=hass, runtime_data=fake_runtime)
+        result = SwitchEnabledFilter().check(ctx)
         assert result.passed is False
         assert result.filter_name == "switch_enabled"
 

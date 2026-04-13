@@ -9,6 +9,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Literal
 
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.template import TemplateError
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
     from .config import PhaseConfig
-    from .data import ProfileRuntime, RuntimeConfig
+    from .data import FrigateNotificationsRuntimeData, ProfileRuntime, RuntimeConfig
     from .models import Review
 
 _LOGGER = logging.getLogger(__name__)
@@ -330,6 +331,13 @@ class NotificationDispatcher:
             for profile in profiles
         }
 
+    def _resolve_runtime_data(self, entry_id: str) -> FrigateNotificationsRuntimeData | None:
+        """Return runtime_data for a config entry, or None if not loaded."""
+        entry = self._hass.config_entries.async_get_entry(entry_id)
+        if entry is None or entry.state is not ConfigEntryState.LOADED:
+            return None
+        return entry.runtime_data  # type: ignore[return-value]
+
     def _get_profile_state(self, profile_id: str) -> ProfileState:
         if profile_id not in self._profile_states:
             self._profile_states[profile_id] = ProfileState()
@@ -403,6 +411,7 @@ class NotificationDispatcher:
                     review_state=rs,
                     profile_state=ps,
                     hass=self._hass,
+                    runtime_data=self._resolve_runtime_data(profile.entry_id),
                 )
                 result = self._filter_chain.evaluate(ctx)
                 if not result.passed:
@@ -581,6 +590,7 @@ class NotificationDispatcher:
             review_state=ctx.review_state,
             profile_state=ps,
             hass=self._hass,
+            runtime_data=self._resolve_runtime_data(ctx.profile.entry_id),
         )
         return self._filter_chain.evaluate_runtime(recheck_ctx).passed
 

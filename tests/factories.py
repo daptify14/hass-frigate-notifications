@@ -171,6 +171,7 @@ def make_filter_context(
     lifecycle: Lifecycle = Lifecycle.NEW,
     review_state: ReviewState | None = None,
     profile_state: ProfileState | None = None,
+    runtime_data: Any = None,
 ) -> FilterContext:
     """Build a FilterContext with sensible defaults."""
     return FilterContext(
@@ -180,6 +181,7 @@ def make_filter_context(
         review_state=review_state or ReviewState(),
         profile_state=profile_state or ProfileState(),
         hass=hass,
+        runtime_data=runtime_data,
     )
 
 

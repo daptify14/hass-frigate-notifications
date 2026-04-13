@@ -12,13 +12,12 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 from homeassistant.const import STATE_HOME, STATE_OFF
 from homeassistant.util import dt as dt_util
 
-from .data import find_entry_for_profile
 from .enums import Lifecycle, RecognitionMode, Severity, TimeFilterMode, ZoneMatchMode
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
-    from .data import ProfileRuntime
+    from .data import FrigateNotificationsRuntimeData, ProfileRuntime
     from .models import ProfileState, Review, ReviewState
 
 
@@ -35,6 +34,7 @@ class FilterContext:
     review_state: ReviewState
     profile_state: ProfileState
     hass: HomeAssistant
+    runtime_data: FrigateNotificationsRuntimeData | None = None
 
 
 @dataclass(frozen=True)
@@ -259,10 +259,9 @@ class SilenceFilter:
 
     def check(self, ctx: FilterContext) -> FilterResult:
         """Evaluate the filter."""
-        entry = find_entry_for_profile(ctx.hass, ctx.profile.profile_id)
         entity = (
-            entry.runtime_data.silence_datetimes.get(ctx.profile.profile_id)
-            if entry is not None
+            ctx.runtime_data.silence_datetimes.get(ctx.profile.profile_id)
+            if ctx.runtime_data is not None
             else None
         )
         if entity is None:
@@ -291,10 +290,9 @@ class SwitchEnabledFilter:
 
     def check(self, ctx: FilterContext) -> FilterResult:
         """Evaluate the filter."""
-        entry = find_entry_for_profile(ctx.hass, ctx.profile.profile_id)
         entity = (
-            entry.runtime_data.enabled_switches.get(ctx.profile.profile_id)
-            if entry is not None
+            ctx.runtime_data.enabled_switches.get(ctx.profile.profile_id)
+            if ctx.runtime_data is not None
             else None
         )
         if entity is None:

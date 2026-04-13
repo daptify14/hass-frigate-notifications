@@ -3,6 +3,7 @@
 from dataclasses import replace
 from unittest.mock import AsyncMock, patch
 
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, ServiceCall
 import pytest
 from pytest_homeassistant_custom_component.common import async_mock_service
@@ -820,14 +821,13 @@ class TestDelayedRefilter:
         entity_id = "datetime.test_silenced_until"
         fake_entity = type("E", (), {"entity_id": entity_id})()
         fake_runtime = type("R", (), {"silence_datetimes": {profile.profile_id: fake_entity}})()
-        fake_entry = type("C", (), {"runtime_data": fake_runtime})()
+        fake_entry = type(
+            "C", (), {"runtime_data": fake_runtime, "state": ConfigEntryState.LOADED}
+        )()
 
         with (
             patch("asyncio.sleep", side_effect=_block),
-            patch(
-                "custom_components.frigate_notifications.filters.find_entry_for_profile",
-                return_value=fake_entry,
-            ),
+            patch.object(hass.config_entries, "async_get_entry", return_value=fake_entry),
         ):
             await dispatcher.on_review_new(review)
 
@@ -840,6 +840,20 @@ class TestDelayedRefilter:
             await hass.async_block_till_done()
 
         assert len(notify_calls) == 0
+
+
+class TestResolveRuntimeData:
+    async def test_non_loaded_entry_returns_none(self, hass: HomeAssistant) -> None:
+        """Non-LOADED entry state returns None to prevent stale runtime_data reads."""
+        profile = make_profile()
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+
+        fake_entry = type(
+            "C", (), {"runtime_data": object(), "state": ConfigEntryState.SETUP_RETRY}
+        )()
+        with patch.object(hass.config_entries, "async_get_entry", return_value=fake_entry):
+            assert dispatcher._resolve_runtime_data(profile.entry_id) is None
 
 
 class TestDispatcherPendingTaskCancel:
