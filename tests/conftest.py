@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator
 from copy import deepcopy
 from typing import Any
 
-from homeassistant.config_entries import ConfigSubentryData
+from homeassistant.config_entries import ConfigEntryState, ConfigSubentryData
 from homeassistant.core import HomeAssistant
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -154,4 +154,5 @@ def mock_frigate_entry(hass: HomeAssistant) -> MockConfigEntry:
         data=FRIGATE_ENTRY_DATA,
     )
     entry.add_to_hass(hass)
+    entry.mock_state(hass, ConfigEntryState.LOADED)
     return entry
