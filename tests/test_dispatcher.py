@@ -842,6 +842,69 @@ class TestDelayedRefilter:
         assert len(notify_calls) == 0
 
 
+class TestDelayedDispatchEdgeCases:
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_no_target_skips_bookkeeping(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """When deliver_notification returns False (no target), skip bookkeeping."""
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+        from custom_components.frigate_notifications.const import SIGNAL_LAST_SENT, SIGNAL_STATS
+
+        profile = make_profile(notify_target="", cooldown_seconds=60)
+        runtime = make_runtime([profile])
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        stats_received: list[tuple[object, ...]] = []
+        last_sent_received: list[tuple[object, ...]] = []
+        async_dispatcher_connect(
+            hass,
+            f"{SIGNAL_STATS}_{profile.entry_id}",
+            lambda *a: stats_received.append(a),
+        )
+        async_dispatcher_connect(
+            hass,
+            f"{SIGNAL_LAST_SENT}_{profile.entry_id}_{profile.profile_id}",
+            lambda *a: last_sent_received.append(a),
+        )
+
+        await dispatcher.on_review_new(review)
+        await hass.async_block_till_done()
+
+        key = (profile.profile_id, review.review_id)
+
+        assert notify_calls == []
+        assert stats_received == []
+        assert last_sent_received == []
+        assert key in dispatcher._review_states
+        assert dispatcher._review_states[key].initial_sent is False
+
+        ps = dispatcher._get_profile_state(profile.profile_id)
+        assert review.camera not in ps.last_sent_at
+
+    async def test_cancelled_during_sleep_skips_all(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        """CancelledError during sleep exits without rendering or delivering."""
+        import asyncio
+
+        profile = make_profile()
+        runtime = make_runtime([profile], initial_delay=10.0)
+        dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
+        review = make_review()
+
+        with patch("asyncio.sleep", side_effect=asyncio.CancelledError):
+            await dispatcher.on_review_new(review)
+        await hass.async_block_till_done()
+
+        assert len(notify_calls) == 0
+
+        rs = dispatcher._get_review_state(profile.profile_id, review.review_id)
+        assert rs.initial_sent is False
+
+
 class TestResolveRuntimeData:
     async def test_non_loaded_entry_returns_none(self, hass: HomeAssistant) -> None:
         """Non-LOADED entry state returns None to prevent stale runtime_data reads."""
