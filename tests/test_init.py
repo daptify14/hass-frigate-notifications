@@ -39,7 +39,7 @@ class TestAsyncSetupEntry:
     async def test_setup_entry_frigate_not_ready(
         self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
-        """ConfigEntryNotReady when Frigate is not available."""
+        """ConfigEntryNotReady when Frigate is not available; root-cause repair created."""
         entry = MockConfigEntry(
             domain=DOMAIN,
             title="Test",
@@ -51,6 +51,10 @@ class TestAsyncSetupEntry:
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
         assert entry.state is ConfigEntryState.SETUP_RETRY
+
+        issue_reg = ir.async_get(hass)
+        root_id = f"fn_{entry.entry_id}_linked_frigate_unavailable"
+        assert (DOMAIN, root_id) in issue_reg.issues
 
     async def test_mqtt_topic_set(
         self, hass: HomeAssistant, mock_config_entry: MockConfigEntry

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 import logging
 from typing import TYPE_CHECKING
 
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.helpers import issue_registry as ir
 
 from .const import DOMAIN, SUBENTRY_TYPE_PROFILE
@@ -19,6 +21,19 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+FRIGATE_TERMINAL_FAILURE = {
+    ConfigEntryState.SETUP_ERROR,
+    ConfigEntryState.MIGRATION_ERROR,
+}
+
+
+class FrigateEntryStatus(StrEnum):
+    """Availability state for the linked Frigate config entry."""
+
+    AVAILABLE = "available"
+    TRANSIENT = "transient"
+    ACTION_REQUIRED = "action_required"
+
 
 @dataclass(frozen=True)
 class IssueSpec:
@@ -31,12 +46,19 @@ class IssueSpec:
 
 def sync_repair_issues(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Validate all profiles and global config, sync repair issues."""
+    found: dict[str, IssueSpec] = {}
     frigate_entry_id = entry.data["frigate_entry_id"]
+
+    status = _check_frigate_entry(hass, entry, found)
+    if status is FrigateEntryStatus.ACTION_REQUIRED:
+        _reconcile(hass, entry.entry_id, found)
+        return
+    if status is FrigateEntryStatus.TRANSIENT:
+        return
+
     config_view = get_frigate_config_view(hass, frigate_entry_id)
     if config_view is None:
         return
-
-    found: dict[str, IssueSpec] = {}
 
     for subentry in entry.subentries.values():
         if subentry.subentry_type != SUBENTRY_TYPE_PROFILE:
@@ -54,6 +76,29 @@ def delete_all_issues_for_entry(hass: HomeAssistant, entry: ConfigEntry) -> None
     for domain, iid in list(issue_reg.issues):
         if domain == DOMAIN and iid.startswith(prefix):
             ir.async_delete_issue(hass, DOMAIN, iid)
+
+
+def _check_frigate_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    found: dict[str, IssueSpec],
+) -> FrigateEntryStatus:
+    """Classify whether the linked Frigate entry can be used for validation."""
+    frigate_entry_id = entry.data["frigate_entry_id"]
+    frigate_entry = hass.config_entries.async_get_entry(frigate_entry_id)
+
+    if frigate_entry is None or frigate_entry.state in FRIGATE_TERMINAL_FAILURE:
+        issue_id = f"fn_{entry.entry_id}_linked_frigate_unavailable"
+        found[issue_id] = IssueSpec(
+            translation_key="linked_frigate_unavailable",
+            severity=ir.IssueSeverity.ERROR,
+        )
+        return FrigateEntryStatus.ACTION_REQUIRED
+
+    if frigate_entry.state is not ConfigEntryState.LOADED:
+        return FrigateEntryStatus.TRANSIENT
+
+    return FrigateEntryStatus.AVAILABLE
 
 
 def _check_cameras(

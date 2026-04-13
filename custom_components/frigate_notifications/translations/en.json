@@ -859,6 +859,10 @@
     }
   },
   "issues": {
+    "linked_frigate_unavailable": {
+      "title": "Linked Frigate integration unavailable",
+      "description": "The Frigate integration that this notification entry depends on is unavailable and needs attention. This usually means the Frigate entry was removed or failed during setup or migration.\n\n**If the Frigate entry failed:** fix the Frigate integration, then reload this integration after Frigate is healthy again.\n\n**If the Frigate entry was deleted and re-added:** delete this notification entry and create a new one linked to the new Frigate entry."
+    },
     "broken_camera_binding": {
       "title": "Profile \"{profile_name}\" references missing cameras",
       "description": "The profile **{profile_name}** is configured for cameras **{cameras}** which no longer exist in Frigate. Re-add the cameras in Frigate, or edit the profile to use valid cameras."

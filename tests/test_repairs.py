@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigSubentryData
+from homeassistant.config_entries import ConfigEntryState, ConfigSubentryData
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 import pytest
@@ -61,6 +61,61 @@ def mock_entry_with_stale_zone(
             ),
         ],
     )
+
+
+class TestRootCauseFrigateEntry:
+    """Tests for root-cause Frigate entry check and suppression."""
+
+    def test_missing_entry_creates_root_cause_and_suppresses_downstream(
+        self,
+        hass: HomeAssistant,
+        mock_frigate_data: dict[str, Any],
+    ) -> None:
+        """Missing/failed Frigate entry creates one ERROR issue; transient state is a no-op."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test",
+            data={"frigate_entry_id": "nonexistent_frigate"},
+            subentries_data=[
+                ConfigSubentryData(
+                    data={"name": "Ghost", "cameras": ["ghost_cam"]},
+                    subentry_type="profile",
+                    title="Ghost",
+                    unique_id="ghost_uid",
+                ),
+            ],
+        )
+        entry.add_to_hass(hass)
+
+        # Missing entry → root-cause issue only, no broken_cameras.
+        sync_repair_issues(hass, entry)
+        issue_reg = ir.async_get(hass)
+        domain_issues = {iid[1]: iss for iid, iss in issue_reg.issues.items() if iid[0] == DOMAIN}
+        assert len(domain_issues) == 1
+        root_id = f"fn_{entry.entry_id}_linked_frigate_unavailable"
+        assert root_id in domain_issues
+        assert domain_issues[root_id].severity == ir.IssueSeverity.ERROR
+
+        # Simulate Frigate entry appearing but still retrying (transient).
+        frigate_entry = MockConfigEntry(
+            domain="frigate",
+            title="Frigate",
+            entry_id="nonexistent_frigate",
+        )
+        frigate_entry.add_to_hass(hass)
+        # MockConfigEntry defaults to NOT_LOADED — transient, should no-op.
+        sync_repair_issues(hass, entry)
+        # Root-cause issue from previous sync should still be there (no-op doesn't clear).
+        assert root_id in {iid[1] for iid in issue_reg.issues if iid[0] == DOMAIN}
+
+        # Frigate loads successfully — inject config data and mark LOADED.
+        frigate_entry.mock_state(hass, ConfigEntryState.LOADED)
+        mock_frigate_data["nonexistent_frigate"] = mock_frigate_data[FRIGATE_ENTRY_ID]
+        sync_repair_issues(hass, entry)
+        remaining = {iid[1] for iid in issue_reg.issues if iid[0] == DOMAIN}
+        assert root_id not in remaining
+        # broken_cameras should now appear since ghost_cam doesn't exist in Frigate.
+        assert any("broken_cameras" in iid for iid in remaining)
 
 
 class TestBrokenCameraIssues:

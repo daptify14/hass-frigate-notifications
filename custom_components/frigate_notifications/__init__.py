@@ -75,12 +75,12 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConfigEntry) -> bool:
     """Set up Notifications for Frigate from a config entry."""
     frigate_entry_id = entry.data["frigate_entry_id"]
+    sync_repair_issues(hass, entry)
+
     config_view = get_frigate_config_view(hass, frigate_entry_id)
     if config_view is None:
         msg = f"Frigate entry {frigate_entry_id} not ready"
         raise ConfigEntryNotReady(msg)
-
-    sync_repair_issues(hass, entry)
 
     # Before update listener to avoid reload loop.
     _ensure_integration_subentry(hass, entry)
