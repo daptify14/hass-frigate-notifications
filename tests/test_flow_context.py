@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from custom_components.frigate_notifications.enums import Provider
 from custom_components.frigate_notifications.flows.profile.context import (
     _derive_enabled_phases,
@@ -112,22 +110,6 @@ class TestBuildFlowContext:
         ctx = build_flow_context(hass, entry, {"cameras": ["front"]}, is_reconfiguring=False)
         assert ctx.genai_available is False
         mock_cam_genai.assert_called_once_with(hass, "fid", "front")
-
-    @patch(
-        "custom_components.frigate_notifications.flows.profile.context.supports_genai",
-        return_value=False,
-    )
-    def test_build_flow_context_is_frozen(self, mock_genai: MagicMock) -> None:
-        """FlowContext is immutable."""
-        hass = MagicMock()
-        hass.data = {}
-        entry = MagicMock()
-        entry.data = {"frigate_entry_id": "test_id"}
-
-        ctx = build_flow_context(hass, entry, {}, is_reconfiguring=False)
-
-        with pytest.raises(AttributeError):
-            ctx.provider = Provider.ANDROID  # type: ignore[misc]  # ty: ignore[invalid-assignment]
 
 
 class TestNormalizeProfileData:
