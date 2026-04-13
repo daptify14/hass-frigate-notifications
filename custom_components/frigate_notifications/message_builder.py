@@ -250,6 +250,27 @@ def _build_zone_context(
     }
 
 
+def _render_zone_phrase(
+    review: Review,
+    profile: ProfileRuntime,
+    ctx: dict[str, Any],
+    hass: HomeAssistant | None,
+) -> str | None:
+    """Render zone_phrase override template. Returns None if no override applies."""
+    first_zone = review.zones[0] if review.zones else ""
+    zone_override_tpl = profile.zone_overrides.get(first_zone, "") if first_zone else ""
+    if not zone_override_tpl:
+        return None
+    if hass is None:
+        return zone_override_tpl
+    try:
+        rendered = render_template(hass, zone_override_tpl, ctx)
+        return rendered.strip() or "detected"
+    except TemplateError as err:
+        _LOGGER.warning("Zone phrase template failed for zone '%s': %s", first_zone, err)
+        return None
+
+
 def build_context(
     review: Review,
     config: ProfileRuntime,
@@ -288,16 +309,9 @@ def build_context(
     }
 
     # Render zone_phrase override against full context (override may be Jinja2).
-    first_zone = review.zones[0] if review.zones else ""
-    zone_override_tpl = config.zone_overrides.get(first_zone, "") if first_zone else ""
-    if zone_override_tpl and hass is not None:
-        try:
-            rendered = render_template(hass, zone_override_tpl, ctx)
-            ctx["zone_phrase"] = rendered.strip() or "detected"
-        except TemplateError as err:
-            _LOGGER.warning("Zone phrase template failed for zone '%s': %s", first_zone, err)
-    elif zone_override_tpl:
-        ctx["zone_phrase"] = zone_override_tpl
+    zone_phrase = _render_zone_phrase(review, config, ctx, hass)
+    if zone_phrase is not None:
+        ctx["zone_phrase"] = zone_phrase
 
     return ctx
 
@@ -325,37 +339,14 @@ def _build_emoji_overlay(
     hass: HomeAssistant | None,
 ) -> dict[str, Any]:
     """Build a shallow overlay with emoji-dependent keys recomputed."""
-    clean_objs = _clean_objects(review.objects)
-    first_obj = clean_objs[0] if clean_objs else ""
-    emoji = _get_emoji(first_obj, profile) if first_obj else ""
-
-    subjects = _build_subjects(review.objects, review.sub_labels, profile, emoji_mode=emoji_mode)
-    before_subjects = _build_subjects(
-        review.before_objects, review.before_sub_labels, profile, emoji_mode=emoji_mode
-    )
-    before_set = {s.lower() for s in before_subjects}
-    added = [s for s in subjects if s.lower() not in before_set]
-
     overlay = {
         **ctx,
-        "subject": subjects[0] if subjects else "",
-        "subjects": ", ".join(subjects),
-        "added_subject": ", ".join(added),
-        "emoji": emoji,
+        **_build_object_context(review, profile, emoji_mode=emoji_mode),
+        **_build_subject_context(review, profile, emoji_mode=emoji_mode),
     }
-
-    # Re-render zone_phrase if a zone override template exists.
-    first_zone = review.zones[0] if review.zones else ""
-    zone_override_tpl = profile.zone_overrides.get(first_zone, "") if first_zone else ""
-    if zone_override_tpl and hass is not None:
-        try:
-            rendered = render_template(hass, zone_override_tpl, overlay)
-            overlay["zone_phrase"] = rendered.strip() or "detected"
-        except TemplateError as err:
-            _LOGGER.warning(
-                "Zone phrase overlay template failed for zone '%s': %s", first_zone, err
-            )
-
+    zone_phrase = _render_zone_phrase(review, profile, overlay, hass)
+    if zone_phrase is not None:
+        overlay["zone_phrase"] = zone_phrase
     return overlay
 
 

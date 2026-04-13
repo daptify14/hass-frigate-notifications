@@ -552,7 +552,26 @@ class TestRenderNotification:
         )
         result = render_notification(hass, profile, review, Phase.INITIAL, phase, Lifecycle.NEW)
         assert result.subtitle == "detected"
-        assert "Zone phrase overlay template failed" in caplog.text
+        assert "Zone phrase template failed" in caplog.text
+
+    def test_zone_phrase_diverges_with_emoji_mode(self, hass: HomeAssistant) -> None:
+        """Zone override referencing subjects produces different zone_phrase per emoji mode."""
+        phase = PhaseConfig(
+            content=PhaseContent(
+                message_template="{{ zone_phrase }}",
+                subtitle_template="{{ zone_phrase }}",
+                emoji_message=False,
+                emoji_subtitle=True,
+            )
+        )
+        review = make_review(objects=["person"], zones=["front_yard"])
+        profile = make_profile(
+            emoji_map={"person": "\U0001f464"},
+            zone_overrides={"front_yard": "{{ subjects }} spotted"},
+        )
+        result = render_notification(hass, profile, review, Phase.INITIAL, phase, Lifecycle.NEW)
+        assert result.message == "Person spotted"
+        assert result.subtitle == "\U0001f464 Person spotted"
 
     @pytest.mark.parametrize(
         ("field", "phase_kwargs"),
