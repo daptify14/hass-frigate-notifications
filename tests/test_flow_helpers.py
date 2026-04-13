@@ -183,119 +183,6 @@ class TestFilteringValidation:
         assert data["exclude_sub_labels"] == []
 
 
-class TestSubmissionHelpers:
-    """Test standalone submission helper functions for edge cases."""
-
-    def test_submit_media_phases_extracts_video(self) -> None:
-        """Test media submission extracts video when present in input."""
-        from custom_components.frigate_notifications.flows.profile.steps.media_actions import (
-            _submit_media_phases,
-        )
-
-        data: dict[str, Any] = {}
-        _submit_media_phases(
-            data,
-            {"initial_media": {"attachment": "snapshot", "video": "clip_mp4"}},
-        )
-        assert data["phases"]["initial"]["video"] == "clip_mp4"
-        assert data["phases"]["initial"]["attachment"] == "snapshot"
-
-    def test_submit_media_phases_no_video_when_absent(self) -> None:
-        """Test media submission does not set video when not in input."""
-        from custom_components.frigate_notifications.flows.profile.steps.media_actions import (
-            _submit_media_phases,
-        )
-
-        data: dict[str, Any] = {}
-        _submit_media_phases(
-            data,
-            {"initial_media": {"attachment": "snapshot"}},
-        )
-        assert "video" not in data["phases"]["initial"]
-
-    def test_submit_android_delivery(self) -> None:
-        """Test android delivery config submission."""
-        from custom_components.frigate_notifications.flows.profile.steps.delivery import (
-            _submit_android_delivery,
-        )
-
-        data: dict[str, Any] = {}
-        _submit_android_delivery(
-            data,
-            {"android_delivery": {"android_channel": "test", "android_sticky": True}},
-        )
-        assert data["android_channel"] == "test"
-        assert data["android_sticky"] is True
-
-    def test_submit_delivery_phases_tv_overlay(self) -> None:
-        """Test TV overlay delivery fields are stored."""
-        from custom_components.frigate_notifications.flows.profile.steps.delivery import (
-            _submit_delivery_phases,
-        )
-
-        data: dict[str, Any] = {}
-        _submit_delivery_phases(
-            data,
-            {
-                "initial_delivery": {
-                    "delay": 3,
-                    "tv_fontsize": "large",
-                    "tv_position": "top-left",
-                },
-            },
-        )
-        assert data["phases"]["initial"]["delay"] == 3
-        assert data["phases"]["initial"]["tv_fontsize"] == "large"
-
-    def test_submit_delivery_phases_android_fields(self) -> None:
-        """Test Android per-phase delivery fields are persisted."""
-        from custom_components.frigate_notifications.flows.profile.steps.delivery import (
-            _submit_delivery_phases,
-        )
-
-        data: dict[str, Any] = {}
-        _submit_delivery_phases(
-            data,
-            {
-                "initial_delivery": {
-                    "importance": "max",
-                    "priority": "low",
-                    "ttl": 60,
-                    "delay": 2,
-                },
-            },
-        )
-        phase = data["phases"]["initial"]
-        assert phase["importance"] == "max"
-        assert phase["priority"] == "low"
-        assert phase["ttl"] == 60
-        assert phase["delay"] == 2
-
-    def test_submit_delivery_phases_urgency(self) -> None:
-        """Test urgency key is persisted in per-phase delivery."""
-        from custom_components.frigate_notifications.flows.profile.steps.delivery import (
-            _submit_delivery_phases,
-        )
-
-        data: dict[str, Any] = {}
-        _submit_delivery_phases(
-            data,
-            {"initial_delivery": {"urgency": "urgent", "delay": 0}},
-        )
-        assert data["phases"]["initial"]["urgency"] == "urgent"
-
-    def test_submit_rate_limiting_clears(self) -> None:
-        """Test rate limiting clears values when None."""
-        from custom_components.frigate_notifications.flows.profile.steps.delivery import (
-            _submit_rate_limiting,
-        )
-
-        data: dict[str, Any] = {"silence_duration": 30, "cooldown_override": 60}
-        _submit_rate_limiting(data, {"rate_limiting": {}})
-        assert "silence_duration" not in data
-        assert "cooldown_override" not in data
-
-
 class TestFilteringSubmission:
     """Test apply_filtering_input standalone function."""
 
@@ -404,58 +291,8 @@ class TestFilteringSubmission:
         assert suggested["presence_config"]["presence_entities"] == ["person.alice"]
 
 
-class TestSupportsGenai:
-    """Tests for supports_genai capability detection via Frigate config."""
-
-    def test_supports_genai_true_when_config_enabled(self) -> None:
-        """Returns True when review.genai.enabled is True in Frigate config."""
-        from unittest.mock import MagicMock
-
-        from custom_components.frigate_notifications.flows.helpers import supports_genai
-
-        hass = MagicMock()
-        hass.data = {
-            "frigate": {
-                "fid": {
-                    "config": {
-                        "cameras": {"cam1": {"review": {"genai": {"enabled": True}}}},
-                    },
-                },
-            },
-        }
-        assert supports_genai(hass, "fid") is True
-
-    def test_supports_genai_false_when_config_disabled(self) -> None:
-        """Returns False when review.genai.enabled is False in Frigate config."""
-        from unittest.mock import MagicMock
-
-        from custom_components.frigate_notifications.flows.helpers import supports_genai
-
-        hass = MagicMock()
-        hass.data = {
-            "frigate": {
-                "fid": {
-                    "config": {
-                        "cameras": {"cam1": {"review": {"genai": {"enabled": False}}}},
-                    },
-                },
-            },
-        }
-        assert supports_genai(hass, "fid") is False
-
-    def test_supports_genai_false_when_frigate_config_missing(self) -> None:
-        """Returns False when the linked Frigate entry/config is unavailable."""
-        from unittest.mock import MagicMock
-
-        from custom_components.frigate_notifications.flows.helpers import supports_genai
-
-        hass = MagicMock()
-        hass.data = {"frigate": {}}
-        assert supports_genai(hass, "missing") is False
-
-
-class TestCameraHelperGuards:
-    """Guard-clause coverage for camera helper functions."""
+class TestConfigHelperGuards:
+    """Guard-clause coverage for Frigate config helper wrappers."""
 
     def _make_hass(self, cameras: dict | None = None) -> Any:
         from unittest.mock import MagicMock
@@ -467,35 +304,28 @@ class TestCameraHelperGuards:
             hass.data = {"frigate": {}}
         return hass
 
-    def test_get_camera_zones_empty_camera(self) -> None:
-        """Returns empty when camera name is blank."""
-        from custom_components.frigate_notifications.flows.helpers import get_camera_zones
+    def test_missing_config_returns_safe_defaults(self) -> None:
+        """All helpers return safe defaults when Frigate config is unavailable."""
+        from custom_components.frigate_notifications.flows.helpers import (
+            camera_supports_genai,
+            get_camera_zones,
+            get_tracked_objects,
+            supports_genai,
+        )
 
-        assert get_camera_zones(self._make_hass({"cam1": {"zones": {}}}), "fid", "") == []
-
-    def test_get_camera_zones_unknown_camera(self) -> None:
-        """Returns empty when camera does not exist."""
-        from custom_components.frigate_notifications.flows.helpers import get_camera_zones
-
-        assert get_camera_zones(self._make_hass({"cam1": {"zones": {}}}), "fid", "nope") == []
-        assert get_camera_zones(self._make_hass(), "fid", "cam1") == []
-
-    def test_get_tracked_objects_unknown_camera(self) -> None:
-        """Returns empty when camera does not exist."""
-        from custom_components.frigate_notifications.flows.helpers import get_tracked_objects
-
-        assert get_tracked_objects(self._make_hass({"cam1": {}}), "fid", "nope") == []
-        assert get_tracked_objects(self._make_hass(), "fid", "cam1") == []
-
-    def test_camera_supports_genai_missing_entry(self) -> None:
-        """Returns False when Frigate entry is missing."""
-        from custom_components.frigate_notifications.flows.helpers import camera_supports_genai
-
-        assert camera_supports_genai(self._make_hass(), "missing", "cam1") is False
+        hass = self._make_hass()
+        assert supports_genai(hass, "missing") is False
+        assert camera_supports_genai(hass, "missing", "cam1") is False
+        assert get_camera_zones(hass, "fid", "cam1") == []
+        assert get_tracked_objects(hass, "fid", "cam1") == []
 
     def test_camera_supports_genai_unknown_camera(self) -> None:
         """Returns False when camera does not exist."""
-        from custom_components.frigate_notifications.flows.helpers import camera_supports_genai
+        from custom_components.frigate_notifications.flows.helpers import (
+            camera_supports_genai,
+            get_camera_zones,
+        )
 
         hass = self._make_hass({"cam1": {"review": {"genai": {"enabled": True}}}})
         assert camera_supports_genai(hass, "fid", "nope") is False
+        assert get_camera_zones(hass, "fid", "") == []

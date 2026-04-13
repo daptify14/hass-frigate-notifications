@@ -49,7 +49,7 @@ def format_camera_text(cameras: list[str] | tuple[str, ...]) -> str:
     if count <= 1:
         return humanize_zone(cameras[0])
     names = [humanize_zone(c) for c in cameras]
-    if count == 2:  # Two cameras: show both inline  # noqa: PLR2004
+    if count == 2:  # noqa: PLR2004
         return f"{names[0]}, {names[1]}"
     return f"{names[0]} +{count - 1}"
 

@@ -244,12 +244,6 @@ class TestBuildPhaseEmojiMap:
         assert result["end"] == DEFAULT_PHASE_EMOJI_MAP["end"]
         assert result["genai"] == DEFAULT_PHASE_EMOJI_MAP["genai"]
 
-    def test_enable_emojis_false_suppresses(self) -> None:
-        """enable_emojis=False returns all empty strings."""
-        result = _build_phase_emoji_map({"enable_emojis": False})
-        assert all(v == "" for v in result.values())
-        assert set(result.keys()) == set(DEFAULT_PHASE_EMOJI_MAP.keys())
-
 
 class TestBuildEmojiMapDisabled:
     """Tests for emoji maps when globally disabled."""

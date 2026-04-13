@@ -10,10 +10,12 @@ from custom_components.frigate_notifications.flows.profile.steps.basics import (
     build_basics_schema,
 )
 from custom_components.frigate_notifications.flows.profile.steps.delivery import (
-    _submit_rate_limiting,
     apply_delivery_input,
     build_delivery_schema,
     build_delivery_suggested,
+)
+from custom_components.frigate_notifications.flows.profile.steps.media_actions import (
+    apply_media_actions_input,
 )
 from custom_components.frigate_notifications.providers.base import get_capabilities
 
@@ -134,20 +136,101 @@ class TestDeliveryApplyCoercions:
 
 
 class TestDeliveryRateLimiting:
-    """Test rate limiting apply."""
+    """Test rate limiting via apply_delivery_input."""
 
     def test_rate_limiting_cooldown_coerced_to_int(self) -> None:
         """Cooldown override is coerced to int."""
-        data: dict[str, Any] = {}
-        _submit_rate_limiting(data, {"rate_limiting": {"cooldown_override": 120.0}})
-        assert data["cooldown_override"] == 120
-        assert isinstance(data["cooldown_override"], int)
+        ctx = _make_ctx(Provider.APPLE)
+        draft: dict[str, Any] = {}
+        apply_delivery_input(draft, {"rate_limiting": {"cooldown_override": 120.0}}, ctx)
+        assert draft["cooldown_override"] == 120
+        assert isinstance(draft["cooldown_override"], int)
 
     def test_rate_limiting_alert_once_stored(self) -> None:
         """alert_once=True is stored."""
-        data: dict[str, Any] = {}
-        _submit_rate_limiting(data, {"rate_limiting": {"alert_once": True}})
-        assert data["alert_once"] is True
+        ctx = _make_ctx(Provider.APPLE)
+        draft: dict[str, Any] = {}
+        apply_delivery_input(draft, {"rate_limiting": {"alert_once": True}}, ctx)
+        assert draft["alert_once"] is True
+
+    def test_rate_limiting_clears_stale_values(self) -> None:
+        """Empty rate_limiting input clears stale keys."""
+        ctx = _make_ctx(Provider.APPLE)
+        draft: dict[str, Any] = {
+            "silence_duration": 30,
+            "cooldown_override": 60,
+            "alert_once": True,
+        }
+        apply_delivery_input(draft, {"rate_limiting": {}}, ctx)
+        assert "silence_duration" not in draft
+        assert "cooldown_override" not in draft
+        assert "alert_once" not in draft
+
+
+class TestDeliveryFieldPersistence:
+    """Test that apply_delivery_input persists provider-specific fields."""
+
+    def test_android_channel_stored(self) -> None:
+        """Android delivery channel and sticky flag are persisted."""
+        ctx = _make_ctx(Provider.ANDROID)
+        draft: dict[str, Any] = {}
+        apply_delivery_input(
+            draft,
+            {"android_delivery": {"android_channel": "test", "android_sticky": True}},
+            ctx,
+        )
+        assert draft["android_channel"] == "test"
+        assert draft["android_sticky"] is True
+
+    def test_tv_overlay_stored(self) -> None:
+        """TV overlay delivery fields are persisted."""
+        ctx = _make_ctx(Provider.ANDROID_TV)
+        draft: dict[str, Any] = {}
+        apply_delivery_input(
+            draft,
+            {"initial_delivery": {"delay": 3, "tv_fontsize": "large", "tv_position": "top-left"}},
+            ctx,
+        )
+        assert draft["phases"]["initial"]["delay"] == 3
+        assert draft["phases"]["initial"]["tv_fontsize"] == "large"
+
+    def test_urgency_stored(self) -> None:
+        """Urgency key is persisted in per-phase delivery."""
+        ctx = _make_ctx(Provider.APPLE)
+        draft: dict[str, Any] = {}
+        apply_delivery_input(
+            draft,
+            {"initial_delivery": {"urgency": "urgent", "delay": 0}},
+            ctx,
+        )
+        assert draft["phases"]["initial"]["urgency"] == "urgent"
+
+
+class TestMediaActionsApply:
+    """Test apply_media_actions_input field persistence."""
+
+    def test_video_stored(self) -> None:
+        """Video field is persisted when present in input."""
+        ctx = _make_ctx(Provider.APPLE)
+        draft: dict[str, Any] = {}
+        apply_media_actions_input(
+            draft,
+            {"initial_media": {"attachment": "snapshot", "video": "clip_mp4"}},
+            ctx,
+        )
+        assert draft["phases"]["initial"]["video"] == "clip_mp4"
+        assert draft["phases"]["initial"]["attachment"] == "snapshot"
+
+    def test_no_video_when_absent(self) -> None:
+        """Video key is not introduced when absent from input."""
+        ctx = _make_ctx(Provider.APPLE)
+        draft: dict[str, Any] = {}
+        apply_media_actions_input(
+            draft,
+            {"initial_media": {"attachment": "snapshot"}},
+            ctx,
+        )
+        assert "video" not in draft["phases"]["initial"]
 
 
 class TestDeliverySuggested:

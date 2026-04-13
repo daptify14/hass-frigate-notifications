@@ -1,5 +1,6 @@
 """Tests for profile wizard, conditional visibility, multi-camera, and title template."""
 
+from collections.abc import Callable, Coroutine
 from typing import Any
 from unittest.mock import patch
 
@@ -424,45 +425,35 @@ class TestConditionalVisibility:
         assert "genai_media" in keys
         assert "update_media" not in keys
 
-    async def test_media_actions_tv_profile_omits_custom_actions(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+    @pytest.mark.parametrize(
+        ("advance_fn", "expected"),
+        [
+            (_advance_tv_to_content, False),
+            (_advance_to_content, True),
+        ],
+        ids=["tv-omits-custom-actions", "non-tv-shows-custom-actions"],
+    )
+    async def test_media_actions_custom_actions_visibility(
+        self,
+        hass: HomeAssistant,
+        mock_frigate_data: dict,
+        advance_fn: Callable[..., Coroutine[Any, Any, tuple[str, Any]]],
+        expected: bool,
     ) -> None:
-        """TV profiles do not show the custom_actions section in media_actions."""
+        """Custom actions visibility depends on provider type (TV vs non-TV)."""
         entry = _make_profile_entry(hass, mock_frigate_data)
-        flow_id, _ = await _advance_tv_to_content(hass, entry)
+        flow_id, _ = await advance_fn(hass, entry)
 
-        # Submit content to return to menu.
         result = await hass.config_entries.subentries.async_configure(flow_id, {})
         assert result["step_id"] == "customize"
 
-        # Enter media_actions from menu.
         result = await hass.config_entries.subentries.async_configure(
             flow_id, {"next_step_id": "media_actions"}
         )
         assert result["step_id"] == "media_actions"
 
         keys = _schema_section_keys(result)
-        assert "custom_actions" not in keys
-
-    async def test_media_actions_non_tv_shows_custom_actions(
-        self, hass: HomeAssistant, mock_frigate_data: dict
-    ) -> None:
-        """Non-TV profiles show the custom_actions section in media_actions."""
-        entry = _make_profile_entry(hass, mock_frigate_data)
-        flow_id, _ = await _advance_to_content(hass, entry)
-
-        # Submit content to return to menu.
-        result = await hass.config_entries.subentries.async_configure(flow_id, {})
-        assert result["step_id"] == "customize"
-
-        # Enter media_actions from menu.
-        result = await hass.config_entries.subentries.async_configure(
-            flow_id, {"next_step_id": "media_actions"}
-        )
-        assert result["step_id"] == "media_actions"
-
-        keys = _schema_section_keys(result)
-        assert "custom_actions" in keys
+        assert ("custom_actions" in keys) is expected
 
     async def test_media_actions_custom_actions_filters_disabled_phases(
         self, hass: HomeAssistant, mock_frigate_data: dict
@@ -575,10 +566,22 @@ class TestConditionalVisibility:
 class TestMultiCameraConfigFlow:
     """Tests for multi-camera profile config flow behavior."""
 
-    async def test_filtering_step_hides_zones_for_multi_camera(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+    @pytest.mark.parametrize(
+        ("cameras", "zones_expected"),
+        [
+            (["driveway", "backyard"], False),
+            (["driveway"], True),
+        ],
+        ids=["multi-camera-hides-zones", "single-camera-shows-zones"],
+    )
+    async def test_filtering_step_zone_field_visibility(
+        self,
+        hass: HomeAssistant,
+        mock_frigate_data: dict,
+        cameras: list[str],
+        zones_expected: bool,
     ) -> None:
-        """Zone fields are absent from filtering schema for multi-camera profiles."""
+        """Zone fields are shown for single-camera profiles and hidden for multi-camera."""
         entry = _make_profile_entry(hass, mock_frigate_data)
         result = await hass.config_entries.subentries.async_init(
             (entry.entry_id, "profile"), context={"source": "user"}
@@ -587,42 +590,15 @@ class TestMultiCameraConfigFlow:
             result["flow_id"], {"preset": "custom"}
         )
         flow_id = result["flow_id"]
-        await _basics_to_menu(
-            hass, flow_id, name="Multi", cameras=["driveway", "backyard"], provider="apple"
-        )
-
-        # Enter filtering from menu.
-        result = await hass.config_entries.subentries.async_configure(
-            flow_id, {"next_step_id": "filtering"}
-        )
-        assert result["step_id"] == "filtering"
-        keys = _schema_section_keys(result)
-        assert "required_zones" not in keys
-        assert "zone_match_mode" not in keys
-        assert "objects" in keys
-        assert "severity" in keys
-
-    async def test_filtering_step_shows_zones_for_single_camera(
-        self, hass: HomeAssistant, mock_frigate_data: dict
-    ) -> None:
-        """Zone fields are present in filtering schema for single-camera profiles."""
-        entry = _make_profile_entry(hass, mock_frigate_data)
-        result = await hass.config_entries.subentries.async_init(
-            (entry.entry_id, "profile"), context={"source": "user"}
-        )
-        result = await hass.config_entries.subentries.async_configure(
-            result["flow_id"], {"preset": "custom"}
-        )
-        flow_id = result["flow_id"]
-        await _basics_to_menu(hass, flow_id, name="Single", cameras=["driveway"], provider="apple")
+        await _basics_to_menu(hass, flow_id, name="Test", cameras=cameras, provider="apple")
 
         result = await hass.config_entries.subentries.async_configure(
             flow_id, {"next_step_id": "filtering"}
         )
         assert result["step_id"] == "filtering"
         keys = _schema_section_keys(result)
-        assert "required_zones" in keys
-        assert "zone_match_mode" in keys
+        assert ("required_zones" in keys) is zones_expected
+        assert ("zone_match_mode" in keys) is zones_expected
 
     async def test_filtering_step_merges_objects_across_cameras(
         self, hass: HomeAssistant, mock_frigate_entry: MockConfigEntry
@@ -736,37 +712,36 @@ class TestMultiCameraConfigFlow:
 class TestContentStep:
     """Tests for the content step — templates, validation, and preset resolution."""
 
-    async def test_content_title_template_override_stored(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+    @pytest.mark.parametrize(
+        ("input_value", "stored"),
+        [
+            ("Override: {{ camera_name }}", True),
+            ("", False),
+        ],
+        ids=["override-stored", "blank-not-stored"],
+    )
+    async def test_content_title_template_storage(
+        self,
+        hass: HomeAssistant,
+        mock_frigate_data: dict,
+        input_value: str,
+        stored: bool,
     ) -> None:
-        """Non-empty title_template in content step is stored in profile data."""
+        """Non-empty title_template is stored; blank is omitted for global fallback."""
         entry = _make_profile_entry(hass, mock_frigate_data)
         flow_id, _ = await _advance_to_content(hass, entry)
 
         result = await hass.config_entries.subentries.async_configure(
-            flow_id, {"title_template": "Override: {{ camera_name }}"}
+            flow_id, {"title_template": input_value}
         )
         assert result["step_id"] == "customize"
 
         result = await _save_from_menu(hass, flow_id)
         assert result["type"] is FlowResultType.CREATE_ENTRY
-        assert result["data"]["title_template"] == "Override: {{ camera_name }}"
-
-    async def test_content_title_template_blank_not_stored(
-        self, hass: HomeAssistant, mock_frigate_data: dict
-    ) -> None:
-        """Blank title_template is not stored, allowing global fallback."""
-        entry = _make_profile_entry(hass, mock_frigate_data)
-        flow_id, _ = await _advance_to_content(hass, entry)
-
-        result = await hass.config_entries.subentries.async_configure(
-            flow_id, {"title_template": ""}
-        )
-        assert result["step_id"] == "customize"
-
-        result = await _save_from_menu(hass, flow_id)
-        assert result["type"] is FlowResultType.CREATE_ENTRY
-        assert "title_template" not in result["data"]
+        if stored:
+            assert result["data"]["title_template"] == input_value
+        else:
+            assert "title_template" not in result["data"]
 
     async def test_content_invalid_templates_rejected(
         self, hass: HomeAssistant, mock_frigate_data: dict

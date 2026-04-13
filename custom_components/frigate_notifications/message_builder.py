@@ -123,33 +123,101 @@ def _format_duration(seconds: int) -> str:
     return f"{minutes}m {secs}s"
 
 
-def build_context(
-    review: Review,
-    config: ProfileRuntime,
-    phase: Phase,
-    lifecycle: Lifecycle,
-    *,
-    emoji_mode: bool = True,
-    hass: HomeAssistant | None = None,
-    global_zone_aliases: dict[str, dict[str, str]] | None = None,
+def _build_detection_context(review: Review) -> dict[str, Any]:
+    """Build detection-related template variables."""
+    first_det_id = review.detection_ids[0] if review.detection_ids else review.review_id
+    return {
+        "review_id": review.review_id,
+        "detection_id": first_det_id,
+        "detection_ids": ", ".join(review.detection_ids),
+        "detection_count": str(len(review.detection_ids)),
+        "latest_detection_id": review.latest_detection_id or first_det_id,
+    }
+
+
+def _build_genai_context(review: Review) -> dict[str, Any]:
+    """Build GenAI-related template variables."""
+    genai = review.genai
+    if not genai:
+        return {
+            "genai_title": "",
+            "genai_summary": "",
+            "genai_scene": "",
+            "genai_confidence": "",
+            "genai_threat_level": "",
+            "genai_concerns": "",
+            "genai_time": "",
+        }
+    return {
+        "genai_title": genai.title,
+        "genai_summary": genai.short_summary,
+        "genai_scene": genai.scene,
+        "genai_confidence": str(genai.confidence),
+        "genai_threat_level": str(genai.threat_level),
+        "genai_concerns": ", ".join(genai.other_concerns),
+        "genai_time": genai.time,
+    }
+
+
+def _build_time_context(review: Review) -> dict[str, Any]:
+    """Build time-related template variables."""
+    now = dt_util.now()
+    return {
+        "start_time": str(review.start_time),
+        "end_time": str(review.end_time) if review.end_time else "",
+        "duration": str(int(review.end_time - review.start_time)) if review.end_time else "",
+        "duration_human": (
+            _format_duration(int(review.end_time - review.start_time)) if review.end_time else ""
+        ),
+        "time": now.strftime("%-I:%M %p"),
+        "time_24hr": now.strftime("%H:%M"),
+    }
+
+
+def _build_object_context(
+    review: Review, config: ProfileRuntime, *, emoji_mode: bool
 ) -> dict[str, Any]:
-    """Build the complete variable context dict for template rendering."""
+    """Build object-related template variables."""
     clean_objs = _clean_objects(review.objects)
     first_obj = clean_objs[0] if clean_objs else ""
-    first_zone = review.zones[0] if review.zones else ""
-    last_zone = review.zones[-1] if review.zones else ""
-
     emoji = _get_emoji(first_obj, config) if first_obj else ""
-    subjects = _build_subjects(review.objects, review.sub_labels, config, emoji_mode=emoji_mode)
-    first_subject = subjects[0] if subjects else ""
-    subjects_str = ", ".join(subjects)
+    return {
+        "object": first_obj.replace("_", " ").title() if first_obj else "",
+        "objects": ", ".join(o.replace("_", " ").title() for o in clean_objs),
+        "objects_raw": ", ".join(review.objects),
+        "object_count": str(len(clean_objs)),
+        "emoji": emoji,
+    }
 
+
+def _build_subject_context(
+    review: Review, config: ProfileRuntime, *, emoji_mode: bool
+) -> dict[str, Any]:
+    """Build subject-related template variables."""
+    subjects = _build_subjects(review.objects, review.sub_labels, config, emoji_mode=emoji_mode)
     before_subjects = _build_subjects(
         review.before_objects, review.before_sub_labels, config, emoji_mode=emoji_mode
     )
     before_set = {s.lower() for s in before_subjects}
     added = [s for s in subjects if s.lower() not in before_set]
-    added_subject = ", ".join(added)
+    return {
+        "subject": subjects[0] if subjects else "",
+        "subjects": ", ".join(subjects),
+        "added_subject": ", ".join(added),
+        "sub_label": review.sub_labels[0] if review.sub_labels else "",
+        "sub_labels": ", ".join(dict.fromkeys(review.sub_labels)),
+        "sub_labels_raw": ", ".join(review.sub_labels),
+    }
+
+
+def _build_zone_context(
+    review: Review,
+    config: ProfileRuntime,
+    global_zone_aliases: dict[str, dict[str, str]] | None,
+) -> dict[str, Any]:
+    """Build zone-related template variables."""
+    first_zone = review.zones[0] if review.zones else ""
+    last_zone = review.zones[-1] if review.zones else ""
 
     if first_zone:
         if config.zone_aliases:
@@ -163,37 +231,10 @@ def build_context(
         zone_alias = ""
 
     zone_text = config.zone_overrides.get(first_zone, zone_alias) if first_zone else ""
-
     before_zones_set = set(review.before_zones)
     added_zones = ", ".join(humanize_zone(z) for z in sorted(set(review.zones) - before_zones_set))
 
-    genai = review.genai
-    genai_summary = genai.short_summary if genai else ""
-
-    first_det_id = review.detection_ids[0] if review.detection_ids else review.review_id
-    latest_det_id = review.latest_detection_id or first_det_id
-
-    phase_emoji = config.phase_emoji_map.get(phase.value, "")
-
-    now = dt_util.now()
-
-    ctx: dict[str, Any] = {
-        "camera": review.camera,
-        "camera_name": humanize_zone(review.camera),
-        "profile_cameras": ", ".join(config.cameras),
-        "profile_cameras_name": ", ".join(humanize_zone(c) for c in config.cameras),
-        "object": first_obj.replace("_", " ").title() if first_obj else "",
-        "objects": ", ".join(o.replace("_", " ").title() for o in clean_objs),
-        "objects_raw": ", ".join(review.objects),
-        "object_count": str(len(clean_objs)),
-        "subject": first_subject,
-        "subjects": subjects_str,
-        "added_subject": added_subject,
-        "sub_label": review.sub_labels[0] if review.sub_labels else "",
-        "sub_labels": ", ".join(dict.fromkeys(review.sub_labels)),
-        "sub_labels_raw": ", ".join(review.sub_labels),
-        "emoji": emoji,
-        "severity": review.severity,
+    return {
         "zone": first_zone,
         "zones": ", ".join(humanize_zone(z) for z in review.zones),
         "zones_raw": ", ".join(review.zones),
@@ -206,19 +247,49 @@ def build_context(
         "zone_alias": zone_alias,
         "zone_phrase": "detected",
         "added_zones": added_zones,
-        "review_id": review.review_id,
-        "detection_id": first_det_id,
-        "detection_ids": ", ".join(review.detection_ids),
-        "detection_count": str(len(review.detection_ids)),
-        "latest_detection_id": latest_det_id,
-        "start_time": str(review.start_time),
-        "end_time": str(review.end_time) if review.end_time else "",
-        "duration": str(int(review.end_time - review.start_time)) if review.end_time else "",
-        "duration_human": (
-            _format_duration(int(review.end_time - review.start_time)) if review.end_time else ""
-        ),
-        "time": now.strftime("%-I:%M %p"),
-        "time_24hr": now.strftime("%H:%M"),
+    }
+
+
+def _render_zone_phrase(
+    review: Review,
+    profile: ProfileRuntime,
+    ctx: dict[str, Any],
+    hass: HomeAssistant | None,
+) -> str | None:
+    """Render zone_phrase override template. Returns None if no override applies."""
+    first_zone = review.zones[0] if review.zones else ""
+    zone_override_tpl = profile.zone_overrides.get(first_zone, "") if first_zone else ""
+    if not zone_override_tpl:
+        return None
+    if hass is None:
+        return zone_override_tpl
+    try:
+        rendered = render_template(hass, zone_override_tpl, ctx)
+        return rendered.strip() or "detected"
+    except TemplateError as err:
+        _LOGGER.warning("Zone phrase template failed for zone '%s': %s", first_zone, err)
+        return None
+
+
+def build_context(
+    review: Review,
+    config: ProfileRuntime,
+    phase: Phase,
+    lifecycle: Lifecycle,
+    *,
+    emoji_mode: bool = True,
+    hass: HomeAssistant | None = None,
+    global_zone_aliases: dict[str, dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    """Build the complete variable context dict for template rendering."""
+    phase_emoji = config.phase_emoji_map.get(phase.value, "")
+
+    ctx: dict[str, Any] = {
+        "camera": review.camera,
+        "camera_name": humanize_zone(review.camera),
+        "profile_cameras": ", ".join(config.cameras),
+        "profile_cameras_name": ", ".join(humanize_zone(c) for c in config.cameras),
+        "severity": review.severity,
         "phase": str(phase),
         "lifecycle": str(lifecycle),
         "phase_emoji": phase_emoji,
@@ -226,28 +297,21 @@ def build_context(
         "is_update": phase == Phase.UPDATE,
         "is_end": phase == Phase.END,
         "is_genai": phase == Phase.GENAI,
-        "genai_title": genai.title if genai else "",
-        "genai_summary": genai_summary,
-        "genai_scene": genai.scene if genai else "",
-        "genai_confidence": str(genai.confidence) if genai else "",
-        "genai_threat_level": str(genai.threat_level) if genai else "",
-        "genai_concerns": ", ".join(genai.other_concerns) if genai else "",
-        "genai_time": genai.time if genai else "",
         "base_url": config.base_url,
         "frigate_url": config.frigate_url,
         "client_id": config.client_id,
+        **_build_object_context(review, config, emoji_mode=emoji_mode),
+        **_build_subject_context(review, config, emoji_mode=emoji_mode),
+        **_build_zone_context(review, config, global_zone_aliases),
+        **_build_detection_context(review),
+        **_build_genai_context(review),
+        **_build_time_context(review),
     }
 
     # Render zone_phrase override against full context (override may be Jinja2).
-    zone_override_tpl = config.zone_overrides.get(first_zone, "") if first_zone else ""
-    if zone_override_tpl and hass is not None:
-        try:
-            rendered = render_template(hass, zone_override_tpl, ctx)
-            ctx["zone_phrase"] = rendered.strip() or "detected"
-        except TemplateError as err:
-            _LOGGER.warning("Zone phrase template failed for zone '%s': %s", first_zone, err)
-    elif zone_override_tpl:
-        ctx["zone_phrase"] = zone_override_tpl
+    zone_phrase = _render_zone_phrase(review, config, ctx, hass)
+    if zone_phrase is not None:
+        ctx["zone_phrase"] = zone_phrase
 
     return ctx
 
@@ -275,37 +339,14 @@ def _build_emoji_overlay(
     hass: HomeAssistant | None,
 ) -> dict[str, Any]:
     """Build a shallow overlay with emoji-dependent keys recomputed."""
-    clean_objs = _clean_objects(review.objects)
-    first_obj = clean_objs[0] if clean_objs else ""
-    emoji = _get_emoji(first_obj, profile) if first_obj else ""
-
-    subjects = _build_subjects(review.objects, review.sub_labels, profile, emoji_mode=emoji_mode)
-    before_subjects = _build_subjects(
-        review.before_objects, review.before_sub_labels, profile, emoji_mode=emoji_mode
-    )
-    before_set = {s.lower() for s in before_subjects}
-    added = [s for s in subjects if s.lower() not in before_set]
-
     overlay = {
         **ctx,
-        "subject": subjects[0] if subjects else "",
-        "subjects": ", ".join(subjects),
-        "added_subject": ", ".join(added),
-        "emoji": emoji,
+        **_build_object_context(review, profile, emoji_mode=emoji_mode),
+        **_build_subject_context(review, profile, emoji_mode=emoji_mode),
     }
-
-    # Re-render zone_phrase if a zone override template exists.
-    first_zone = review.zones[0] if review.zones else ""
-    zone_override_tpl = profile.zone_overrides.get(first_zone, "") if first_zone else ""
-    if zone_override_tpl and hass is not None:
-        try:
-            rendered = render_template(hass, zone_override_tpl, overlay)
-            overlay["zone_phrase"] = rendered.strip() or "detected"
-        except TemplateError as err:
-            _LOGGER.warning(
-                "Zone phrase overlay template failed for zone '%s': %s", first_zone, err
-            )
-
+    zone_phrase = _render_zone_phrase(review, profile, overlay, hass)
+    if zone_phrase is not None:
+        overlay["zone_phrase"] = zone_phrase
     return overlay
 
 

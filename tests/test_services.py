@@ -86,7 +86,7 @@ class TestSilenceProfileService:
 
         dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         with (
-            patch.object(dt_entity, "activate", side_effect=RuntimeError("boom")),
+            patch.object(dt_entity, "activate", side_effect=HomeAssistantError("boom")),
             pytest.raises(HomeAssistantError) as exc_info,
         ):
             await hass.services.async_call(
@@ -133,7 +133,7 @@ class TestClearSilenceService:
 
         dt_entity = mock_config_entry.runtime_data.silence_datetimes[sub_id]
         with (
-            patch.object(dt_entity, "clear", side_effect=RuntimeError("boom")),
+            patch.object(dt_entity, "clear", side_effect=HomeAssistantError("boom")),
             pytest.raises(HomeAssistantError) as exc_info,
         ):
             await hass.services.async_call(

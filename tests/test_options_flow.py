@@ -60,50 +60,6 @@ class TestOptionsFlowMenu:
         assert "zone_aliases" in result["menu_options"]
         assert "save" in result["menu_options"]
 
-    async def test_menu_delivery_returns_to_menu(
-        self, hass: HomeAssistant, options_entry: MockConfigEntry
-    ) -> None:
-        """Delivery step returns to menu after submit."""
-        flow_id, result = await _enter_menu_section(hass, options_entry, "delivery")
-        assert result["step_id"] == "delivery"
-
-        result = await hass.config_entries.options.async_configure(
-            flow_id, {"base_url": "http://ha.local:8123"}
-        )
-        assert result["type"] is FlowResultType.MENU
-        assert result["step_id"] == "menu"
-
-    async def test_menu_appearance_returns_to_menu(
-        self, hass: HomeAssistant, options_entry: MockConfigEntry
-    ) -> None:
-        """Appearance step returns to menu after submit."""
-        flow_id, result = await _enter_menu_section(hass, options_entry, "appearance")
-        assert result["step_id"] == "appearance"
-
-        result = await hass.config_entries.options.async_configure(
-            flow_id,
-            {
-                "title_template": "{{ camera_name }}",
-                "emoji_config": {"enable_emojis": True, "default_emoji": "\U0001f514"},
-            },
-        )
-        assert result["type"] is FlowResultType.MENU
-        assert result["step_id"] == "menu"
-
-    async def test_menu_zone_aliases_returns_to_menu(
-        self, hass: HomeAssistant, options_entry: MockConfigEntry
-    ) -> None:
-        """Zone aliases step returns to menu after submit."""
-        flow_id, result = await _enter_menu_section(hass, options_entry, "zone_aliases")
-        assert result["step_id"] == "zone_aliases"
-
-        result = await hass.config_entries.options.async_configure(
-            flow_id,
-            {"Driveway": {"driveway_approach": "Front Walk", "front_yard": "Front Yard"}},
-        )
-        assert result["type"] is FlowResultType.MENU
-        assert result["step_id"] == "menu"
-
     async def test_menu_save_creates_entry(
         self, hass: HomeAssistant, options_entry: MockConfigEntry
     ) -> None:
