@@ -9,20 +9,20 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components import mqtt
-from homeassistant.config_entries import ConfigSubentry
+from homeassistant.config_entries import SIGNAL_CONFIG_ENTRY_CHANGED, ConfigSubentry
 from homeassistant.const import Platform
 from homeassistant.core import callback
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.debounce import Debouncer
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_track_time_interval
 
 from .actions import setup_action_listener
 from .const import (
     CLEANUP_INTERVAL,
     DOMAIN,
-    FRIGATE_DOMAIN,
     SUBENTRY_TYPE_INTEGRATION,
     SUBENTRY_TYPE_PROFILE,
     TOPIC_SUFFIX_REVIEWS,
@@ -42,7 +42,7 @@ from .repairs import delete_all_issues_for_entry, sync_repair_issues
 from .services import register_services
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.config_entries import ConfigEntry, ConfigEntryChange
     from homeassistant.core import Event, HomeAssistant
     from homeassistant.helpers.device_registry import DeviceEntry
 
@@ -147,7 +147,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
     unsub_cleanup = async_track_time_interval(hass, _cleanup, timedelta(seconds=CLEANUP_INTERVAL))
     entry.async_on_unload(unsub_cleanup)
 
-    _setup_frigate_device_listener(hass, entry, frigate_entry_id)
+    _setup_repair_sync_listener(hass, entry)
 
     _LOGGER.debug(
         "Setup complete for %s: %d profiles, topic=%s",
@@ -190,10 +190,8 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-def _setup_frigate_device_listener(
-    hass: HomeAssistant, entry: ConfigEntry, frigate_entry_id: str
-) -> None:
-    """Subscribe to device-registry changes and re-sync repairs when Frigate topology changes."""
+def _setup_repair_sync_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Subscribe to repair-relevant changes and re-sync repair issues."""
 
     async def _async_sync_repairs() -> None:
         sync_repair_issues(hass, entry)
@@ -207,31 +205,32 @@ def _setup_frigate_device_listener(
     )
 
     @callback
-    def _frigate_device_filter(event_data: dr.EventDeviceRegistryUpdatedData) -> bool:
-        return event_data["action"] in ("create", "remove")
+    def _on_device_updated(_event: Event[dr.EventDeviceRegistryUpdatedData]) -> None:
+        debouncer.async_schedule_call()
 
     @callback
-    def _on_device_registry_updated(event: Event[dr.EventDeviceRegistryUpdatedData]) -> None:
-        data = event.data
-        if data["action"] == "remove":
-            identifiers: Any = data["device"]["identifiers"]
-        else:
-            device = dr.async_get(hass).async_get(data["device_id"])
-            if device is None:
-                return
-            identifiers = device.identifiers
-
-        if not any(domain == FRIGATE_DOMAIN for domain, _ident in identifiers):
-            return
-
+    def _on_entity_updated(_event: Event[er.EventEntityRegistryUpdatedData]) -> None:
         debouncer.async_schedule_call()
+
+    @callback
+    def _on_config_entry_changed(_change: ConfigEntryChange, changed_entry: ConfigEntry) -> None:
+        if changed_entry.entry_id == entry.data["frigate_entry_id"]:
+            debouncer.async_schedule_call()
 
     entry.async_on_unload(
         hass.bus.async_listen(
             dr.EVENT_DEVICE_REGISTRY_UPDATED,
-            _on_device_registry_updated,
-            event_filter=_frigate_device_filter,
+            _on_device_updated,
         )
+    )
+    entry.async_on_unload(
+        hass.bus.async_listen(
+            er.EVENT_ENTITY_REGISTRY_UPDATED,
+            _on_entity_updated,
+        )
+    )
+    entry.async_on_unload(
+        async_dispatcher_connect(hass, SIGNAL_CONFIG_ENTRY_CHANGED, _on_config_entry_changed)
     )
     entry.async_on_unload(debouncer.async_shutdown)
 

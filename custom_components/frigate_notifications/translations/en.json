@@ -870,6 +870,10 @@
     "stale_zone_config": {
       "title": "Profile \"{profile_name}\" references missing zones",
       "description": "The profile **{profile_name}** requires zones **{zones}** which no longer exist in Frigate. Edit the profile to update zone filtering, or re-add the zones in Frigate."
+    },
+    "stale_reference": {
+      "title": "Home Assistant reference missing: {reference}",
+      "description": "The configured Home Assistant reference **{reference}** no longer exists. Affected profiles: **{profiles}**. Update it in {location}."
     }
   }
 }
