@@ -57,7 +57,7 @@ async def _handle_silence_profile(call: ServiceCall) -> None:
     entity = _get_silence_entity(hass, profile_id)
     try:
         entity.activate(duration_minutes=duration)
-    except Exception as err:
+    except HomeAssistantError as err:
         _LOGGER.exception("Failed to silence profile %s", profile_id)
         raise HomeAssistantError(
             translation_domain=DOMAIN,
@@ -73,7 +73,7 @@ async def _handle_clear_silence(call: ServiceCall) -> None:
     entity = _get_silence_entity(hass, profile_id)
     try:
         entity.clear()
-    except Exception as err:
+    except HomeAssistantError as err:
         _LOGGER.exception("Failed to clear silence for profile %s", profile_id)
         raise HomeAssistantError(
             translation_domain=DOMAIN,

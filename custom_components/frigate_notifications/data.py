@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 import logging
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.helpers import device_registry as dr
 from homeassistant.util import slugify
 
@@ -85,8 +86,6 @@ type FrigateNotificationsConfigEntry = ConfigEntry[FrigateNotificationsRuntimeDa
 
 def iter_loaded_entries(hass: HomeAssistant) -> Iterator[FrigateNotificationsConfigEntry]:
     """Yield all loaded config entries for this domain."""
-    from homeassistant.config_entries import ConfigEntryState
-
     for entry in hass.config_entries.async_entries(DOMAIN):
         if entry.state is ConfigEntryState.LOADED:
             yield entry  # type: ignore[misc]
