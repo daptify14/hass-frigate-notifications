@@ -2,125 +2,126 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import logging
 from typing import TYPE_CHECKING
 
 from homeassistant.helpers import issue_registry as ir
-from homeassistant.util import slugify
 
 from .const import DOMAIN, SUBENTRY_TYPE_PROFILE
 from .frigate_config import get_frigate_config_view
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.config_entries import ConfigEntry, ConfigSubentry
     from homeassistant.core import HomeAssistant
+
+    from .frigate_config import FrigateConfigView
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def sync_broken_camera_issues(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Create/resolve repair issues for profiles bound to missing Frigate cameras."""
-    frigate_entry_id = entry.data["frigate_entry_id"]
-    config_view = get_frigate_config_view(hass, frigate_entry_id)
-    if config_view is None:
-        return
-    available = config_view.camera_names()
+@dataclass(frozen=True)
+class IssueSpec:
+    """Specification for a repair issue to create or keep."""
 
-    active_issue_keys: set[tuple[str, str]] = set()
-
-    for subentry in entry.subentries.values():
-        if subentry.subentry_type != SUBENTRY_TYPE_PROFILE:
-            continue
-        profile_name = subentry.data.get("name", subentry.title)
-        for camera in subentry.data.get("cameras", []):
-            if camera and camera not in available:
-                active_issue_keys.add((subentry.subentry_id, camera))
-                issue_id = (
-                    f"broken_camera_{entry.entry_id}_{subentry.subentry_id}_{slugify(camera)}"
-                )
-                ir.async_create_issue(
-                    hass,
-                    DOMAIN,
-                    issue_id,
-                    is_fixable=False,
-                    severity=ir.IssueSeverity.ERROR,
-                    translation_key="broken_camera_binding",
-                    translation_placeholders={
-                        "profile_name": profile_name,
-                        "camera": camera,
-                    },
-                )
-
-    active_slugs = {f"{sub_id}_{slugify(cam)}" for sub_id, cam in active_issue_keys}
-    prefix = f"broken_camera_{entry.entry_id}_"
-
-    issue_reg = ir.async_get(hass)
-    for issue_id, _issue in list(issue_reg.issues.items()):
-        if issue_id[0] != DOMAIN:
-            continue
-        iid = issue_id[1]
-        if iid.startswith(prefix):
-            suffix = iid[len(prefix) :]
-            if suffix not in active_slugs:
-                ir.async_delete_issue(hass, DOMAIN, iid)
+    translation_key: str
+    translation_placeholders: dict[str, str] = field(default_factory=dict)
+    severity: ir.IssueSeverity = ir.IssueSeverity.WARNING
 
 
-def sync_stale_zone_issues(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Create/resolve repair issues for zone configs referencing nonexistent zones."""
+def sync_repair_issues(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Validate all profiles and global config, sync repair issues."""
     frigate_entry_id = entry.data["frigate_entry_id"]
     config_view = get_frigate_config_view(hass, frigate_entry_id)
     if config_view is None:
         return
 
-    all_frigate_zones: set[str] = set()
-    for camera in config_view.cameras.values():
-        all_frigate_zones.update(camera.zones)
-
-    active_subentry_ids: set[str] = set()
+    found: dict[str, IssueSpec] = {}
 
     for subentry in entry.subentries.values():
         if subentry.subentry_type != SUBENTRY_TYPE_PROFILE:
             continue
-        required_zones = subentry.data.get("required_zones", [])
-        stale = [z for z in required_zones if z not in all_frigate_zones]
-        if stale:
-            active_subentry_ids.add(subentry.subentry_id)
-            profile_name = subentry.data.get("name", subentry.title)
-            issue_id = f"stale_zone_{entry.entry_id}_{subentry.subentry_id}"
-            ir.async_create_issue(
-                hass,
-                DOMAIN,
-                issue_id,
-                is_fixable=False,
-                severity=ir.IssueSeverity.ERROR,
-                translation_key="stale_zone_config",
-                translation_placeholders={
-                    "profile_name": profile_name,
-                    "zones": ", ".join(sorted(stale)),
-                },
-            )
+        _check_cameras(entry, subentry, config_view, found)
+        _check_zones(entry, subentry, config_view, found)
 
-    prefix = f"stale_zone_{entry.entry_id}_"
-    issue_reg = ir.async_get(hass)
-    for issue_id, _issue in list(issue_reg.issues.items()):
-        if issue_id[0] != DOMAIN:
-            continue
-        iid = issue_id[1]
-        if iid.startswith(prefix):
-            sub_id = iid[len(prefix) :]
-            if sub_id not in active_subentry_ids:
-                ir.async_delete_issue(hass, DOMAIN, iid)
+    _reconcile(hass, entry.entry_id, found)
 
 
 def delete_all_issues_for_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Delete all repair issues associated with a config entry."""
+    prefix = f"fn_{entry.entry_id}_"
     issue_reg = ir.async_get(hass)
-    prefixes = (
-        f"broken_camera_{entry.entry_id}_",
-        f"stale_zone_{entry.entry_id}_",
+    for domain, iid in list(issue_reg.issues):
+        if domain == DOMAIN and iid.startswith(prefix):
+            ir.async_delete_issue(hass, DOMAIN, iid)
+
+
+def _check_cameras(
+    entry: ConfigEntry,
+    subentry: ConfigSubentry,
+    config_view: FrigateConfigView,
+    found: dict[str, IssueSpec],
+) -> None:
+    """Produce an IssueSpec if the profile references missing cameras."""
+    available = config_view.camera_names()
+    broken = [cam for cam in subentry.data.get("cameras", []) if cam and cam not in available]
+    if not broken:
+        return
+    issue_id = f"fn_{entry.entry_id}_{subentry.subentry_id}_broken_cameras"
+    found[issue_id] = IssueSpec(
+        translation_key="broken_camera_binding",
+        translation_placeholders={
+            "profile_name": subentry.data.get("name", subentry.title),
+            "cameras": ", ".join(sorted(broken)),
+        },
     )
-    for issue_id, _issue in list(issue_reg.issues.items()):
-        if issue_id[0] != DOMAIN:
-            continue
-        if issue_id[1].startswith(prefixes):
-            ir.async_delete_issue(hass, DOMAIN, issue_id[1])
+
+
+def _check_zones(
+    entry: ConfigEntry,
+    subentry: ConfigSubentry,
+    config_view: FrigateConfigView,
+    found: dict[str, IssueSpec],
+) -> None:
+    """Produce an IssueSpec if the profile references nonexistent zones."""
+    all_zones: set[str] = set()
+    for camera in config_view.cameras.values():
+        all_zones.update(camera.zones)
+
+    required_zones = subentry.data.get("required_zones", [])
+    stale = [z for z in required_zones if z not in all_zones]
+    if not stale:
+        return
+    issue_id = f"fn_{entry.entry_id}_{subentry.subentry_id}_stale_zones"
+    found[issue_id] = IssueSpec(
+        translation_key="stale_zone_config",
+        translation_placeholders={
+            "profile_name": subentry.data.get("name", subentry.title),
+            "zones": ", ".join(sorted(stale)),
+        },
+    )
+
+
+def _reconcile(
+    hass: HomeAssistant,
+    entry_id: str,
+    found: dict[str, IssueSpec],
+) -> None:
+    """Single-pass reconciliation against the issue registry."""
+    prefix = f"fn_{entry_id}_"
+    issue_reg = ir.async_get(hass)
+
+    for issue_id, spec in found.items():
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            issue_id,
+            is_fixable=False,
+            severity=spec.severity,
+            translation_key=spec.translation_key,
+            translation_placeholders=spec.translation_placeholders,
+        )
+
+    for domain, iid in list(issue_reg.issues):
+        if domain == DOMAIN and iid.startswith(prefix) and iid not in found:
+            ir.async_delete_issue(hass, DOMAIN, iid)

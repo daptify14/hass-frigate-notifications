@@ -38,11 +38,7 @@ from .filters import build_default_filter_chain
 from .frigate_config import get_frigate_config_view
 from .presets import async_ensure_preset_cache
 from .processor import ReviewProcessor
-from .repairs import (
-    delete_all_issues_for_entry,
-    sync_broken_camera_issues,
-    sync_stale_zone_issues,
-)
+from .repairs import delete_all_issues_for_entry, sync_repair_issues
 from .services import register_services
 
 if TYPE_CHECKING:
@@ -84,8 +80,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
         msg = f"Frigate entry {frigate_entry_id} not ready"
         raise ConfigEntryNotReady(msg)
 
-    sync_broken_camera_issues(hass, entry)
-    sync_stale_zone_issues(hass, entry)
+    sync_repair_issues(hass, entry)
 
     # Before update listener to avoid reload loop.
     _ensure_integration_subentry(hass, entry)
@@ -201,10 +196,7 @@ def _setup_frigate_device_listener(
     """Subscribe to device-registry changes and re-sync repairs when Frigate topology changes."""
 
     async def _async_sync_repairs() -> None:
-        if get_frigate_config_view(hass, frigate_entry_id) is None:
-            return
-        sync_broken_camera_issues(hass, entry)
-        sync_stale_zone_issues(hass, entry)
+        sync_repair_issues(hass, entry)
 
     debouncer = Debouncer(
         hass,
