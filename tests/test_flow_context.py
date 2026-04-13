@@ -77,14 +77,21 @@ class TestBuildFlowContext:
         assert ctx.capabilities == get_capabilities(Provider.ANDROID)
         assert ctx.is_reconfiguring is True
 
-    @patch(
-        "custom_components.frigate_notifications.flows.profile.context.supports_genai",
-        return_value=True,
-    )
-    def test_build_flow_context_passes_cameras(self, mock_genai: MagicMock) -> None:
-        """available_cameras comes from get_available_cameras; no draft cameras falls back."""
+    def test_build_flow_context_passes_cameras_and_genai(self) -> None:
+        """available_cameras from config; genai_available reflects config state."""
         hass = MagicMock()
-        hass.data = {"frigate": {"fid": {"config": {"cameras": {"front": {}, "back": {}}}}}}
+        hass.data = {
+            "frigate": {
+                "fid": {
+                    "config": {
+                        "cameras": {
+                            "front": {"review": {"genai": {"enabled": True}}},
+                            "back": {},
+                        },
+                    },
+                },
+            },
+        }
         entry = MagicMock()
         entry.data = {"frigate_entry_id": "fid"}
 
@@ -92,24 +99,27 @@ class TestBuildFlowContext:
 
         assert sorted(ctx.available_cameras) == ["back", "front"]
         assert ctx.genai_available is True
-        mock_genai.assert_called_once()
 
-    @patch(
-        "custom_components.frigate_notifications.flows.profile.context.camera_supports_genai",
-    )
-    def test_build_flow_context_genai_scoped_to_draft_cameras(
-        self, mock_cam_genai: MagicMock
-    ) -> None:
+    def test_build_flow_context_genai_scoped_to_draft_cameras(self) -> None:
         """GenAI check uses only draft cameras when present, not all cameras."""
         hass = MagicMock()
-        hass.data = {"frigate": {"fid": {"config": {"cameras": {"front": {}, "back": {}}}}}}
+        hass.data = {
+            "frigate": {
+                "fid": {
+                    "config": {
+                        "cameras": {
+                            "front": {"review": {"genai": {"enabled": False}}},
+                            "back": {"review": {"genai": {"enabled": True}}},
+                        },
+                    },
+                },
+            },
+        }
         entry = MagicMock()
         entry.data = {"frigate_entry_id": "fid"}
 
-        mock_cam_genai.return_value = False
         ctx = build_flow_context(hass, entry, {"cameras": ["front"]}, is_reconfiguring=False)
         assert ctx.genai_available is False
-        mock_cam_genai.assert_called_once_with(hass, "fid", "front")
 
 
 class TestNormalizeProfileData:

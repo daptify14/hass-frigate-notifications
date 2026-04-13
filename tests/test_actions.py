@@ -74,7 +74,10 @@ class TestActionListener:
         assert dt_entity.native_value is not None
 
     async def test_silence_action_unknown_profile(
-        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+        self,
+        hass: HomeAssistant,
+        mock_config_entry: MockConfigEntry,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Silence action for unknown profile logs warning but doesn't crash."""
         await setup_integration(hass, mock_config_entry)
@@ -84,7 +87,7 @@ class TestActionListener:
             {"action": f"silence-{DOMAIN}:profile:nonexistent_id"},
         )
         await hass.async_block_till_done()
-        # Should not raise.
+        assert "Silence action for unknown profile" in caplog.text
 
     async def test_custom_action_uses_cached_review_context(
         self, hass: HomeAssistant, mock_frigate_data: dict[str, object]
