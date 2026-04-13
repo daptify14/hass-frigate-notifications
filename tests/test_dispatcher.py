@@ -481,6 +481,7 @@ class TestDispatcherFailure:
 
         assert len(received) == 1
         assert received[0] is not None
+        assert received[0].startswith("lifecycle_error:")
         assert "boom" in received[0]
 
     @pytest.mark.usefixtures("_zero_delays")

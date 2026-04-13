@@ -417,7 +417,7 @@ class NotificationDispatcher:
                     profile.profile_id,
                     review.review_id,
                 )
-                self._signal_dispatch_problem(profile, error_msg=str(err))
+                self._signal_dispatch_problem(profile, error_msg=f"lifecycle_error: {err}")
 
     async def _dispatch_for_profile(
         self,
