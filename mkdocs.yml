@@ -27,6 +27,8 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.sections
+    - navigation.path
+    - navigation.tabs
     - navigation.top
     - search.suggest
     - search.highlight
@@ -34,15 +36,10 @@ theme:
     - toc.follow
 
 nav:
-  - Home: index.md
-  - Setup:
-      - Installation: setup/installation.md
-      - Getting Started: setup/getting-started.md
-  - Platforms:
-      - platforms/index.md
-      - iOS: platforms/ios.md
-      - Android: platforms/android.md
-      - Android TV / Fire TV: platforms/android-tv.md
+  - Home:
+      - index.md
+      - Installation: installation.md
+  - Getting Started: getting-started.md
   - Examples:
       - examples/index.md
       - Filtering: examples/filtering.md
@@ -50,21 +47,29 @@ nav:
       - Delivery: examples/delivery.md
   - Reference:
       - reference/index.md
-      - Global Defaults: reference/global-defaults.md
-      - Profiles:
-          - reference/profiles/index.md
-          - Setup: reference/profiles/setup.md
-          - Filter Settings: reference/profiles/filter-settings.md
-          - Content & Templates: reference/profiles/content-and-templates.md
-          - Media & Actions: reference/profiles/media-and-actions.md
-          - Delivery & Timing: reference/profiles/delivery-and-timing.md
-          - Entities & Diagnostics: reference/profiles/entities-and-diagnostics.md
-      - Presets: reference/presets.md
-      - Filtering: reference/filtering.md
-      - Notification Lifecycle: reference/notification-lifecycle.md
-      - Context Variables: reference/context-variables.md
-      - Templates: reference/templates.md
-      - Actions: reference/actions.md
+      - Configuration:
+          - Global Defaults: reference/global-defaults.md
+          - Profiles:
+              - reference/profiles/index.md
+              - Setup: reference/profiles/setup.md
+              - Filter Settings: reference/profiles/filter-settings.md
+              - Content & Templates: reference/profiles/content-and-templates.md
+              - Media & Actions: reference/profiles/media-and-actions.md
+              - Delivery & Timing: reference/profiles/delivery-and-timing.md
+              - Entities & Diagnostics: reference/profiles/entities-and-diagnostics.md
+          - Presets: reference/presets.md
+          - Platforms:
+              - platforms/index.md
+              - iOS: platforms/ios.md
+              - Android: platforms/android.md
+              - Android TV / Fire TV: platforms/android-tv.md
+      - Filtering & Templates:
+          - Filtering: reference/filtering.md
+          - Context Variables: reference/context-variables.md
+          - Jinja Templates: reference/templates.md
+      - Notifications:
+          - Notification Lifecycle: reference/notification-lifecycle.md
+          - Actions: reference/actions.md
       - Logging: reference/logging.md
   - Troubleshooting: troubleshooting.md
 
@@ -81,6 +86,10 @@ markdown_extensions:
   - attr_list
   - toc:
       permalink: true
+
+validation:
+  links:
+    anchors: warn
 
 plugins:
   - search

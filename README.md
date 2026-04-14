@@ -1,10 +1,12 @@
 # Notifications for Frigate
 
-[![CI](https://github.com/daptify14/hass-frigate-notifications/actions/workflows/ci.yml/badge.svg)](https://github.com/daptify14/hass-frigate-notifications/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/daptify14/hass-frigate-notifications/graph/badge.svg)](https://codecov.io/gh/daptify14/hass-frigate-notifications)
+[![CI](https://github.com/daptify14/hass-frigate-notifications/actions/workflows/ci.yml/badge.svg)](https://github.com/daptify14/hass-frigate-notifications/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/daptify14/hass-frigate-notifications/graph/badge.svg)](https://codecov.io/gh/daptify14/hass-frigate-notifications) [![Docs](https://img.shields.io/badge/docs-mkdocs-blue)](https://daptify14.github.io/hass-frigate-notifications/)
 
 A Home Assistant integration that delivers dynamic push notifications from [Frigate NVR](https://frigate.video) reviews to iOS, Android, and Android TV devices.
 
 Extends the [Frigate integration](https://github.com/blakeblackshear/frigate-hass-integration). Set up notification profiles from built-in presets or customize everything through UI-based configuration flows.
+
+**[Read the full documentation →](https://daptify14.github.io/hass-frigate-notifications/)**
 
 ## Features
 
@@ -26,22 +28,23 @@ Extends the [Frigate integration](https://github.com/blakeblackshear/frigate-has
 
 ## Installation
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=daptify14&repository=hass-frigate-notifications)
+
+Click the badge above, or add manually:
+
 1. Open HACS → **Integrations** → three-dot menu → **Custom repositories**
 2. Paste `https://github.com/daptify14/hass-frigate-notifications`, select **Integration**, click **Add**
 3. Search for "Notifications for Frigate" and click **Download**
 4. Restart Home Assistant
 5. Go to **Settings → Devices & Services → Add Integration** and search for "Notifications for Frigate"
 
-For manual installation and more details, see [docs/setup/installation.md](docs/setup/installation.md).
+### Manual installation
 
-## Configuration
+1. Download the [latest release](https://github.com/daptify14/hass-frigate-notifications/releases) from GitHub
+2. Copy `custom_components/frigate_notifications` into your HA `config/custom_components/` directory
+3. Restart Home Assistant
 
-A guided config flow walks you through creating profiles, selecting cameras, choosing presets, and customizing each phase.
-
-- [Getting Started](docs/setup/getting-started.md): first profile walkthrough
-- [Examples](docs/examples/index.md): filtering, templates, and delivery examples
-- [Troubleshooting](docs/troubleshooting.md): common issues, logs, and limitations
-- [Full reference](docs/index.md): overview, features, and reference index
+See the [full installation guide](https://daptify14.github.io/hass-frigate-notifications/installation/) for details.
 
 ## Development
 

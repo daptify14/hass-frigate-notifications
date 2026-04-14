@@ -14,8 +14,8 @@ A Home Assistant integration that delivers enriched push notifications for [Frig
 
 ## Getting started
 
-1. **[Installation](setup/installation.md)** -- install via HACS or manually, then add the integration
-2. **[Getting Started](setup/getting-started.md)** -- set your URLs, create a profile, and test your first notification
+1. **[Installation](installation.md)** -- install via HACS or manually, then add the integration
+2. **[Getting Started](getting-started.md)** -- set your URLs, create a profile, and test your first notification
 
 ## How it works
 
