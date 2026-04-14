@@ -32,13 +32,13 @@ Extends the [Frigate integration](https://github.com/blakeblackshear/frigate-has
 4. Restart Home Assistant
 5. Go to **Settings → Devices & Services → Add Integration** and search for "Notifications for Frigate"
 
-For manual installation and more details, see [docs/installation.md](docs/installation.md).
+For manual installation and more details, see [docs/setup/installation.md](docs/setup/installation.md).
 
 ## Configuration
 
 A guided config flow walks you through creating profiles, selecting cameras, choosing presets, and customizing each phase.
 
-- [Getting Started](docs/getting-started.md): first profile walkthrough
+- [Getting Started](docs/setup/getting-started.md): first profile walkthrough
 - [Examples](docs/examples.md): filtering, templates, and delivery examples
 - [Troubleshooting](docs/troubleshooting.md): common issues, logs, and limitations
 - [Full reference](docs/index.md): overview, features, and reference index

@@ -39,11 +39,11 @@ After Basics, you land on a menu with these sections:
 
 If the preset defaults work for you, go straight to **Save**. You can reconfigure any section later from the profile device's three-dot menu.
 
-See [Profiles](reference/profiles.md) for a full reference of every field.
+See [Profiles](../reference/profiles.md) for a full reference of every field.
 
 ## Test it
 
-Trigger a detection on the camera you configured (walk in front of it) and check your phone for the notification. If it doesn't arrive, see [Troubleshooting](troubleshooting.md).
+Trigger a detection on the camera you configured (walk in front of it) and check your phone for the notification. If it doesn't arrive, see [Troubleshooting](../troubleshooting.md).
 
 ## Next steps
 

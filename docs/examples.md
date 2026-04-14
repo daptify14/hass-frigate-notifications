@@ -231,4 +231,4 @@ Cross-Platform provider ensures both iOS and Android payload keys are included.
 
 ---
 
-See [Getting Started](getting-started.md) for initial setup and [Troubleshooting](troubleshooting.md) if notifications aren't arriving.
+See [Getting Started](setup/getting-started.md) for initial setup and [Troubleshooting](troubleshooting.md) if notifications aren't arriving.

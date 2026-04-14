@@ -23,6 +23,7 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
+    - navigation.indexes
     - navigation.instant
     - navigation.tracking
     - navigation.sections
@@ -34,10 +35,15 @@ theme:
 
 nav:
   - Home: index.md
-  - Installation: installation.md
-  - Getting Started: getting-started.md
-  - Examples: examples.md
+  - Setup:
+      - Installation: setup/installation.md
+      - Getting Started: setup/getting-started.md
+  - Guides:
+      - guides/index.md
+  - Platforms:
+      - platforms/index.md
   - Reference:
+      - reference/index.md
       - Global Defaults: reference/global-defaults.md
       - Profiles: reference/profiles.md
       - Presets: reference/presets.md
