@@ -1,6 +1,6 @@
 # Delivery
 
-How to control where and how notifications arrive. Each example shows the minimum settings needed; see [Providers](../reference/providers.md) for platform details and [Notification Lifecycle](../reference/notification-lifecycle.md) for phase behavior.
+How to control where and how notifications arrive. Each example shows the minimum settings needed; see [Platforms](../platforms/index.md) for platform details and [Notification Lifecycle](../reference/notification-lifecycle.md) for phase behavior.
 
 ## Different profiles for different people
 

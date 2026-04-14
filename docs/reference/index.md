@@ -24,5 +24,4 @@ Complete behavior and field documentation for every part of the integration.
 - **[Context Variables](context-variables.md)** -- all template variables
 - **[Templates](templates.md)** -- built-in templates, rendering, and notification URLs
 - **[Actions](actions.md)** -- action buttons, tap actions, and custom HA actions
-- **[Providers](providers.md)** -- iOS, Android, Android TV, and Cross-Platform
 - **[Logging](logging.md)** -- filter rejection messages and key log entries

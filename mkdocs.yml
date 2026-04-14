@@ -40,6 +40,9 @@ nav:
       - Getting Started: setup/getting-started.md
   - Platforms:
       - platforms/index.md
+      - iOS: platforms/ios.md
+      - Android: platforms/android.md
+      - Android TV / Fire TV: platforms/android-tv.md
   - Examples:
       - examples/index.md
       - Filtering: examples/filtering.md
@@ -55,7 +58,6 @@ nav:
       - Context Variables: reference/context-variables.md
       - Templates: reference/templates.md
       - Actions: reference/actions.md
-      - Providers: reference/providers.md
       - Logging: reference/logging.md
   - Troubleshooting: troubleshooting.md
 
