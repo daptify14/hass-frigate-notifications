@@ -38,10 +38,13 @@ nav:
   - Setup:
       - Installation: setup/installation.md
       - Getting Started: setup/getting-started.md
-  - Guides:
-      - guides/index.md
   - Platforms:
       - platforms/index.md
+  - Examples:
+      - examples/index.md
+      - Filtering: examples/filtering.md
+      - Templates: examples/templates.md
+      - Delivery: examples/delivery.md
   - Reference:
       - reference/index.md
       - Global Defaults: reference/global-defaults.md

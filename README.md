@@ -39,7 +39,7 @@ For manual installation and more details, see [docs/setup/installation.md](docs/
 A guided config flow walks you through creating profiles, selecting cameras, choosing presets, and customizing each phase.
 
 - [Getting Started](docs/setup/getting-started.md): first profile walkthrough
-- [Examples](docs/examples.md): filtering, templates, and delivery examples
+- [Examples](docs/examples/index.md): filtering, templates, and delivery examples
 - [Troubleshooting](docs/troubleshooting.md): common issues, logs, and limitations
 - [Full reference](docs/index.md): overview, features, and reference index
 

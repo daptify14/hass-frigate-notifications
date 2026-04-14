@@ -68,7 +68,7 @@ notifications:
 
 # Serve docs locally (MkDocs Material)
 docs *ARGS:
-    uv run --group docs mkdocs serve {{ ARGS }}
+    uv run --group docs mkdocs serve --livereload {{ ARGS }}
 
 # Build docs to site/
 docs-build *ARGS:
