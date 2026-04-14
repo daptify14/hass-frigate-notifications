@@ -51,7 +51,14 @@ nav:
   - Reference:
       - reference/index.md
       - Global Defaults: reference/global-defaults.md
-      - Profiles: reference/profiles.md
+      - Profiles:
+          - reference/profiles/index.md
+          - Setup: reference/profiles/setup.md
+          - Filter Settings: reference/profiles/filter-settings.md
+          - Content & Templates: reference/profiles/content-and-templates.md
+          - Media & Actions: reference/profiles/media-and-actions.md
+          - Delivery & Timing: reference/profiles/delivery-and-timing.md
+          - Entities & Diagnostics: reference/profiles/entities-and-diagnostics.md
       - Presets: reference/presets.md
       - Filtering: reference/filtering.md
       - Notification Lifecycle: reference/notification-lifecycle.md

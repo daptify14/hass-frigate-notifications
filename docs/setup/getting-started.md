@@ -39,7 +39,7 @@ After Basics, you land on a menu with these sections:
 
 If the preset defaults work for you, go straight to **Save**. You can reconfigure any section later from the profile device's three-dot menu.
 
-See [Profiles](../reference/profiles.md) for a full reference of every field.
+See [Profiles](../reference/profiles/index.md) for a full reference of every field.
 
 ## Test it
 

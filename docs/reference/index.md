@@ -4,7 +4,7 @@ Complete behavior and field documentation for every part of the integration.
 
 ## Core concepts
 
-**[Profiles](profiles.md)**: A profile connects cameras to a notification target (your phone, a device group, a TV). Each profile has its own filters, templates, and phase settings. A camera can belong to multiple profiles, so you can layer different notification strategies on the same camera.
+**[Profiles](profiles/index.md)**: A profile connects cameras to a notification target (your phone, a device group, a TV). Each profile has its own filters, templates, and phase settings. A camera can belong to multiple profiles, so you can layer different notification strategies on the same camera.
 
 **[Global defaults](global-defaults.md) & inheritance**: Shared settings that profiles can inherit from. Each option in a profile can inherit the global value, override it, or disable it entirely. Set your baseline in the integration options flow (reconfigure any time), then only customize what differs per profile.
 
@@ -17,7 +17,7 @@ Complete behavior and field documentation for every part of the integration.
 ## All reference topics
 
 - **[Global Defaults](global-defaults.md)** -- shared settings that profiles inherit from
-- **[Profiles](profiles.md)** -- every profile field, entities, and device details
+- **[Profiles](profiles/index.md)** -- every profile field, entities, and device details
 - **[Presets](presets.md)** -- built-in presets and custom YAML presets
 - **[Filtering](filtering.md)** -- the filter pipeline and profile inheritance model
 - **[Notification Lifecycle](notification-lifecycle.md)** -- phases, dispatch, silence, and cooldown

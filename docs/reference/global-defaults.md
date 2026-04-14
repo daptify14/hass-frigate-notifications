@@ -1,6 +1,6 @@
 # Global Defaults
 
-Global defaults apply across all [profiles](profiles.md). Configure via Settings > Devices & Services > Notifications for Frigate > **Configure**.
+Global defaults apply across all [profiles](profiles/index.md). Configure via Settings > Devices & Services > Notifications for Frigate > **Configure**.
 
 The options flow has three sections. On first configure they run in sequence; on reconfigure a menu lets you jump directly to any section. Profiles inherit these values unless they override them.
 
@@ -158,4 +158,4 @@ This pattern applies to: time filter, guard entity, presence filter, and state f
 
 **Example:** A global time filter set to "Notify only during 22:00--06:00" applies to every profile that uses inherit mode. A profile can override this with its own window (custom) or bypass the filter entirely (disabled).
 
-See [Profiles](profiles.md) for how individual profiles configure overrides.
+See [Profiles](profiles/index.md) for how individual profiles configure overrides.
