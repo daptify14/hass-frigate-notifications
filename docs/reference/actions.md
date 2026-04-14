@@ -51,7 +51,9 @@ The tap action controls what happens when the user taps the notification body it
 
 **Default:** View Clip.
 
-> **Frigate URL reachability:** The **Open Frigate** option uses the Frigate URL configured in [Global Defaults](global-defaults.md). Add-on users should select the ingress path, which routes through HA's proxy and works from any network. If you run Frigate externally, enter a URL reachable from your phone -- internal addresses (e.g. `http://10.0.0.5:5000`, Docker hostnames) will fail when you're outside your local network.
+!!! warning "Frigate URL reachability"
+
+    The **Open Frigate** option uses the Frigate URL configured in [Global Defaults](global-defaults.md). Add-on users should select the ingress path, which routes through HA's proxy and works from any network. If you run Frigate externally, enter a URL reachable from your phone -- internal addresses (e.g. `http://10.0.0.5:5000`, Docker hostnames) will fail when you're outside your local network.
 
 ## Custom actions
 

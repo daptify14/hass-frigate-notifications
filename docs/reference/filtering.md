@@ -16,6 +16,8 @@ Compares the review's severity against the profile's requirement.
 
 By default, Frigate classifies `person` and `car` objects as alerts; all other tracked objects (and audio labels) are detections. This is configurable in Frigate's [`review` config](https://docs.frigate.video/configuration/review#alerts-and-detections).
 
+---
+
 ### 2. Object type
 
 Checks whether the review contains any object types the profile cares about.
@@ -23,6 +25,8 @@ Checks whether the review contains any object types the profile cares about.
 - If you configured specific objects (e.g., person, car), at least one must be present
 - An empty object list passes all object types
 - The `-verified` suffix is stripped before comparison -- `person-verified` matches a `person` filter
+
+---
 
 ### 3. Sub-label (recognition)
 
@@ -47,9 +51,15 @@ Filters notifications based on Frigate's face recognition and license plate reco
 - If the review's sub-labels contain any excluded identity (case-insensitive), the notification is suppressed
 - Useful for "stop alerting once you know it's a family member's car"
 
-> **Scope:** The config flow discovers identities from Frigate's face recognition and LPR sensors. The runtime filter operates on all sub-labels regardless of source, but identities from other sources are not discoverable in the config flow UI.
->
-> **Reload rule:** Changes to Frigate's recognition setup (adding new faces, known plates) require a Frigate integration reload before they appear in this integration's config flow.
+!!! note "Scope"
+
+    The config flow discovers identities from Frigate's face recognition and LPR sensors. The runtime filter operates on all sub-labels regardless of source, but identities from other sources are not discoverable in the config flow UI.
+
+!!! warning "Reload rule"
+
+    Changes to Frigate's recognition setup (adding new faces, known plates) require a Frigate integration reload before they appear in this integration's config flow.
+
+---
 
 ### 4. Zone
 
@@ -83,7 +93,11 @@ Zones must appear in sequence, anchored by the first required zone.
 | A, B | B, A | Fail -- B appears before A |
 | A, B | A, C | Fail -- B never appears |
 
-> **Multi-camera profiles:** Zone filtering is skipped entirely for multi-camera profiles. The zone filter fields are hidden in the config flow. A future release may support zone filtering for multi-camera profiles where all selected cameras share the same zone names.
+!!! note "Multi-camera profiles"
+
+    Zone filtering is skipped entirely for multi-camera profiles. The zone filter fields are hidden in the config flow. A future release may support zone filtering for multi-camera profiles where all selected cameras share the same zone names.
+
+---
 
 ### 5. Time filter
 
@@ -98,6 +112,8 @@ Overnight ranges are supported (e.g., 22:00--06:00 wraps around midnight).
 
 Time filter supports [3-mode inheritance](#inheritance-pattern): Inherit shared time filter, Use profile time filter, or No time filter.
 
+---
+
 ### 6. State filter
 
 Checks whether an external entity is in one of the allowed states.
@@ -108,6 +124,8 @@ Checks whether an external entity is in one of the allowed states.
 
 Supports [3-mode inheritance](#inheritance-pattern): Inherit shared state filter, Use profile state filter, or No state filter.
 
+---
+
 ### 7. Presence filter
 
 Checks whether any configured `person`, `device_tracker`, or `group` entity is `home`. If any has state `home`, the notification is suppressed.
@@ -116,19 +134,27 @@ Presence is **stateless** -- it is evaluated at every lifecycle phase (initial, 
 
 Supports [3-mode inheritance](#inheritance-pattern): Inherit shared presence filter, Use profile presence filter, or Ignore presence for this profile.
 
+---
+
 ### 8. Silence
 
 Checks whether the profile is currently silenced via its "Silenced Until" datetime entity. If the current time is before the silenced-until timestamp, the notification is blocked. States of `unknown` or `unavailable` are treated as not silenced. See [Notification Lifecycle -- Silence](notification-lifecycle.md#silence).
 
+---
+
 ### 9. Switch entity
 
 Checks the profile's enabled switch. Only an explicit `off` state blocks notifications -- any other state (including `unavailable` or `unknown`) passes. The integration looks up the switch via the entity registry using its stable unique ID, so renaming the entity in the UI has no effect.
+
+---
 
 ### 10. Guard entity
 
 Checks an external guard entity (`input_boolean`, `switch`, or `binary_sensor`) that gates notifications. Only an explicit `off` state blocks -- any other state passes.
 
 Supports [3-mode inheritance](#inheritance-pattern): Inherit shared guard, Use profile guard, or No guard entity.
+
+---
 
 ### 11. Cooldown
 

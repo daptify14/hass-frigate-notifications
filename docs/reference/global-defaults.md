@@ -15,7 +15,9 @@ Core delivery settings and shared gating filters.
 | **Home Assistant URL** | Dropdown (custom) | Base URL for attachment links. Auto-detects external/internal URLs. | External URL |
 | **Frigate URL** | Dropdown (custom) | URL for the "Open Frigate" action. Auto-detects addon ingress. | (auto-detected) |
 
-> The base URL constructs snapshot, GIF, and clip URLs in notifications. The external URL is usually best for off-network delivery. The Frigate URL powers the "Open Frigate" action button -- addon users get auto-detected ingress, external Frigate users enter a full URL (e.g. `https://frigate.local:5000`).
+!!! tip "URL selection"
+
+    The base URL constructs snapshot, GIF, and clip URLs in notifications. The external URL is usually best for off-network delivery. The Frigate URL powers the "Open Frigate" action button -- addon users get auto-detected ingress, external Frigate users enter a full URL (e.g. `https://frigate.local:5000`).
 
 ### Timing section (collapsed)
 
@@ -124,7 +126,9 @@ Only shown when known plates are stored in the Frigate integration's entity regi
 
 Sub-label emoji overrides map recognized identities to emojis. The fallback chain is: sub-label override → emoji map → default emoji. Empty fields are ignored.
 
-> **Reload rule:** Changes to Frigate's recognition setup (adding new faces or known plates) require a Frigate integration reload before they appear here.
+!!! warning "Reload rule"
+
+    Changes to Frigate's recognition setup (adding new faces or known plates) require a Frigate integration reload before they appear here.
 
 ---
 

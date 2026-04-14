@@ -6,7 +6,9 @@ Presets are starting templates that pre-fill your [profile](profiles/index.md) c
 
 The integration ships with six built-in presets.
 
-> Message and subtitle values shown in the phase tables are template IDs. See [Templates](templates.md#built-in-templates) for the full Jinja2 behind each ID.
+!!! note "Template IDs"
+
+    Message and subtitle values shown in the phase tables are template IDs. See [Templates](templates.md#built-in-templates) for the full Jinja2 behind each ID.
 
 | ID | Display Name | Summary |
 | ---- | ------------- | --------- |
@@ -30,6 +32,8 @@ Basic detection alerts that work with any camera. Sends an immediate alert with 
 | End | inherits update (5s delay) | inherits update | inherits update | inherits update |
 | GenAI | `genai_summary` | `merged_subjects` | review_gif | audible, passive |
 
+---
+
 ### Rich Alerts (`detailed`)
 
 Zone-aware alerts with phase icons. Uses `genai_disabled_overrides` to switch the end-phase message template when GenAI is off.
@@ -42,6 +46,8 @@ Zone-aware alerts with phase icons. Uses `genai_disabled_overrides` to switch th
 | End (GenAI off) | `phase_icon_context` (5s delay), latest detection | `merged_subjects` | inherits update | inherits update |
 | GenAI | `phase_icon_genai_summary`, latest detection | `merged_subjects` | review_gif | audible, passive |
 
+---
+
 ### End Only (`notify_on_end`)
 
 Suppresses real-time alerts entirely. One audible notification per event when the review ends.
@@ -52,6 +58,8 @@ Suppresses real-time alerts entirely. One audible notification per event when th
 | Update | disabled | -- | -- | -- |
 | End | `object_action_zone` + emoji (5s delay), latest detection | `duration_summary` | review_gif | audible, active |
 | GenAI | `genai_summary`, latest detection | (none) | review_gif | none, passive |
+
+---
 
 ### Snapshot Only (`snapshot_pager`)
 
@@ -64,6 +72,8 @@ One snapshot, one sound, done. No follow-up notifications of any kind.
 | End | disabled | -- | -- | -- |
 | GenAI | disabled | -- | -- | -- |
 
+---
+
 ### Latest Only (`latest_event`)
 
 A single shared notification slot that always shows the most recent event. All profiles using this preset share tag `frigate-latest` and group `frigate`, so new events replace old ones.
@@ -74,6 +84,8 @@ A single shared notification slot that always shows the most recent event. All p
 | Update | `single_subject` + emoji, latest detection | `camera_zone` | review_gif | none, passive |
 | End | inherits update (5s delay) | inherits update | inherits update | inherits update |
 | GenAI | `genai_summary`, latest detection | `camera_only_content` | review_gif | none, passive |
+
+---
 
 ### Silent Log (`activity_log`)
 
@@ -198,7 +210,9 @@ Each phase accepts these fields (all optional except where the phase requires th
 
 Unknown keys are rejected. If a file fails any validation check, it is skipped with a log warning and the integration continues loading other presets.
 
-> **Schema versioning:** The `schema_version` field is checked against the integration's supported version (currently `1`). Files with a higher schema version are skipped with a warning, allowing forward compatibility.
+!!! note "Schema versioning"
+
+    The `schema_version` field is checked against the integration's supported version (currently `1`). Files with a higher schema version are skipped with a warning, allowing forward compatibility.
 
 ### Security and trust model
 

@@ -32,47 +32,277 @@ This lets you use `{{ genai_summary }}` for the GenAI phase while keeping the de
 
 Dropdown options for message, title, and subtitle fields. See [Presets](presets.md) for the profile preset system, which is separate.
 
-> Built-in templates use short IDs in config storage. When you select a template from the dropdown, the ID is stored and resolved to the full Jinja2 at render time. You can also type custom Jinja2 directly into the dropdown field -- custom templates are stored and rendered as-is.
+!!! note "Template IDs vs custom Jinja2"
+
+    Built-in templates use short IDs in config storage. When you select a template from the dropdown, the ID is stored and resolved to the full Jinja2 at render time. You can also type custom Jinja2 directly into the dropdown field -- custom templates are stored and rendered as-is.
 
 All examples below assume a person detected on a camera named "Driveway" in a zone aliased to "the Driveway" with zone phrase "entered".
 
-### Message templates
+---
 
-| ID | Label | Template | Phases | Example |
-| ---- | ------- | ---------- | -------- | --------- |
-| `object_action_zone` | Object + action + zone | `{{ object }} {{ zone_phrase }} {{ zone_alias }}` | all | 👤 Person entered the Driveway |
-| `phase_icon_context` | Phase icon + context | `{{ phase_emoji }} {{ object }} {{ zone_phrase }} {{ zone_alias }}` | all | 🆕 Person entered the Driveway |
-| `object_zone_only` | Object + zone only | `{{ object }} in {{ zone_alias }}` | all | 👤 Person in the Driveway |
-| `object_zone_phrase` | Object + action (no zone) | `{{ object }} {{ zone_phrase }}` | all | 👤 Person entered |
-| `merged_subjects` | Merged subjects | `{{ subjects }}` | all | Alice, Car |
-| `object_only` | Object only | `{{ object }} detected` | all | 👤 Person detected |
-| `single_subject` | Single subject | `{{ subject }}` | all | 👤 Person |
-| `rich_update` | Rich update (new line) | `{{ phase_emoji }} {{ object }} ... / {{ added_subject }} detected` | update, end | 🔄 Person entered the Driveway / Car detected |
-| `zone_info` | Zone info | `{{ zone_alias }}` | all | the Driveway |
-| `update_delta` | Update delta | `{{ added_subject }} detected` | update, end | Car detected |
-| `camera_zone` | Camera + zone | `{{ camera_name }} {{ zone_alias }}` | all | Driveway the Driveway (works best when camera and zone names differ) |
-| `camera_only_content` | Camera only | `{{ camera_name }}` | all | Driveway |
-| `duration_summary` | Duration summary | `Duration: {{ duration }}s` | end | Duration: 12s |
-| `genai_summary` | GenAI summary | `{{ genai_summary }}` | genai | A person pushes a stroller down the driveway, passing a parked white SUV, and exits the scene. |
-| `phase_icon_genai_summary` | Phase icon + GenAI summary | `{{ phase_emoji }} {{ genai_summary }}` | genai | ✨ A person pushes a stroller down the driveway, passing a parked white SUV, and exits the scene. |
-| `genai_pending` | GenAI pending placeholder | `{{ phase_emoji }} Pending AI Summary` | end | 🔚 Pending AI Summary |
-| `genai_scene` | GenAI scene | `{{ genai_scene }}` | genai | A person is observed walking down the driveway pushing a stroller... |
-| `genai_summary_concerns` | GenAI summary + concerns | `{{ genai_summary }}` + `{{ genai_concerns }}` | genai | Car departs the driveway and exits the frame. / unknown vehicle near garage |
+## Message templates
 
-### Title templates
+### `object_action_zone`
 
-| ID | Label | Template | Example |
-| ---- | ------- | ---------- | --------- |
-| `camera_time` | Camera + time (default) | `{{ camera_name }} - {{ time }}` | Driveway - 3:45 PM |
-| `camera_time_24hr` | Camera + 24hr time | `{{ camera_name }} - {{ time_24hr }}` | Driveway - 15:45 |
-| `camera_only` | Camera only | `{{ camera_name }}` | Driveway |
-| `camera_object` | Camera + object | `{{ camera_name }} - {{ object }}` | Driveway - Person |
-| `camera_subject` | Camera + subject | `{{ camera_name }} - {{ subject }}` | Driveway - Alice |
-| `genai_title` | GenAI title | `{{ genai_title }}` | Person pushing stroller down driveway |
-| `camera_genai_title` | Camera + GenAI title | `{{ camera_name }} - {{ genai_title }}` | Driveway - Person pushing stroller down driveway |
-| `camera_genai_title_time` | Camera + GenAI title + time | `{{ camera_name }} - {{ genai_title }} ({{ genai_time }})` | Driveway - Person pushing stroller down driveway (Thursday, 11:49 AM) |
+Object + action + zone. All phases.
 
-### Zone phrase options
+`{{ object }} {{ zone_phrase }} {{ zone_alias }}`
+
+**Example:** 👤 Person entered the Driveway
+
+---
+
+### `phase_icon_context`
+
+Phase icon + context. All phases.
+
+`{{ phase_emoji }} {{ object }} {{ zone_phrase }} {{ zone_alias }}`
+
+**Example:** 🆕 Person entered the Driveway
+
+---
+
+### `object_zone_only`
+
+Object + zone only. All phases.
+
+`{{ object }} in {{ zone_alias }}`
+
+**Example:** 👤 Person in the Driveway
+
+---
+
+### `object_zone_phrase`
+
+Object + action (no zone). All phases.
+
+`{{ object }} {{ zone_phrase }}`
+
+**Example:** 👤 Person entered
+
+---
+
+### `merged_subjects`
+
+Merged subjects. All phases.
+
+`{{ subjects }}`
+
+**Example:** Alice, Car
+
+---
+
+### `object_only`
+
+Object only. All phases.
+
+`{{ object }} detected`
+
+**Example:** 👤 Person detected
+
+---
+
+### `single_subject`
+
+Single subject. All phases.
+
+`{{ subject }}`
+
+**Example:** 👤 Person
+
+---
+
+### `rich_update`
+
+Rich update with delta on new line. Update and end phases.
+
+`{{ phase_emoji }} {{ object }} ... / {{ added_subject }} detected`
+
+**Example:** 🔄 Person entered the Driveway / Car detected
+
+---
+
+### `zone_info`
+
+Zone info. All phases.
+
+`{{ zone_alias }}`
+
+**Example:** the Driveway
+
+---
+
+### `update_delta`
+
+Update delta. Update and end phases.
+
+`{{ added_subject }} detected`
+
+**Example:** Car detected
+
+---
+
+### `camera_zone`
+
+Camera + zone. All phases. Works best when camera and zone names differ.
+
+`{{ camera_name }} {{ zone_alias }}`
+
+**Example:** Driveway the Driveway
+
+---
+
+### `camera_only_content`
+
+Camera only. All phases.
+
+`{{ camera_name }}`
+
+**Example:** Driveway
+
+---
+
+### `duration_summary`
+
+Duration summary. End phase.
+
+`Duration: {{ duration }}s`
+
+**Example:** Duration: 12s
+
+---
+
+### `genai_summary`
+
+GenAI summary. GenAI phase.
+
+`{{ genai_summary }}`
+
+**Example:** A person pushes a stroller down the driveway, passing a parked white SUV, and exits the scene.
+
+---
+
+### `phase_icon_genai_summary`
+
+Phase icon + GenAI summary. GenAI phase.
+
+`{{ phase_emoji }} {{ genai_summary }}`
+
+**Example:** ✨ A person pushes a stroller down the driveway, passing a parked white SUV, and exits the scene.
+
+---
+
+### `genai_pending`
+
+GenAI pending placeholder. End phase.
+
+`{{ phase_emoji }} Pending AI Summary`
+
+**Example:** 🔚 Pending AI Summary
+
+---
+
+### `genai_scene`
+
+GenAI scene. GenAI phase.
+
+`{{ genai_scene }}`
+
+**Example:** A person is observed walking down the driveway pushing a stroller...
+
+---
+
+### `genai_summary_concerns`
+
+GenAI summary + concerns. GenAI phase.
+
+`{{ genai_summary }}` + `{{ genai_concerns }}`
+
+**Example:** Car departs the driveway and exits the frame. / unknown vehicle near garage
+
+## Title templates
+
+### `camera_time`
+
+Camera + time. Default title template.
+
+`{{ camera_name }} - {{ time }}`
+
+**Example:** Driveway - 3:45 PM
+
+---
+
+### `camera_time_24hr`
+
+Camera + 24-hour time.
+
+`{{ camera_name }} - {{ time_24hr }}`
+
+**Example:** Driveway - 15:45
+
+---
+
+### `camera_only`
+
+Camera name only.
+
+`{{ camera_name }}`
+
+**Example:** Driveway
+
+---
+
+### `camera_object`
+
+Camera + detected object.
+
+`{{ camera_name }} - {{ object }}`
+
+**Example:** Driveway - Person
+
+---
+
+### `camera_subject`
+
+Camera + subject (with sub-label).
+
+`{{ camera_name }} - {{ subject }}`
+
+**Example:** Driveway - Alice
+
+---
+
+### `genai_title`
+
+GenAI-generated title. GenAI phase.
+
+`{{ genai_title }}`
+
+**Example:** Person pushing stroller down driveway
+
+---
+
+### `camera_genai_title`
+
+Camera + GenAI title. GenAI phase.
+
+`{{ camera_name }} - {{ genai_title }}`
+
+**Example:** Driveway - Person pushing stroller down driveway
+
+---
+
+### `camera_genai_title_time`
+
+Camera + GenAI title + time. GenAI phase.
+
+`{{ camera_name }} - {{ genai_title }} ({{ genai_time }})`
+
+**Example:** Driveway - Person pushing stroller down driveway (Thursday, 11:49 AM)
+
+---
+
+## Zone phrase options
 
 Used as zone phrase overrides in the profile's Content & templates section. These slot into the `{{ zone_phrase }}` variable.
 
@@ -91,6 +321,8 @@ Used as zone phrase overrides in the profile's Content & templates section. Thes
 | `detected in` | Person detected in the Backyard |
 | `outside` | Person outside the Garage |
 | `seen at` | Car seen at the Driveway |
+
+---
 
 ## Notification URLs
 

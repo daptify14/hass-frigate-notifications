@@ -15,7 +15,9 @@ The integration maps Frigate's MQTT message types to notification phases:
 
 The initial phase fires on the **first message that passes filters** for a review. Normally that's the `new` message, but if a filter isn't satisfied yet (e.g., the required zone hasn't been detected), the `new` message is skipped and the first `update` that passes filters dispatches as the initial notification instead.
 
-> **Tip:** Templates receive the phase value via `{{ phase }}`, not the raw MQTT message type. So the first notification always uses `phase = "initial"`, even if it was triggered by an `update` message.
+!!! tip "Phase vs lifecycle"
+
+    Templates receive the phase value via `{{ phase }}`, not the raw MQTT message type. So the first notification always uses `phase = "initial"`, even if it was triggered by an `update` message.
 
 The descriptions below reflect the default preset behavior. Sound, attachment, video, delay, interruption level, and more can be changed per phase in your profile settings.
 
