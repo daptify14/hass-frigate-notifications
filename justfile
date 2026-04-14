@@ -66,6 +66,14 @@ simulate *ARGS:
 notifications:
     scripts/tail_notifications.sh
 
+# Serve docs locally (MkDocs Material)
+docs *ARGS:
+    uv run --group docs mkdocs serve {{ ARGS }}
+
+# Build docs to site/
+docs-build *ARGS:
+    uv run --group docs mkdocs build {{ ARGS }}
+
 # Set up local dev environment (deps + pre-commit hooks)
 setup:
     scripts/setup.sh

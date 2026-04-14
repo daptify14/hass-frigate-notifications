@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
+site_name: Notifications for Frigate
+site_description: Home Assistant integration for Frigate notifications
+repo_url: https://github.com/daptify14/hass-frigate-notifications
+repo_name: daptify14/hass-frigate-notifications
+
+theme:
+  name: material
+  logo: assets/logo.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: red
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: red
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Getting Started: getting-started.md
+  - Examples: examples.md
+  - Reference:
+      - Global Defaults: reference/global-defaults.md
+      - Profiles: reference/profiles.md
+      - Presets: reference/presets.md
+      - Filtering: reference/filtering.md
+      - Notification Lifecycle: reference/notification-lifecycle.md
+      - Context Variables: reference/context-variables.md
+      - Templates: reference/templates.md
+      - Actions: reference/actions.md
+      - Providers: reference/providers.md
+      - Logging: reference/logging.md
+  - Troubleshooting: troubleshooting.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - def_list
+  - attr_list
+  - toc:
+      permalink: true
+
+plugins:
+  - search

@@ -27,6 +27,9 @@ htmlcov/
 # OS
 .DS_Store
 
+# MkDocs
+site/
+
 # HA runtime
 *.db
 *.log

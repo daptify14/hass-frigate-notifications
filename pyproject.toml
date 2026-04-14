@@ -18,6 +18,10 @@ dev = [
     "ty==0.0.29",
     "voluptuous-stubs==0.1.1",
 ]
+docs = [
+    "mkdocs==1.6.1",
+    "mkdocs-material==9.7.6",
+]
 
 [tool.ruff]
 target-version = "py313"
