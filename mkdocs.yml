@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
+site_name: Notifications for Frigate
+site_description: Home Assistant integration for Frigate notifications
+repo_url: https://github.com/daptify14/hass-frigate-notifications
+repo_name: daptify14/hass-frigate-notifications
+
+theme:
+  name: material
+  logo: assets/logo.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: red
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: red
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.indexes
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.path
+    - navigation.tabs
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+
+nav:
+  - Home:
+      - index.md
+      - Installation: installation.md
+  - Getting Started: getting-started.md
+  - Examples:
+      - examples/index.md
+      - Filtering: examples/filtering.md
+      - Templates: examples/templates.md
+      - Delivery: examples/delivery.md
+  - Reference:
+      - reference/index.md
+      - Configuration:
+          - Global Defaults: reference/global-defaults.md
+          - Profiles:
+              - reference/profiles/index.md
+              - Setup: reference/profiles/setup.md
+              - Filter Settings: reference/profiles/filter-settings.md
+              - Content & Templates: reference/profiles/content-and-templates.md
+              - Media & Actions: reference/profiles/media-and-actions.md
+              - Delivery & Timing: reference/profiles/delivery-and-timing.md
+              - Entities & Diagnostics: reference/profiles/entities-and-diagnostics.md
+          - Presets: reference/presets.md
+          - Platforms:
+              - platforms/index.md
+              - iOS: platforms/ios.md
+              - Android: platforms/android.md
+              - Android TV / Fire TV: platforms/android-tv.md
+      - Filtering & Templates:
+          - Filtering: reference/filtering.md
+          - Context Variables: reference/context-variables.md
+          - Jinja Templates: reference/templates.md
+      - Notifications:
+          - Notification Lifecycle: reference/notification-lifecycle.md
+          - Actions: reference/actions.md
+      - Logging: reference/logging.md
+  - Troubleshooting: troubleshooting.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - def_list
+  - attr_list
+  - toc:
+      permalink: true
+
+validation:
+  links:
+    anchors: warn
+
+plugins:
+  - search

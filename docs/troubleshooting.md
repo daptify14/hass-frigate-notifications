@@ -10,6 +10,8 @@ Setup complete for Frigate: 2 profiles, topic=frigate/reviews
 
 If you don't see this, the integration failed to set up. Check below.
 
+---
+
 ## Common startup failures
 
 ### "Frigate integration not ready yet -- will retry"
@@ -35,6 +37,8 @@ Zone aliases or profile zone overrides reference zones that no longer exist in F
 2. Edit zone aliases: Settings > Devices & Services > Notifications for Frigate > Configure > zone aliases
 3. The repair clears once all references point to current Frigate zones
 
+---
+
 ## Notification not sending
 
 Check these in order:
@@ -48,6 +52,8 @@ Check these in order:
 7. **Notify service**: is the mobile app device registered and online? Check Settings > Devices & Services > Mobile App. For Android TV, check the Android TV / Fire TV integration
 8. **Logs**: [enable debug logging](#reading-logs) and check Settings > Logs. The filter chain logs exactly which filter rejected the review
 
+---
+
 ## Reading logs
 
 Most integration log messages are at `debug` level. Enable debug logging in `configuration.yaml`:
@@ -60,6 +66,8 @@ logger:
 
 The filter chain logs exactly which filter rejected each review per profile. See [Filtering](reference/filtering.md) for how the chain works and [Logging Reference](reference/logging.md) for all filter rejection messages.
 
+---
+
 ## MQTT not connected
 
 If no reviews appear in logs:
@@ -68,6 +76,8 @@ If no reviews appear in logs:
 2. Confirm MQTT is added and configured: Settings > Devices & Services > MQTT
 3. Check the **MQTT Connected** binary sensor entity created by the integration
 4. Verify the subscribed topic matches Frigate's config (`frigate/reviews` by default)
+
+---
 
 ## Android-specific issues
 
@@ -83,6 +93,8 @@ Android does not support HLS streaming. When a phase uses Clip (HLS), the integr
 
 Android notification behavior (sound, vibration, priority) is controlled by the notification channel. Set the channel name in the profile's Delivery step under Android delivery. Create matching channels on your Android device via the Companion App settings.
 
+---
+
 ## Recognition filter not appearing
 
 If the recognition filter section doesn't appear in the profile's Filtering step:
@@ -93,6 +105,8 @@ If the recognition filter section doesn't appear in the profile's Filtering step
 4. Check for `sensor.frigate_*_recognized_face_*` or `sensor.frigate_*_recognized_plate_*` entities in Settings > Entities
 
 The recognition filter uses the HA entity registry exclusively. If entities are missing, the section won't appear.
+
+---
 
 ## GenAI section not appearing
 
@@ -105,6 +119,8 @@ If the GenAI section does not appear in the profile wizard or global Appearance 
 
 GenAI capability is detected from the Frigate config exposed by the Frigate integration
 
+---
+
 ## Frigate integration reconfigured
 
 If the underlying Frigate integration is reconfigured (URL, auth, SSL, IP, or port changes):
@@ -115,12 +131,16 @@ If the underlying Frigate integration is reconfigured (URL, auth, SSL, IP, or po
 
 If the Frigate instance was replaced entirely (new server, different camera set), delete and recreate the Notifications for Frigate entry instead.
 
+---
+
 ## Known limitations
 
-- **Sub-label filter: face/plate recognition only**: the sub-label filter discovers identities from Frigate's face recognition and LPR sensors only. Sub-labels from other sources (custom classification models, triggers with `classification_type: sub_label`) are not discoverable in the UI
-- **Reviews-only architecture**: the integration subscribes to `frigate/reviews` only, not `frigate/events` or the Frigate HTTP API. All data comes from MQTT review messages
-- **Zone data is append-only**: Frigate deduplicates zones at the review level. Re-entry through a previously visited zone doesn't re-append, so the zone list may not reflect the most recent position when using zone phrases.
-- **Android TV: still images only**: Android TV notifications support static images (snapshot/thumbnail). GIF and video attachments are not supported
-- **GenAI text is pre-rendered**: AI summary text comes from Frigate's GenAI metadata and is not processed through the template engine. Template variables do not apply inside GenAI content
-- **Android video: HLS to MP4 fallback**: when HLS is configured for a phase, Android devices receive `clip.mp4` instead since Android does not support HLS in notifications
-- **Datetime picker overflow on device page**: the "Silenced until" datetime picker may overflow its container on the device page, especially on narrow screens
+!!! info "Current limitations"
+
+    - **Sub-label filter: face/plate recognition only** -- the sub-label filter discovers identities from Frigate's face recognition and LPR sensors only. Sub-labels from other sources (custom classification models, triggers with `classification_type: sub_label`) are not discoverable in the UI
+    - **Reviews-only architecture** -- the integration subscribes to `frigate/reviews` only, not `frigate/events` or the Frigate HTTP API. All data comes from MQTT review messages
+    - **Zone data is append-only** -- Frigate deduplicates zones at the review level. Re-entry through a previously visited zone doesn't re-append, so the zone list may not reflect the most recent position when using zone phrases
+    - **Android TV: still images only** -- Android TV notifications support static images (snapshot/thumbnail). GIF and video attachments are not supported
+    - **GenAI text is pre-rendered** -- AI summary text comes from Frigate's GenAI metadata and is not processed through the template engine. Template variables do not apply inside GenAI content
+    - **Android video: HLS to MP4 fallback** -- when HLS is configured for a phase, Android devices receive `clip.mp4` instead since Android does not support HLS in notifications
+    - **Datetime picker overflow on device page** -- the "Silenced until" datetime picker may overflow its container on the device page, especially on narrow screens

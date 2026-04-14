@@ -14,6 +14,10 @@ Before installing Notifications for Frigate, make sure you have:
 
 ## Install via HACS (recommended)
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=daptify14&repository=hass-frigate-notifications)
+
+Click the badge above, or add manually:
+
 1. Open HACS in Home Assistant
 2. Go to **Integrations**
 3. Click the three-dot menu (top right) and select **Custom repositories**

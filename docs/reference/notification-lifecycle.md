@@ -15,7 +15,9 @@ The integration maps Frigate's MQTT message types to notification phases:
 
 The initial phase fires on the **first message that passes filters** for a review. Normally that's the `new` message, but if a filter isn't satisfied yet (e.g., the required zone hasn't been detected), the `new` message is skipped and the first `update` that passes filters dispatches as the initial notification instead.
 
-> **Tip:** Templates receive the phase value via `{{ phase }}`, not the raw MQTT message type. So the first notification always uses `phase = "initial"`, even if it was triggered by an `update` message.
+!!! tip "Phase vs lifecycle"
+
+    Templates receive the phase value via `{{ phase }}`, not the raw MQTT message type. So the first notification always uses `phase = "initial"`, even if it was triggered by an `update` message.
 
 The descriptions below reflect the default preset behavior. Sound, attachment, video, delay, interruption level, and more can be changed per phase in your profile settings.
 
@@ -67,7 +69,7 @@ Reviews that have not received an update in 30 minutes are automatically removed
 
 ## Silence
 
-Silence temporarily mutes a [profile](profiles.md). It is per-profile, time-based -- when the timer expires, notifications resume automatically.
+Silence temporarily mutes a [profile](profiles/index.md). It is per-profile, time-based -- when the timer expires, notifications resume automatically.
 
 **Triggering silence:**
 
@@ -75,7 +77,7 @@ Silence temporarily mutes a [profile](profiles.md). It is per-profile, time-base
 - Press the **Silence** button entity on the profile's device
 - Set the **Silenced Until** datetime entity directly from a dashboard or automation
 
-Silence is **persistent** -- it survives restarts. To clear immediately, press **Clear Silence** or set the datetime to a past time. See [Profiles -- Entities](profiles.md#entities) for the full entity list.
+Silence is **persistent** -- it survives restarts. To clear immediately, press **Clear Silence** or set the datetime to a past time. See [Profiles -- Entities](profiles/entities-and-diagnostics.md) for the full entity list.
 
 ## Cooldown
 
@@ -109,4 +111,4 @@ When enabled, only the first notification per review plays sound. Subsequent upd
 | **Affects** | All phases | Only initial notifications |
 | **Survives restart** | Yes (entity-based) | No (in-memory) |
 
-Duration defaults and per-profile overrides are configured in [Delivery & timing](profiles.md#delivery--timing).
+Duration defaults and per-profile overrides are configured in [Delivery & Timing](profiles/delivery-and-timing.md).

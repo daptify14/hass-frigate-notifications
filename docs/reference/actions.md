@@ -51,7 +51,9 @@ The tap action controls what happens when the user taps the notification body it
 
 **Default:** View Clip.
 
-> **Frigate URL reachability:** The **Open Frigate** option uses the Frigate URL configured in [Global Defaults](global-defaults.md). Add-on users should select the ingress path, which routes through HA's proxy and works from any network. If you run Frigate externally, enter a URL reachable from your phone -- internal addresses (e.g. `http://10.0.0.5:5000`, Docker hostnames) will fail when you're outside your local network.
+!!! warning "Frigate URL reachability"
+
+    The **Open Frigate** option uses the Frigate URL configured in [Global Defaults](global-defaults.md). Add-on users should select the ingress path, which routes through HA's proxy and works from any network. If you run Frigate externally, enter a URL reachable from your phone -- internal addresses (e.g. `http://10.0.0.5:5000`, Docker hostnames) will fail when you're outside your local network.
 
 ## Custom actions
 
@@ -83,4 +85,4 @@ All slots are optional. Leave them empty to skip.
 
 When a user taps a notification button, the integration looks up the review in its cache to provide full context variables. Reviews are cached for 30 minutes after the last MQTT update. If the review has expired (stale cleanup), the action still executes but with minimal context (camera and profile ID only). Most button-press actions (turn on a light, trigger a script) don't need review-specific variables.
 
-See [Profiles](profiles.md) for the full config flow field reference.
+See [Profiles](profiles/index.md) for the full config flow field reference.
