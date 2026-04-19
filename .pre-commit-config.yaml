@@ -16,13 +16,13 @@ repos:
         priority: 0
 
   - repo: https://github.com/crate-ci/typos
-    rev: v1.45.0
+    rev: v1.45.1
     hooks:
       - id: typos
         priority: 0
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.10
+    rev: v0.15.11
     hooks:
       - id: ruff-check
         args:
