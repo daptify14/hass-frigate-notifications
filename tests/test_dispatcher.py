@@ -1,6 +1,7 @@
 """Tests for the notification dispatcher."""
 
 from dataclasses import replace
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 from homeassistant.config_entries import ConfigEntryState
@@ -377,7 +378,7 @@ class TestDispatcherFailure:
         signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
         async_dispatcher_connect(hass, signal, problem_received.append)
 
-        stats_received: list = []
+        stats_received: list[Any] = []
         async_dispatcher_connect(
             hass,
             f"frigate_notifications_stats_{profile.entry_id}",
@@ -416,7 +417,7 @@ class TestDispatcherFailure:
         signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
         async_dispatcher_connect(hass, signal, problem_received.append)
 
-        stats_received: list = []
+        stats_received: list[Any] = []
         async_dispatcher_connect(
             hass,
             f"frigate_notifications_stats_{profile.entry_id}",
@@ -641,7 +642,7 @@ class TestDispatcherCustomActions:
         signal = f"{SIGNAL_DISPATCH_PROBLEM}_{profile.entry_id}_{profile.profile_id}"
         async_dispatcher_connect(hass, signal, received.append)
 
-        stats_received: list = []
+        stats_received: list[Any] = []
         async_dispatcher_connect(
             hass,
             f"frigate_notifications_stats_{profile.entry_id}",

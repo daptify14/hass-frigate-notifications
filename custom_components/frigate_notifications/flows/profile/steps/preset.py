@@ -18,6 +18,7 @@ import voluptuous as vol
 from ....const import DOMAIN
 
 if TYPE_CHECKING:
+    from ....presets import ProfilePreset
     from ..context import FlowContext
 
 _PRESET_BASE_URL = (
@@ -26,7 +27,7 @@ _PRESET_BASE_URL = (
 )
 
 
-def _build_preset_details_markdown(presets: list) -> str:
+def _build_preset_details_markdown(presets: list[ProfilePreset]) -> str:
     """Build a flat list of preset descriptions with source links."""
     blocks: list[str] = []
     for p in presets:

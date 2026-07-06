@@ -92,8 +92,8 @@ from .factories import make_phase, make_profile
     ids=["inherit-uses-global", "custom-uses-profile", "disabled", "missing-defaults-to-inherit"],
 )
 def test__resolve_time_filter(
-    profile_data: dict,
-    global_opts: dict,
+    profile_data: dict[str, Any],
+    global_opts: dict[str, Any],
     expected_mode: TimeFilterMode,
     expected_start: str,
     expected_end: str,
@@ -129,8 +129,8 @@ def test__resolve_time_filter(
     ids=["inherit-uses-global", "custom-uses-profile", "disabled"],
 )
 def test__resolve_guard_entity(
-    profile_data: dict,
-    global_opts: dict,
+    profile_data: dict[str, Any],
+    global_opts: dict[str, Any],
     expected_mode: GuardMode,
     expected_entity: str | None,
 ) -> None:
@@ -167,9 +167,9 @@ def test__resolve_guard_entity(
     ],
 )
 def test__resolve_presence(
-    profile_data: dict,
-    global_opts: dict,
-    expected: tuple,
+    profile_data: dict[str, Any],
+    global_opts: dict[str, Any],
+    expected: tuple[Any, ...],
 ) -> None:
     assert _resolve_presence(profile_data, global_opts) == expected
 
@@ -203,10 +203,10 @@ def test__resolve_presence(
     ids=["inherit-uses-global", "custom-uses-profile", "disabled"],
 )
 def test__resolve_state_filter(
-    profile_data: dict,
-    global_opts: dict,
+    profile_data: dict[str, Any],
+    global_opts: dict[str, Any],
     expected_entity: str | None,
-    expected_states: tuple,
+    expected_states: tuple[Any, ...],
 ) -> None:
     entity, states = _resolve_state_filter(profile_data, global_opts)
     assert entity == expected_entity

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
@@ -88,6 +88,7 @@ class FrigateNotificationsProfileEntity(Entity):
                     )
         self._attr_device_info = device_info
 
+    @override
     async def async_added_to_hass(self) -> None:
         """Ensure the profile device metadata stays in sync on startup."""
         await super().async_added_to_hass()

@@ -1,5 +1,7 @@
 """Tests for the options flow."""
 
+from typing import Any
+
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
@@ -37,7 +39,9 @@ class TestOptionsFlowMenu:
     """Tests for the menu-based reconfigure mode."""
 
     @pytest.fixture
-    def options_entry(self, hass: HomeAssistant, mock_frigate_data: dict) -> MockConfigEntry:
+    def options_entry(
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
+    ) -> MockConfigEntry:
         """Create an entry with existing options (triggers menu mode)."""
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -108,7 +112,7 @@ class TestOptionsFlowMenu:
         assert data["shared_state_filter_states"] == ["on"]
 
     async def test_delivery_clears_empty_guard(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Delivery step clears guard, time filter, presence, and state filter when empty."""
         entry = MockConfigEntry(
@@ -330,7 +334,7 @@ class TestOptionsFlowMenu:
         assert aliases["backyard"] == {"patio": "Back Patio"}
 
     async def test_zone_aliases_empty_clears(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Submitting all empty zone aliases removes zone_aliases key."""
         entry = MockConfigEntry(
@@ -359,7 +363,9 @@ class TestOptionsFlowLinear:
     """Tests for the linear first-time setup mode."""
 
     @pytest.fixture
-    def empty_options_entry(self, hass: HomeAssistant, mock_frigate_data: dict) -> MockConfigEntry:
+    def empty_options_entry(
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
+    ) -> MockConfigEntry:
         """Create an entry with empty options (triggers linear mode)."""
         entry = MockConfigEntry(
             domain=DOMAIN,

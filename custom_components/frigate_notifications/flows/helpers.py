@@ -65,7 +65,9 @@ TV_ATTACHMENT_SELECTOR = SelectSelector(
 )
 
 
-def video_selector(provider: str) -> SelectSelector:
+def video_selector(
+    provider: str,
+) -> SelectSelector:  # ty: ignore[invalid-type-form]
     """Build a video selector appropriate for the provider.
 
     Android omits HLS (unsupported). All other platforms show all options.
@@ -123,7 +125,9 @@ _EXCLUDED_NOTIFY_PREFIXES = ("mobile_app_", "send_message")
 _EXCLUDED_NOTIFY_SERVICES = ("persistent_notification", "notify")
 
 
-def notify_service_selector(hass: HomeAssistant) -> SelectSelector:
+def notify_service_selector(
+    hass: HomeAssistant,
+) -> SelectSelector:  # ty: ignore[invalid-type-form]
     """Build a SelectSelector listing available notify services, excluding per-device ones."""
     notify_services = hass.services.async_services().get("notify", {})
     options = [
@@ -141,7 +145,10 @@ def notify_service_selector(hass: HomeAssistant) -> SelectSelector:
     )
 
 
-def content_selector(template_presets: dict, phase: str | None = None) -> SelectSelector:
+def content_selector(
+    template_presets: dict[str, Any],
+    phase: str | None = None,
+) -> SelectSelector:  # ty: ignore[invalid-type-form]
     """Build a SelectSelector for content template fields (message/subtitle)."""
     options = [
         SelectOptionDict(value=t.id, label=t.label)
@@ -157,7 +164,9 @@ def content_selector(template_presets: dict, phase: str | None = None) -> Select
     )
 
 
-def zone_phrase_selector(template_presets: dict) -> SelectSelector:
+def zone_phrase_selector(
+    template_presets: dict[str, Any],
+) -> SelectSelector:  # ty: ignore[invalid-type-form]
     """Build a SelectSelector for zone phrase override fields."""
     options = [
         SelectOptionDict(value=t.value, label=t.label)
@@ -172,7 +181,9 @@ def zone_phrase_selector(template_presets: dict) -> SelectSelector:
     )
 
 
-def title_selector(template_presets: dict) -> SelectSelector:
+def title_selector(
+    template_presets: dict[str, Any],
+) -> SelectSelector:  # ty: ignore[invalid-type-form]
     """Build a SelectSelector for title template fields."""
     options = [
         SelectOptionDict(value=t.id, label=t.label) for t in template_presets.get("titles", [])
@@ -187,7 +198,7 @@ def title_selector(template_presets: dict) -> SelectSelector:
 
 
 def tv_overlay_delivery_fields(
-    phase_data: dict,
+    phase_data: dict[str, Any],
 ) -> tuple[dict[Any, Any], dict[str, Any]]:
     """Build TV overlay schema fields and suggested values."""
     suggested = {

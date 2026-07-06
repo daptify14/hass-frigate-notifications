@@ -285,7 +285,7 @@ def profile_common_fields(subentry: ConfigSubentry) -> dict[str, Any]:
 
 
 def _resolve_time_filter(
-    profile_data: dict, global_opts: Mapping
+    profile_data: dict[str, Any], global_opts: Mapping[str, Any]
 ) -> tuple[TimeFilterMode, str, str]:
     """Resolve time filter settings from profile + global inheritance."""
     override = profile_data.get("time_filter_override", TimeFilterOverride.INHERIT)
@@ -305,7 +305,9 @@ def _resolve_time_filter(
     )
 
 
-def _resolve_guard_entity(profile_data: dict, global_opts: Mapping) -> tuple[GuardMode, str | None]:
+def _resolve_guard_entity(
+    profile_data: dict[str, Any], global_opts: Mapping[str, Any]
+) -> tuple[GuardMode, str | None]:
     """Resolve guard entity settings from profile + global inheritance."""
     mode = GuardMode(profile_data.get("guard_mode", GuardMode.INHERIT))
     if mode == GuardMode.CUSTOM:
@@ -316,7 +318,9 @@ def _resolve_guard_entity(profile_data: dict, global_opts: Mapping) -> tuple[Gua
     return (GuardMode.INHERIT, global_opts.get("shared_guard_entity"))
 
 
-def _resolve_presence(profile_data: dict, global_opts: Mapping) -> tuple[str, ...]:
+def _resolve_presence(
+    profile_data: dict[str, Any], global_opts: Mapping[str, Any]
+) -> tuple[str, ...]:
     """Resolve presence entities from profile + global inheritance."""
     mode = PresenceMode(profile_data.get("presence_mode", PresenceMode.INHERIT))
     if mode == PresenceMode.CUSTOM:
@@ -328,7 +332,7 @@ def _resolve_presence(profile_data: dict, global_opts: Mapping) -> tuple[str, ..
 
 
 def _resolve_state_filter(
-    profile_data: dict, global_opts: Mapping
+    profile_data: dict[str, Any], global_opts: Mapping[str, Any]
 ) -> tuple[str | None, tuple[str, ...]]:
     """Resolve state filter from profile + global inheritance."""
     mode = StateFilterMode(profile_data.get("state_filter_mode", StateFilterMode.INHERIT))
@@ -382,7 +386,7 @@ _FALLBACK_DELIVERY: dict[str, Any] = {
 }
 
 
-def _expand_urgency(pd: dict) -> dict[str, Any]:
+def _expand_urgency(pd: dict[str, Any]) -> dict[str, Any]:
     """Expand portable urgency to concrete iOS + Android delivery values.
 
     Explicit concrete fields in pd take precedence over urgency defaults.
@@ -398,7 +402,7 @@ def _expand_urgency(pd: dict) -> dict[str, Any]:
     }
 
 
-def _build_phases(phases_data: dict) -> dict[Phase, PhaseConfig]:
+def _build_phases(phases_data: dict[str, Any]) -> dict[Phase, PhaseConfig]:
     """Build PhaseConfig dict from raw subentry data."""
     result: dict[Phase, PhaseConfig] = {}
     for phase_key, pd in phases_data.items():
@@ -443,7 +447,7 @@ def _build_phases(phases_data: dict) -> dict[Phase, PhaseConfig]:
     return result
 
 
-def _resolve_notify_target(hass: HomeAssistant, profile_data: dict) -> str:
+def _resolve_notify_target(hass: HomeAssistant, profile_data: dict[str, Any]) -> str:
     """Resolve notify target from device ID or service name."""
     device_id = profile_data.get("notify_device", "")
     if device_id:
@@ -456,7 +460,7 @@ def _resolve_notify_target(hass: HomeAssistant, profile_data: dict) -> str:
     return profile_data.get("notify_service", "")
 
 
-def _build_provider_config(p: dict) -> MobileAppConfig | AndroidTvConfig:
+def _build_provider_config(p: dict[str, Any]) -> MobileAppConfig | AndroidTvConfig:
     """Build the typed provider config from profile subentry data."""
     if provider_family(Provider(p.get("provider", Provider.APPLE))) == ProviderFamily.ANDROID_TV:
         return AndroidTvConfig()

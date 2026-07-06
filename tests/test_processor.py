@@ -3,6 +3,7 @@
 import asyncio
 import json
 import time
+from typing import Any
 
 import pytest
 
@@ -19,7 +20,7 @@ class TestHandleReviewMessage:
     """Tests for the review message handler happy paths."""
 
     @pytest.fixture
-    def callbacks(self) -> dict[str, list]:
+    def callbacks(self) -> dict[str, list[Any]]:
         return {
             "new": [],
             "update": [],
@@ -30,7 +31,7 @@ class TestHandleReviewMessage:
         }
 
     @pytest.fixture
-    def processor(self, callbacks: dict[str, list]) -> ReviewProcessor:
+    def processor(self, callbacks: dict[str, list[Any]]) -> ReviewProcessor:
         return ReviewProcessor(
             on_review_new=callbacks["new"].append,
             on_review_update=lambda r, c: callbacks["update"].append((r, c)),
@@ -41,7 +42,7 @@ class TestHandleReviewMessage:
         )
 
     async def test_new_creates_review_fires_callback_and_increments_count(
-        self, processor: ReviewProcessor, callbacks: dict[str, list]
+        self, processor: ReviewProcessor, callbacks: dict[str, list[Any]]
     ) -> None:
         assert processor.active_review_count == 0
         await processor.handle_review_message(json.dumps(REVIEW_NEW_PAYLOAD))
@@ -53,7 +54,7 @@ class TestHandleReviewMessage:
         assert processor.active_review_count == 1
 
     async def test_update_known_review_fires_callback_with_change_string(
-        self, processor: ReviewProcessor, callbacks: dict[str, list]
+        self, processor: ReviewProcessor, callbacks: dict[str, list[Any]]
     ) -> None:
         await processor.handle_review_message(json.dumps(REVIEW_NEW_PAYLOAD))
         await processor.handle_review_message(json.dumps(REVIEW_UPDATE_PAYLOAD))
@@ -63,7 +64,7 @@ class TestHandleReviewMessage:
         assert review.latest_detection_id == "det_id_2"
 
     async def test_update_known_review_tracks_new_objects(
-        self, processor: ReviewProcessor, callbacks: dict[str, list]
+        self, processor: ReviewProcessor, callbacks: dict[str, list[Any]]
     ) -> None:
         await processor.handle_review_message(json.dumps(REVIEW_NEW_PAYLOAD))
         update_payload = json.loads(json.dumps(REVIEW_UPDATE_PAYLOAD))
@@ -74,7 +75,7 @@ class TestHandleReviewMessage:
         assert "new_objects" in change
 
     async def test_update_unknown_review_creates_then_fires_callback(
-        self, processor: ReviewProcessor, callbacks: dict[str, list]
+        self, processor: ReviewProcessor, callbacks: dict[str, list[Any]]
     ) -> None:
         await processor.handle_review_message(json.dumps(REVIEW_UPDATE_PAYLOAD))
         assert len(callbacks["update"]) == 1
@@ -84,7 +85,7 @@ class TestHandleReviewMessage:
         assert processor.active_review_count == 1
 
     async def test_end_known_review_updates_and_fires_callback(
-        self, processor: ReviewProcessor, callbacks: dict[str, list]
+        self, processor: ReviewProcessor, callbacks: dict[str, list[Any]]
     ) -> None:
         await processor.handle_review_message(json.dumps(REVIEW_NEW_PAYLOAD))
         await processor.handle_review_message(json.dumps(REVIEW_END_PAYLOAD))
@@ -93,7 +94,7 @@ class TestHandleReviewMessage:
         assert review.end_time == 1773840991.854811
 
     async def test_end_unknown_review_creates_then_fires_callback(
-        self, processor: ReviewProcessor, callbacks: dict[str, list]
+        self, processor: ReviewProcessor, callbacks: dict[str, list[Any]]
     ) -> None:
         await processor.handle_review_message(json.dumps(REVIEW_END_PAYLOAD))
         assert len(callbacks["end"]) == 1
@@ -102,7 +103,7 @@ class TestHandleReviewMessage:
         assert processor.active_review_count == 1
 
     async def test_genai_known_review_attaches_data_and_fires_callbacks(
-        self, processor: ReviewProcessor, callbacks: dict[str, list]
+        self, processor: ReviewProcessor, callbacks: dict[str, list[Any]]
     ) -> None:
         await processor.handle_review_message(json.dumps(REVIEW_NEW_PAYLOAD))
         await processor.handle_review_message(json.dumps(REVIEW_GENAI_PAYLOAD))
@@ -115,7 +116,7 @@ class TestHandleReviewMessage:
         assert processor.get_review("1773840946.10543-review1") is not None
 
     async def test_genai_unknown_review_ignored(
-        self, processor: ReviewProcessor, callbacks: dict[str, list]
+        self, processor: ReviewProcessor, callbacks: dict[str, list[Any]]
     ) -> None:
         await processor.handle_review_message(json.dumps(REVIEW_GENAI_PAYLOAD))
         assert len(callbacks["genai"]) == 0

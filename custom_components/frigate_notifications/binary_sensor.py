@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -91,6 +91,7 @@ class FrigateNotificationsMqttConnectedBinarySensor(
         self._mqtt_topic = mqtt_topic
         self._attr_is_on = False
 
+    @override
     async def async_added_to_hass(self) -> None:
         """Check and track MQTT connection status."""
         await super().async_added_to_hass()
@@ -112,6 +113,7 @@ class FrigateNotificationsMqttConnectedBinarySensor(
             self.async_write_ha_state()
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the subscribed topic."""
         return {"subscribed_topic": self._mqtt_topic}
@@ -140,6 +142,7 @@ class FrigateNotificationsSilencedBinarySensor(
         self._attr_is_on = False
         self._cancel_timer: CALLBACK_TYPE | None = None
 
+    @override
     async def async_added_to_hass(self) -> None:
         """Derive initial state and subscribe to silence updates."""
         await super().async_added_to_hass()
@@ -195,6 +198,7 @@ class FrigateNotificationsSilencedBinarySensor(
             self._cancel_timer()
             self._cancel_timer = None
 
+    @override
     async def async_will_remove_from_hass(self) -> None:
         """Clean up timer."""
         self._cancel_expiry_timer()
@@ -216,6 +220,7 @@ class FrigateNotificationsCameraDiagnosticBinarySensor(
         self._attr_name = f"Camera {camera}"
 
     @property
+    @override
     def is_on(self) -> bool:
         """Return whether the camera still exists in the linked Frigate config."""
         frigate_entry_id = self._entry.data["frigate_entry_id"]
@@ -223,6 +228,7 @@ class FrigateNotificationsCameraDiagnosticBinarySensor(
         return self._camera in available
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return camera capability attributes."""
         frigate_entry_id = self._entry.data["frigate_entry_id"]
@@ -261,6 +267,7 @@ class FrigateNotificationsDispatchProblemBinarySensor(
         self._attr_is_on = False
         self._last_error: str | None = None
 
+    @override
     async def async_added_to_hass(self) -> None:
         """Subscribe to dispatch problem signals."""
         await super().async_added_to_hass()
@@ -277,6 +284,7 @@ class FrigateNotificationsDispatchProblemBinarySensor(
             self.async_write_ha_state()
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return last error details when in problem state."""
         if self._last_error is None:

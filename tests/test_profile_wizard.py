@@ -80,7 +80,7 @@ class TestProfileWizard:
     """Profile wizard tests — preset -> basics -> customize menu -> save."""
 
     async def test_builtin_preset_survives_empty_wizard_steps(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Selecting a built-in preset seeds phase data; empty submits preserve it."""
         entry = _make_profile_entry(hass, mock_frigate_data)
@@ -122,7 +122,7 @@ class TestProfileWizard:
         return_value=False,
     )
     async def test_rich_alerts_preset_seeds_non_genai_when_capability_absent(
-        self, mock_genai: Any, hass: HomeAssistant, mock_frigate_data: dict
+        self, mock_genai: Any, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Rich-alert preset applies genai_disabled_overrides when capability is absent."""
         entry = _make_profile_entry(hass, mock_frigate_data)
@@ -157,7 +157,7 @@ class TestProfileWizard:
         assert result["data"]["_preset_version"] == 3
 
     async def test_content_selector_filters_by_phase(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Phase-restricted presets only appear in their intended phase selectors."""
         entry = _make_profile_entry(hass, mock_frigate_data)
@@ -188,7 +188,9 @@ class TestProfileWizard:
         assert "object_action_zone" in initial_opts
         assert "object_action_zone" in genai_opts
 
-    async def test_basics_two_pass(self, hass: HomeAssistant, mock_frigate_data: dict) -> None:
+    async def test_basics_two_pass(
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
+    ) -> None:
         """Test basics step uses two-pass pattern (identity then target)."""
         entry = _make_profile_entry(hass, mock_frigate_data)
         result = await hass.config_entries.subentries.async_init(
@@ -222,7 +224,7 @@ class TestProfileWizard:
         assert result["step_id"] == "customize"
 
     async def test_fast_path_save_after_basics(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """User can save immediately from the customize menu with preset defaults."""
         entry = _make_profile_entry(hass, mock_frigate_data)
@@ -265,7 +267,7 @@ class TestProfileWizard:
         assert result["reason"] == "frigate_not_loaded"
 
     async def test_basics_notify_target_required(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Test error when no notify target is provided."""
         entry = _make_profile_entry(hass, mock_frigate_data)
@@ -307,7 +309,7 @@ class TestProfileWizard:
         assert errors["notify_service"] == "notify_target_exclusive"
 
     async def test_tv_provider_rejects_mobile_app(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Test android_tv rejects mobile_app services."""
         entry = _make_profile_entry(hass, mock_frigate_data)
@@ -337,7 +339,7 @@ class TestProfileWizard:
         assert errors["notify_service"] == "tv_notify_service_invalid"
 
     async def test_filtering_shows_recognition_with_identities(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Recognition section appears when camera has discovered sub-label identities."""
         ent_reg = er.async_get(hass)
@@ -375,7 +377,7 @@ class TestProfileWizard:
         assert "recognition_config" in keys
 
     async def test_filtering_hides_recognition_without_identities(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Recognition section hidden when camera has no discovered sub-label identities."""
         entry = _make_profile_entry(hass, mock_frigate_data)
@@ -400,7 +402,7 @@ class TestConditionalVisibility:
     """Tests for conditional phase/provider visibility in the profile flow."""
 
     async def test_media_actions_disabled_phase_omits_section(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Disabled phase sections are omitted from media_actions schema."""
         entry = _make_profile_entry(hass, mock_frigate_data)
@@ -436,7 +438,7 @@ class TestConditionalVisibility:
     async def test_media_actions_custom_actions_visibility(
         self,
         hass: HomeAssistant,
-        mock_frigate_data: dict,
+        mock_frigate_data: dict[str, Any],
         advance_fn: Callable[..., Coroutine[Any, Any, tuple[str, Any]]],
         expected: bool,
     ) -> None:
@@ -456,7 +458,7 @@ class TestConditionalVisibility:
         assert ("custom_actions" in keys) is expected
 
     async def test_media_actions_custom_actions_filters_disabled_phases(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Custom actions section only contains fields for enabled phases."""
         entry = _make_profile_entry(hass, mock_frigate_data)
@@ -494,7 +496,7 @@ class TestConditionalVisibility:
         assert "end_custom_actions" not in inner_keys
 
     async def test_reconfigure_reenable_phase_restores_media_section(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Re-enabling a phase in content makes its media section reappear."""
         initial_data: dict[str, Any] = {
@@ -577,7 +579,7 @@ class TestMultiCameraConfigFlow:
     async def test_filtering_step_zone_field_visibility(
         self,
         hass: HomeAssistant,
-        mock_frigate_data: dict,
+        mock_frigate_data: dict[str, Any],
         cameras: list[str],
         zones_expected: bool,
     ) -> None:
@@ -651,7 +653,7 @@ class TestMultiCameraConfigFlow:
             pytest.fail("objects field not found in filtering schema")
 
     async def test_duplicate_name_rejected(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Profile with identical title to existing profile is rejected."""
         entry = _make_profile_entry(hass, mock_frigate_data)
@@ -683,7 +685,7 @@ class TestMultiCameraConfigFlow:
         assert r2["errors"]["name"] == "profile_name_duplicate"
 
     async def test_cameras_stored_in_sorted_order(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Cameras are canonicalized to alphabetical order on storage."""
         entry = _make_profile_entry(hass, mock_frigate_data)
@@ -723,7 +725,7 @@ class TestContentStep:
     async def test_content_title_template_storage(
         self,
         hass: HomeAssistant,
-        mock_frigate_data: dict,
+        mock_frigate_data: dict[str, Any],
         input_value: str,
         stored: bool,
     ) -> None:
@@ -744,7 +746,7 @@ class TestContentStep:
             assert "title_template" not in result["data"]
 
     async def test_content_invalid_templates_rejected(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Invalid custom templates are rejected with a content-step error."""
         invalid_inputs = (
@@ -762,7 +764,7 @@ class TestContentStep:
             assert result["errors"] == {"base": "invalid_template"}
 
     async def test_content_preset_id_in_title_accepted(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Preset ID in title_template passes validation (resolved before syntax check)."""
         entry = _make_profile_entry(hass, mock_frigate_data)

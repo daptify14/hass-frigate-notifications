@@ -1,5 +1,7 @@
 """Tests for the main config flow."""
 
+from typing import Any
+
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
@@ -12,7 +14,7 @@ class TestMainFlow:
     """Main config flow tests."""
 
     async def test_user_step_creates_entry(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Test happy path: select Frigate instance -> create entry."""
         result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
@@ -33,7 +35,7 @@ class TestMainFlow:
         assert result["reason"] == "frigate_not_loaded"
 
     async def test_user_step_prevents_duplicate(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Test duplicate entry prevented by unique ID."""
         # Create first entry.

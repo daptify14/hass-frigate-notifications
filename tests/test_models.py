@@ -1,5 +1,7 @@
 """Tests for data models."""
 
+from typing import Any
+
 import pytest
 
 from custom_components.frigate_notifications.models import (
@@ -73,7 +75,7 @@ class TestReview:
         assert review.zones == ["driveway_approach"]
 
     @pytest.mark.parametrize("payload", [{"after": {}}, {}])
-    def test_from_review_mqtt_defaults(self, payload: dict) -> None:
+    def test_from_review_mqtt_defaults(self, payload: dict[str, Any]) -> None:
         """Missing or empty payloads produce safe defaults."""
         review = Review.from_review_mqtt(payload)
         assert review.review_id == ""

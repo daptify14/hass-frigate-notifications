@@ -1,5 +1,7 @@
 """Config flow for Notifications for Frigate."""
 
+from typing import override
+
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -28,6 +30,7 @@ class FrigateNotificationsConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @classmethod
     @callback
+    @override
     def async_get_supported_subentry_types(
         cls, config_entry: ConfigEntry
     ) -> dict[str, type[ConfigSubentryFlow]]:
@@ -37,10 +40,12 @@ class FrigateNotificationsConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @classmethod
     @callback
+    @override
     def async_get_options_flow(cls, config_entry: ConfigEntry) -> OptionsFlowHandler:
         """Return the options flow handler."""
         return OptionsFlowHandler()
 
+    @override
     async def async_step_user(self, user_input=None) -> ConfigFlowResult:
         """Select the Frigate instance this integration should follow."""
         frigate_entries = self.hass.config_entries.async_entries(FRIGATE_DOMAIN)
