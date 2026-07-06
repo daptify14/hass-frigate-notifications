@@ -84,7 +84,7 @@ class TemplateCache:
         """Initialize empty template cache."""
         self._cache: dict[str, Template] = {}
 
-    def get_or_create(self, template_str: str, hass: HomeAssistant | None) -> Template:
+    def get_or_create(self, template_str: str, hass: HomeAssistant) -> Template:
         """Return a cached Template or create and cache a new one."""
         tpl = self._cache.get(template_str)
         if tpl is None:
@@ -98,7 +98,7 @@ class TemplateCache:
 
 
 def render_template(
-    hass: HomeAssistant | None,
+    hass: HomeAssistant,
     template_str: str,
     ctx: Mapping[str, Any],
     cache: TemplateCache | None = None,
