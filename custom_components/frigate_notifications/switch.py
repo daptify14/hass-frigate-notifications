@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
@@ -57,6 +57,7 @@ class FrigateNotificationsSwitch(FrigateNotificationsProfileEntity, SwitchEntity
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_enabled"
         self._attr_is_on = True
 
+    @override
     async def async_added_to_hass(self) -> None:
         """Restore state and register in runtime_data for cross-component access."""
         await super().async_added_to_hass()
@@ -67,15 +68,18 @@ class FrigateNotificationsSwitch(FrigateNotificationsProfileEntity, SwitchEntity
         else:
             self._attr_is_on = True
 
+    @override
     async def async_will_remove_from_hass(self) -> None:
         """Clear runtime_data reference."""
         self._entry.runtime_data.enabled_switches.pop(self._subentry_id, None)
 
+    @override
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the profile."""
         self._attr_is_on = True
         self.async_write_ha_state()
 
+    @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the profile."""
         self._attr_is_on = False

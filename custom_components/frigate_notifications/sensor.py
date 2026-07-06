@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from homeassistant.components.sensor import RestoreSensor, SensorEntity, SensorStateClass
 from homeassistant.const import EntityCategory
@@ -66,11 +66,13 @@ class FrigateNotificationsReviewDebugSensor(FrigateNotificationsIntegrationEntit
         self._attr_native_value: str | None = None
         self._review_attrs: dict[str, Any] = {}
 
+    @override
     async def async_added_to_hass(self) -> None:
         """Register in runtime_data so processor can push updates."""
         await super().async_added_to_hass()
         self._entry.runtime_data.debug_sensor = self
 
+    @override
     async def async_will_remove_from_hass(self) -> None:
         """Clear runtime_data reference."""
         self._entry.runtime_data.debug_sensor = None
@@ -92,6 +94,7 @@ class FrigateNotificationsReviewDebugSensor(FrigateNotificationsIntegrationEntit
         self.async_write_ha_state()
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return debug attributes."""
         return self._review_attrs
@@ -112,6 +115,7 @@ class FrigateNotificationsStatsSensor(FrigateNotificationsIntegrationEntity, Res
         self._by_camera: dict[str, int] = {}
         self._by_profile: dict[str, int] = {}
 
+    @override
     async def async_added_to_hass(self) -> None:
         """Restore state and subscribe to stats signal."""
         await super().async_added_to_hass()
@@ -135,6 +139,7 @@ class FrigateNotificationsStatsSensor(FrigateNotificationsIntegrationEntity, Res
         signal = f"{SIGNAL_STATS}_{self._entry.entry_id}"
         self.async_on_remove(async_dispatcher_connect(self.hass, signal, self._on_stats_signal))
 
+    @override
     async def async_will_remove_from_hass(self) -> None:
         """Clear runtime_data reference."""
         self._entry.runtime_data.stats_sensor = None
@@ -157,6 +162,7 @@ class FrigateNotificationsStatsSensor(FrigateNotificationsIntegrationEntity, Res
         self.async_write_ha_state()
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return per-camera and per-profile counters."""
         return {"by_camera": self._by_camera, "by_profile": self._by_profile}
@@ -185,6 +191,7 @@ class FrigateNotificationsLastSentSensor(FrigateNotificationsProfileEntity, Rest
         self._attr_native_value: str | None = None
         self._last_sent_attrs: dict[str, Any] = {}
 
+    @override
     async def async_added_to_hass(self) -> None:
         """Restore state and subscribe to last_sent signal."""
         await super().async_added_to_hass()
@@ -210,6 +217,7 @@ class FrigateNotificationsLastSentSensor(FrigateNotificationsProfileEntity, Rest
         self.async_write_ha_state()
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return last sent notification details."""
         return self._last_sent_attrs

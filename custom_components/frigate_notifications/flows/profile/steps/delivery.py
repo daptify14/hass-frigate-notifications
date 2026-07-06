@@ -165,7 +165,7 @@ def apply_delivery_input(
     _submit_android_delivery(draft, user_input)
 
 
-def _build_android_delivery_schema(data: dict) -> dict[Any, Any]:
+def _build_android_delivery_schema(data: dict[str, Any]) -> dict[Any, Any]:
     """Build schema fields for profile-level Android/mobile delivery options."""
     return {
         vol.Optional("android_delivery"): section(
@@ -193,7 +193,7 @@ def _build_android_delivery_schema(data: dict) -> dict[Any, Any]:
     }
 
 
-def _submit_delivery_phases(data: dict, user_input: dict) -> None:
+def _submit_delivery_phases(data: dict[str, Any], user_input: dict[str, Any]) -> None:
     """Extract delivery fields from user_input into data['phases']."""
     for phase_name in PROFILE_PHASE_ORDER:
         phase_sec = user_input.get(f"{phase_name}_delivery", {})
@@ -218,7 +218,7 @@ def _submit_delivery_phases(data: dict, user_input: dict) -> None:
         phases[phase_name] = phase
 
 
-def _submit_rate_limiting(data: dict, user_input: dict) -> None:
+def _submit_rate_limiting(data: dict[str, Any], user_input: dict[str, Any]) -> None:
     """Extract rate limiting fields from user_input."""
     rate_sec = user_input.get("rate_limiting", {})
     silence = rate_sec.get("silence_duration")
@@ -237,7 +237,7 @@ def _submit_rate_limiting(data: dict, user_input: dict) -> None:
         data.pop("alert_once", None)
 
 
-def _submit_android_delivery(data: dict, user_input: dict) -> None:
+def _submit_android_delivery(data: dict[str, Any], user_input: dict[str, Any]) -> None:
     """Extract android delivery config from user_input."""
     android_sec = user_input.get("android_delivery", {})
     if android_sec:

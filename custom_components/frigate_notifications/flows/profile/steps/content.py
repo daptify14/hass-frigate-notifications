@@ -149,7 +149,7 @@ def apply_content_input(
         draft.pop("zone_overrides", None)
 
 
-def _submit_content_phases(data: dict, user_input: dict) -> None:
+def _submit_content_phases(data: dict[str, Any], user_input: dict[str, Any]) -> None:
     """Extract content fields from user_input into data['phases']."""
     for phase_name in PROFILE_PHASE_ORDER:
         phase_sec = user_input.get(f"{phase_name}_content", {})

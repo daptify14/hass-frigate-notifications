@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from homeassistant.components.datetime import DateTimeEntity
 from homeassistant.const import EntityCategory
@@ -77,6 +77,7 @@ class FrigateNotificationsSilenceDateTime(
         self._silence_duration = silence_duration
         self._cancel_timer: CALLBACK_TYPE | None = None
 
+    @override
     async def async_added_to_hass(self) -> None:
         """Restore state and register in runtime_data for cross-component access."""
         await super().async_added_to_hass()
@@ -104,11 +105,13 @@ class FrigateNotificationsSilenceDateTime(
             self._attr_native_value = None
         self._signal_state_update()
 
+    @override
     async def async_will_remove_from_hass(self) -> None:
         """Clean up timer and runtime_data reference."""
         self._cancel_scheduled_timer()
         self._entry.runtime_data.silence_datetimes.pop(self._subentry_id, None)
 
+    @override
     async def async_set_value(self, value: datetime) -> None:
         """Set the silence-until datetime."""
         self._cancel_scheduled_timer()
@@ -163,6 +166,7 @@ class FrigateNotificationsSilenceDateTime(
         )
 
     @property
+    @override
     def extra_state_attributes(self) -> dict[str, int]:
         """Return the default silence duration as an attribute."""
         return {"default_duration_minutes": self._silence_duration}

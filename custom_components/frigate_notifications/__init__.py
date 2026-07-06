@@ -64,7 +64,7 @@ PLATFORMS = [
 ]
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Set up Notifications for Frigate from configuration.yaml."""
     hass.data.setdefault(DOMAIN, {})
     await async_ensure_preset_cache(hass)

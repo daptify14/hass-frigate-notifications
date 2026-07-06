@@ -294,7 +294,7 @@ class TestFilteringSubmission:
 class TestConfigHelperGuards:
     """Guard-clause coverage for Frigate config helper wrappers."""
 
-    def _make_hass(self, cameras: dict | None = None) -> Any:
+    def _make_hass(self, cameras: dict[str, Any] | None = None) -> Any:
         from unittest.mock import MagicMock
 
         hass = MagicMock()

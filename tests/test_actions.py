@@ -2,6 +2,7 @@
 
 import copy
 import json
+from typing import Any
 from unittest.mock import patch
 
 from homeassistant.config_entries import ConfigSubentryData
@@ -107,7 +108,7 @@ class TestActionListener:
 
         async def _capture(
             _hass: HomeAssistant,
-            _actions: tuple[dict, ...],
+            _actions: tuple[dict[str, Any], ...],
             run_variables: dict[str, object],
             profile_name: str,
         ) -> None:
@@ -155,7 +156,10 @@ class TestActionListener:
         assert "Malformed custom action" in caplog.text
 
     async def test_custom_action_no_button_actions_noop(
-        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_frigate_data: dict
+        self,
+        hass: HomeAssistant,
+        mock_config_entry: MockConfigEntry,
+        mock_frigate_data: dict[str, Any],
     ) -> None:
         """Custom action with no on_button_action configured does nothing."""
         await setup_integration(hass, mock_config_entry)
@@ -188,7 +192,7 @@ class TestActionListener:
 
         async def _capture(
             _hass: HomeAssistant,
-            _actions: tuple[dict, ...],
+            _actions: tuple[dict[str, Any], ...],
             run_variables: dict[str, object],
             profile_name: str,
         ) -> None:
@@ -286,7 +290,7 @@ class TestInferReviewPhase:
     )
     def test_infer_review_phase(
         self,
-        review_kwargs: dict,
+        review_kwargs: dict[str, Any],
         expected_phase: Phase,
         expected_lifecycle: Lifecycle,
     ) -> None:

@@ -4,7 +4,9 @@ These represent the exact shapes Frigate sends on the reviews topic.
 All payloads use consistent review_id and camera for lifecycle chaining.
 """
 
-REVIEW_NEW_PAYLOAD: dict = {
+from typing import Any
+
+REVIEW_NEW_PAYLOAD: dict[str, Any] = {
     "type": "new",
     "before": {
         "id": "1773840946.10543-review1",
@@ -38,7 +40,7 @@ REVIEW_NEW_PAYLOAD: dict = {
     },
 }
 
-REVIEW_UPDATE_PAYLOAD: dict = {
+REVIEW_UPDATE_PAYLOAD: dict[str, Any] = {
     "type": "update",
     "before": {
         "id": "1773840946.10543-review1",
@@ -72,7 +74,7 @@ REVIEW_UPDATE_PAYLOAD: dict = {
     },
 }
 
-REVIEW_END_PAYLOAD: dict = {
+REVIEW_END_PAYLOAD: dict[str, Any] = {
     "type": "end",
     "before": {
         "id": "1773840946.10543-review1",
@@ -106,7 +108,7 @@ REVIEW_END_PAYLOAD: dict = {
     },
 }
 
-REVIEW_GENAI_PAYLOAD: dict = {
+REVIEW_GENAI_PAYLOAD: dict[str, Any] = {
     "type": "genai",
     "before": {
         "id": "1773840946.10543-review1",

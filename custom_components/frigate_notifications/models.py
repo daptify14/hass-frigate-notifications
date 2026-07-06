@@ -132,7 +132,7 @@ class ReviewState:
     """Per-(profile, review) notification tracking state."""
 
     initial_sent: bool = False
-    pending_task: asyncio.Task | None = field(default=None, repr=False)
+    pending_task: asyncio.Task[Any] | None = field(default=None, repr=False)
 
 
 @dataclass

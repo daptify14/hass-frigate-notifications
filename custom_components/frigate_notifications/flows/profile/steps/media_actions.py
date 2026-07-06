@@ -100,7 +100,7 @@ def apply_media_actions_input(
     _submit_action_presets(draft, user_input)
 
 
-def _build_action_preset_schema(data: dict) -> dict[Any, Any]:
+def _build_action_preset_schema(data: dict[str, Any]) -> dict[Any, Any]:
     """Build schema fields for tap action and action buttons."""
     from ....action_presets import (
         DEFAULT_PRESET_IDS,
@@ -152,7 +152,7 @@ def _build_action_preset_schema(data: dict) -> dict[Any, Any]:
     return result
 
 
-def _submit_media_phases(data: dict, user_input: dict) -> None:
+def _submit_media_phases(data: dict[str, Any], user_input: dict[str, Any]) -> None:
     """Extract media fields from user_input into data['phases']."""
     for phase_name in PROFILE_PHASE_ORDER:
         phase_sec = user_input.get(f"{phase_name}_media", {})
@@ -169,7 +169,7 @@ def _submit_media_phases(data: dict, user_input: dict) -> None:
         phases[phase_name] = phase
 
 
-def _submit_custom_actions(data: dict, user_input: dict) -> None:
+def _submit_custom_actions(data: dict[str, Any], user_input: dict[str, Any]) -> None:
     """Extract custom actions per phase from user_input."""
     custom_sec = user_input.get("custom_actions", {})
     for phase_name in PROFILE_PHASE_ORDER:
@@ -183,7 +183,7 @@ def _submit_custom_actions(data: dict, user_input: dict) -> None:
         phases[phase_name] = phase
 
 
-def _submit_action_presets(data: dict, user_input: dict) -> None:
+def _submit_action_presets(data: dict[str, Any], user_input: dict[str, Any]) -> None:
     """Extract tap action and button presets from user_input."""
     if "tap_action" in user_input:
         tap_sec = user_input.get("tap_action", {})

@@ -10,7 +10,7 @@ from custom_components.frigate_notifications.const import DOMAIN
 from .conftest import FRIGATE_ENTRY_ID
 
 
-def _make_profile_entry(hass: HomeAssistant, mock_frigate_data: dict) -> MockConfigEntry:
+def _make_profile_entry(hass: HomeAssistant, mock_frigate_data: dict[str, Any]) -> MockConfigEntry:
     """Create a config entry for profile flow testing."""
     entry = MockConfigEntry(
         domain=DOMAIN,

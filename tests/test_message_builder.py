@@ -1,5 +1,7 @@
 """Tests for the message builder (template rendering and context building)."""
 
+from typing import Any
+
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.template import TemplateError
 import pytest
@@ -588,7 +590,7 @@ class TestRenderNotification:
         ids=["message", "title"],
     )
     def test_render_error_falls_back_to_raw(
-        self, hass: HomeAssistant, field: str, phase_kwargs: dict
+        self, hass: HomeAssistant, field: str, phase_kwargs: dict[str, Any]
     ) -> None:
         """TemplateError falls back to raw template for message or title."""
         phase = PhaseConfig(content=PhaseContent(**phase_kwargs))

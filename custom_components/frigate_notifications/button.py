@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.const import EntityCategory
@@ -63,6 +63,7 @@ class FrigateNotificationsSilenceButton(FrigateNotificationsProfileEntity, Butto
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_silence"
 
+    @override
     async def async_press(self) -> None:
         """Activate silence on the profile's datetime entity."""
         dt_entity = self._entry.runtime_data.silence_datetimes.get(self._subentry_id)
@@ -92,6 +93,7 @@ class FrigateNotificationsClearSilenceButton(FrigateNotificationsProfileEntity, 
         super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_clear_silence"
 
+    @override
     async def async_press(self) -> None:
         """Clear silence on the profile's datetime entity."""
         dt_entity = self._entry.runtime_data.silence_datetimes.get(self._subentry_id)
@@ -112,6 +114,7 @@ class FrigateNotificationsResetStatsButton(FrigateNotificationsIntegrationEntity
         super().__init__(entry)
         self._attr_unique_id = f"{entry.entry_id}_reset_stats"
 
+    @override
     async def async_press(self) -> None:
         """Reset the stats sensor for this config entry."""
         sensor = self._entry.runtime_data.stats_sensor

@@ -27,7 +27,7 @@ class TestProfileReconfigure:
     """Profile reconfigure tests."""
 
     async def test_reconfigure_shows_menu(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Test reconfigure flow shows the section menu."""
         entry = MockConfigEntry(
@@ -57,7 +57,7 @@ class TestProfileReconfigure:
         assert "media_actions" in result["menu_options"]
 
     async def test_reconfigure_deep_copies_data(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Reconfigure deep-copies subentry data — flow mutations don't leak back."""
         original_phases = {"initial": {"enabled": True, "message_template": "test"}}
@@ -92,7 +92,7 @@ class TestProfileReconfigure:
         assert subentry.data["phases"]["initial"] is original_phases["initial"]
 
     async def test_reconfigure_roundtrip_preserves_all_values(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Reconfigure round-trip: all customized values survive each step submission."""
         # Add tracked objects to the mock Frigate config for the objects selector.
@@ -443,7 +443,7 @@ class TestProfileReconfigure:
         assert "custom_actions" not in saved["phases"]["end"]
 
     async def test_reconfigure_basics_shows_identity_fields_readonly(
-        self, hass: HomeAssistant, mock_frigate_data: dict
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
         """Reconfigure basics step shows identity fields as read-only."""
         entry = MockConfigEntry(

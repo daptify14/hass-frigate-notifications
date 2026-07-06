@@ -159,7 +159,7 @@ def resolve_dispatch_plan(
 
 async def execute_custom_actions(
     hass: HomeAssistant,
-    actions: tuple[dict, ...],
+    actions: tuple[dict[str, Any], ...],
     run_variables: Mapping[str, Any],
     profile_name: str,
 ) -> str | None:
