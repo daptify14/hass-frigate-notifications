@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
+from ..action_presets import ACTION_PRESETS, NO_ACTION_URI, resolve_uri_for_platform
 from ..enums import ActionType, VideoType, resolved_platform
 from ..media import (
     ANDROID_IMAGE_URL_TEMPLATES,
@@ -57,7 +58,6 @@ class MobileAppProvider:
             "tag": rendered.tag,
             "group": rendered.group,
             "subtitle": rendered.subtitle,
-            "url": rendered.click_url,
             "attachment": {
                 "url": ios_url,
                 "content-type": ios_content_type,
@@ -74,6 +74,11 @@ class MobileAppProvider:
             },
             "actions": actions,
         }
+
+        # noAction is Android-only; iOS navigates to any url it receives,
+        # so a placeholder or empty value would open the app to a 404.
+        if rendered.click_url and rendered.click_url != NO_ACTION_URI:
+            data["url"] = rendered.click_url
 
         # Live View: tell the iOS companion app to show the camera's live stream.
         if rendered.media.video_kind == VideoType.LIVE_VIEW:
@@ -117,7 +122,6 @@ class MobileAppProvider:
         phase_delivery = profile.get_phase(rendered.phase_name).delivery
         data: dict[str, Any] = {
             "image": android_image_url,
-            "clickAction": rendered.click_url,
             "subject": rendered.subtitle,
             "ttl": 0 if rendered.critical else phase_delivery.ttl,
             "priority": "high" if rendered.critical else phase_delivery.priority,
@@ -127,6 +131,9 @@ class MobileAppProvider:
             "persistent": cfg.persistent,
             "car_ui": cfg.android_auto,
         }
+
+        if rendered.click_url:
+            data["clickAction"] = rendered.click_url
 
         if profile.alert_once and not rendered.critical:
             data["alert_once"] = True
@@ -196,8 +203,6 @@ class MobileAppProvider:
         action_ctx: dict[str, Any],
     ) -> list[dict[str, Any]]:
         """Build iOS/Android action buttons from action_config presets."""
-        from ..action_presets import ACTION_PRESETS, resolve_uri_for_platform
-
         actions: list[dict[str, Any]] = []
         for action_cfg in profile.action_config:
             preset_id = action_cfg.get("preset", "none")
@@ -209,12 +214,13 @@ class MobileAppProvider:
                 continue
 
             if action_type == ActionType.SILENCE:
+                # No uri: iOS force-opens the app (to a 404) for any action
+                # carrying one. Background activation still fires the event.
                 silence_id = f"silence-frigate_notifications:profile:{profile.profile_id}"
                 actions.append(
                     {
                         "action": silence_id,
                         "title": action_cfg.get("title", preset.get("title", "")),
-                        "uri": silence_id,
                         "icon": "",
                         "destructive": True,
                     }
@@ -235,12 +241,14 @@ class MobileAppProvider:
                     }
                 )
             elif action_type == ActionType.NO_ACTION:
-                if resolved_platform(profile.provider) in ("android", "unknown"):
+                # Android-only: iOS has no noAction and would open a 404, so
+                # cross-platform profiles skip the placeholder too.
+                if resolved_platform(profile.provider) == "android":
                     actions.append(
                         {
                             "action": "URI",
                             "title": action_cfg.get("title", preset.get("title", "")),
-                            "uri": "noAction",
+                            "uri": NO_ACTION_URI,
                             "icon": "",
                             "destructive": False,
                         }

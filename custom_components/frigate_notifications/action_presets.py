@@ -22,6 +22,10 @@ if TYPE_CHECKING:
 _JINJA_ENV = SandboxedEnvironment(undefined=StrictUndefined)
 _LOGGER = logging.getLogger(__name__)
 
+# Android-only sentinel that makes a tap/action do nothing. iOS has no
+# equivalent and treats it as a frontend route, so never send it as "url".
+NO_ACTION_URI = "noAction"
+
 ACTION_PRESETS: dict[str, dict[str, str]] = {
     "view_clip": {
         "type": ActionType.URI,
@@ -168,12 +172,12 @@ def resolve_tap_url(
     preset = ACTION_PRESETS.get(preset_id)
     if preset is None:
         _LOGGER.warning("Unknown tap_action preset %s; using noAction", preset_id)
-        return "noAction"
+        return NO_ACTION_URI
 
     action_type = preset.get("type", ActionType.URI)
 
     if action_type == ActionType.NO_ACTION:
-        return "noAction"
+        return NO_ACTION_URI
 
     if action_type != ActionType.URI:
         _LOGGER.warning(
@@ -181,7 +185,7 @@ def resolve_tap_url(
             action_type,
             preset_id,
         )
-        return "noAction"
+        return NO_ACTION_URI
 
     uri_tpl = resolve_uri_for_platform(profile.provider, preset)
     return _JINJA_ENV.from_string(uri_tpl).render(ctx)
