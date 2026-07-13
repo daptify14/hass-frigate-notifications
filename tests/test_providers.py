@@ -185,6 +185,8 @@ class TestMobileAppProvider:
         assert len(actions) == 2
         assert actions[0]["action"] == "URI"
         assert "silence-frigate_notifications" in actions[1]["action"]
+        # A uri would force the iOS app to open (and 404); event fires without it.
+        assert "uri" not in actions[1]
 
     def test_color_included_when_set(self, hass: HomeAssistant) -> None:
         provider = MobileAppProvider()
@@ -284,6 +286,42 @@ class TestMobileAppProvider:
         call = provider.build_notify_call(hass, profile, make_review(), _make_rendered())
         actions = call.service_data["data"]["actions"]
         assert len(actions) == 0
+
+    def test_action_type_no_action_cross_platform_skipped(self, hass: HomeAssistant) -> None:
+        """no_action preset is skipped for cross-platform (iOS devices would 404)."""
+        provider = MobileAppProvider()
+        profile = make_profile(
+            provider=Provider.CROSS_PLATFORM,
+            action_config=({"preset": "no_action"},),
+        )
+        call = provider.build_notify_call(hass, profile, make_review(), _make_rendered())
+        assert call.service_data["data"]["actions"] == []
+
+    def test_click_url_set_includes_url_keys(self, hass: HomeAssistant) -> None:
+        """A real tap URL is sent as both iOS url and Android clickAction."""
+        provider = MobileAppProvider()
+        rendered = _make_rendered(click_url="https://hass.test/lovelace")
+        call = provider.build_notify_call(hass, make_profile(), make_review(), rendered)
+        data = call.service_data["data"]
+        assert data["url"] == "https://hass.test/lovelace"
+        assert data["clickAction"] == "https://hass.test/lovelace"
+
+    def test_click_url_noaction_omits_ios_url(self, hass: HomeAssistant) -> None:
+        """noAction is Android-only: clickAction keeps it, iOS url is omitted."""
+        provider = MobileAppProvider()
+        call = provider.build_notify_call(hass, make_profile(), make_review(), _make_rendered())
+        data = call.service_data["data"]
+        assert "url" not in data
+        assert data["clickAction"] == "noAction"
+
+    def test_click_url_empty_omits_url_keys(self, hass: HomeAssistant) -> None:
+        """An empty tap URL sends neither url nor clickAction."""
+        provider = MobileAppProvider()
+        rendered = _make_rendered(click_url="")
+        call = provider.build_notify_call(hass, make_profile(), make_review(), rendered)
+        data = call.service_data["data"]
+        assert "url" not in data
+        assert "clickAction" not in data
 
 
 class TestAndroidTvProvider:
