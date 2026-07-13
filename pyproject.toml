@@ -1,6 +1,6 @@
 [project]
 name = "frigate-notifications"
-version = "0.1.2"
+version = "0.1.3"
 description = "Notifications for Frigate"
 requires-python = ">=3.14.2"
 
