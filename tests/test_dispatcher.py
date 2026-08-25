@@ -1,7 +1,7 @@
 """Tests for the notification dispatcher."""
 
 from dataclasses import replace
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, patch
 
 from homeassistant.config_entries import ConfigEntryState
@@ -814,7 +814,7 @@ class TestDelayedRefilter:
         dispatcher = NotificationDispatcher(hass, runtime, build_default_filter_chain())
         review = make_review()
 
-        blocker: asyncio.Future[None] = hass.loop.create_future()
+        blocker = cast("asyncio.Future[None]", hass.loop.create_future())
 
         async def _block(delay: float) -> None:
             await blocker
@@ -940,7 +940,7 @@ class TestDispatcherPendingTaskCancel:
         assert len(notify_calls) == 1
 
         # First update — sleep blocks so task stays pending.
-        blocker: asyncio.Future[None] = hass.loop.create_future()
+        blocker = cast("asyncio.Future[None]", hass.loop.create_future())
 
         async def _block_forever(delay: float) -> None:
             await blocker

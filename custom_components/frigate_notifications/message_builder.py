@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.helpers.template import Template, TemplateError
 from homeassistant.util import dt as dt_util
@@ -110,7 +110,7 @@ def render_template(
         tpl = cache.get_or_create(template_str, hass)
     else:
         tpl = Template(template_str, hass)
-    return tpl.async_render(variables=ctx, parse_result=False)
+    return cast("str", tpl.async_render(variables=ctx, parse_result=False))
 
 
 def _format_duration(seconds: int) -> str:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
@@ -386,7 +386,7 @@ def build_base_url_options(
 ) -> tuple[list[SelectOptionDict], str]:
     """Build selectable Home Assistant URL options and a suggested default."""
     options: list[SelectOptionDict] = []
-    suggested = current_options.get("base_url") or ""
+    suggested = cast("str", current_options.get("base_url") or "")
     if hass.config.external_url:
         options.append(
             SelectOptionDict(
@@ -413,7 +413,7 @@ def build_frigate_url_options(
 ) -> tuple[list[SelectOptionDict], str]:
     """Build selectable Frigate URL options and a suggested default."""
     options: list[SelectOptionDict] = []
-    suggested = current_options.get("frigate_url") or ""
+    suggested = cast("str", current_options.get("frigate_url") or "")
 
     if hass.data.get("hassio"):
         options.append(
