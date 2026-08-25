@@ -34,12 +34,13 @@ ignore = [
     "ANN",      # missing-type-annotation
     "ARG",      # unused-function-argument
     "COM812",   # missing-trailing-comma
+    "CPY001",   # missing-copyright-notice
     "FBT",      # flake8-boolean-trap
     "FIX",      # flake8-fixme
     "INP001",   # implicit-namespace-package
     "ISC001",   # single-line-implicit-string-concatenation
     "PLC0415",  # import-outside-top-level
-    "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+    "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917",
     "S101",     # assert
     "TC002",    # typing-only-third-party-import
     "TC003",    # typing-only-standard-library-import
