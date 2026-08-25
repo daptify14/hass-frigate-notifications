@@ -13,9 +13,9 @@ dev = [
     "colorlog==6.12.0",
     "homeassistant==2026.7.1",
     "paho-mqtt==2.1.0",
-    "prek==0.4.11",
-    "ruff==0.16.0",
-    "ty==0.0.63",
+    "prek==0.4.12",
+    "ruff==0.16.1",
+    "ty==0.0.67",
     "voluptuous-stubs==0.1.1",
 ]
 docs = [
