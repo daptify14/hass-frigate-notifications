@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.data_entry_flow import SectionConfig, section
 from homeassistant.helpers.selector import (
@@ -235,7 +235,7 @@ def build_filtering_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schem
             }
         )
 
-    return schema
+    return cast("vol.Schema", schema)
 
 
 def build_filtering_suggested(draft: dict[str, Any], ctx: FlowContext) -> dict[str, Any]:

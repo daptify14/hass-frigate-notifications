@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.helpers import device_registry as dr
@@ -88,7 +88,7 @@ def iter_loaded_entries(hass: HomeAssistant) -> Iterator[FrigateNotificationsCon
     """Yield all loaded config entries for this domain."""
     for entry in hass.config_entries.async_entries(DOMAIN):
         if entry.state is ConfigEntryState.LOADED:
-            yield entry  # type: ignore[misc]
+            yield cast("FrigateNotificationsConfigEntry", entry)
 
 
 def find_entry_for_profile(
@@ -292,16 +292,16 @@ def _resolve_time_filter(
     if override == TimeFilterOverride.CUSTOM:
         return (
             TimeFilterMode(profile_data.get("time_filter_mode", TimeFilterMode.DISABLED)),
-            profile_data.get("time_filter_start", ""),
-            profile_data.get("time_filter_end", ""),
+            cast("str", profile_data.get("time_filter_start", "")),
+            cast("str", profile_data.get("time_filter_end", "")),
         )
     if override == TimeFilterOverride.DISABLED:
         return (TimeFilterMode.DISABLED, "", "")
     # inherit
     return (
         TimeFilterMode(global_opts.get("shared_time_filter_mode", TimeFilterMode.DISABLED)),
-        global_opts.get("shared_time_filter_start", ""),
-        global_opts.get("shared_time_filter_end", ""),
+        cast("str", global_opts.get("shared_time_filter_start", "")),
+        cast("str", global_opts.get("shared_time_filter_end", "")),
     )
 
 
@@ -311,11 +311,11 @@ def _resolve_guard_entity(
     """Resolve guard entity settings from profile + global inheritance."""
     mode = GuardMode(profile_data.get("guard_mode", GuardMode.INHERIT))
     if mode == GuardMode.CUSTOM:
-        return (GuardMode.CUSTOM, profile_data.get("guard_entity"))
+        return (GuardMode.CUSTOM, cast("str | None", profile_data.get("guard_entity")))
     if mode == GuardMode.DISABLED:
         return (GuardMode.DISABLED, None)
     # inherit
-    return (GuardMode.INHERIT, global_opts.get("shared_guard_entity"))
+    return (GuardMode.INHERIT, cast("str | None", global_opts.get("shared_guard_entity")))
 
 
 def _resolve_presence(
@@ -324,11 +324,11 @@ def _resolve_presence(
     """Resolve presence entities from profile + global inheritance."""
     mode = PresenceMode(profile_data.get("presence_mode", PresenceMode.INHERIT))
     if mode == PresenceMode.CUSTOM:
-        return tuple(profile_data.get("presence_entities", []))
+        return cast("tuple[str, ...]", tuple(profile_data.get("presence_entities", [])))
     if mode == PresenceMode.DISABLED:
         return ()
     # inherit
-    return tuple(global_opts.get("shared_presence_entities", []))
+    return cast("tuple[str, ...]", tuple(global_opts.get("shared_presence_entities", [])))
 
 
 def _resolve_state_filter(
@@ -338,15 +338,15 @@ def _resolve_state_filter(
     mode = StateFilterMode(profile_data.get("state_filter_mode", StateFilterMode.INHERIT))
     if mode == StateFilterMode.CUSTOM:
         return (
-            profile_data.get("state_entity"),
-            tuple(profile_data.get("state_filter_states", [])),
+            cast("str | None", profile_data.get("state_entity")),
+            cast("tuple[str, ...]", tuple(profile_data.get("state_filter_states", []))),
         )
     if mode == StateFilterMode.DISABLED:
         return (None, ())
     # inherit
     return (
-        global_opts.get("shared_state_entity"),
-        tuple(global_opts.get("shared_state_filter_states", [])),
+        cast("str | None", global_opts.get("shared_state_entity")),
+        cast("tuple[str, ...]", tuple(global_opts.get("shared_state_filter_states", []))),
     )
 
 
@@ -457,7 +457,7 @@ def _resolve_notify_target(hass: HomeAssistant, profile_data: dict[str, Any]) ->
             _LOGGER.warning("Notify target device %s not found in device registry", device_id)
             return ""
         return f"notify.mobile_app_{slugify(device.name)}"
-    return profile_data.get("notify_service", "")
+    return cast("str", profile_data.get("notify_service", ""))
 
 
 def _build_provider_config(p: dict[str, Any]) -> MobileAppConfig | AndroidTvConfig:
@@ -645,7 +645,7 @@ def build_runtime_config(hass: HomeAssistant, entry: ConfigEntry) -> RuntimeConf
         for cam in profile.cameras:
             profiles_by_camera.setdefault(cam, []).append(profile)
 
-    template_id_map: dict[str, str] = hass.data.get(DOMAIN, {}).get("template_id_map", {})
+    template_id_map = cast("dict[str, str]", hass.data.get(DOMAIN, {}).get("template_id_map", {}))
 
     return RuntimeConfig(
         profiles=profiles_by_camera,

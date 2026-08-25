@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.exceptions import HomeAssistantError
@@ -320,7 +320,7 @@ class NotificationDispatcher:
         entry = self._hass.config_entries.async_get_entry(entry_id)
         if entry is None or entry.state is not ConfigEntryState.LOADED:
             return None
-        return entry.runtime_data  # type: ignore[return-value]
+        return cast("FrigateNotificationsRuntimeData", entry.runtime_data)
 
     def _get_profile_state(self, profile_id: str) -> ProfileState:
         if profile_id not in self._profile_states:

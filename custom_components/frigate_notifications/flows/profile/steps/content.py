@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.data_entry_flow import SectionConfig, section
 from homeassistant.helpers.selector import BooleanSelector
@@ -89,7 +89,9 @@ def validate_content_input(
     draft: dict[str, Any], user_input: dict[str, Any], ctx: FlowContext
 ) -> dict[str, str]:
     """Validate content step input. Returns error dict (empty = valid)."""
-    template_id_map: dict[str, str] = ctx.hass.data.get(DOMAIN, {}).get("template_id_map", {})
+    template_id_map = cast(
+        "dict[str, str]", ctx.hass.data.get(DOMAIN, {}).get("template_id_map", {})
+    )
     candidates: list[str] = []
 
     title = (user_input.get("title_template") or "").strip()

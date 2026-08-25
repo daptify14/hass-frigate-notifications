@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .const import DOMAIN
 from .data import find_entry_for_profile
@@ -111,7 +111,7 @@ def _build_button_action_run_vars(
     profile: ProfileRuntime,
     review: Review,
     global_zone_aliases: dict[str, dict[str, str]],
-) -> dict[str, object]:
+) -> dict[str, Any]:
     """Build button-action variables from the cached review context."""
     phase, lifecycle = _infer_review_phase(review)
     run_vars = build_context(
