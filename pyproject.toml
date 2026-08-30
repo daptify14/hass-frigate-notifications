@@ -15,7 +15,7 @@ dev = [
     "paho-mqtt==2.1.0",
     "prek==0.4.14",
     "ruff==0.16.4",
-    "ty==0.0.74",
+    "ty==0.0.75",
     "voluptuous-stubs==0.1.1",
 ]
 docs = [
