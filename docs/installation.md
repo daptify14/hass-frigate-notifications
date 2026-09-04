@@ -7,7 +7,7 @@ Before installing Notifications for Frigate, make sure you have:
 1. **Home Assistant** 2025.6 or newer
 2. **Frigate NVR** v0.16.0 or newer (v0.17.0+ required for Generative AI summary notifications)
 3. **MQTT** configured in Home Assistant and working for Frigate
-4. **Frigate integration** installed and configured in Home Assistant
+4. **Frigate integration** v5.15.6 or newer installed and configured in Home Assistant (older releases use device registry calls that Home Assistant 2026.9 deprecates)
 5. **iOS or Android Companion App** on your device (or Android TV / Fire TV integration for TV overlays)
 
 > **Why MQTT matters:** this integration subscribes to Frigate review events from the `${topic_prefix}/reviews` MQTT topic (usually `frigate/reviews`).

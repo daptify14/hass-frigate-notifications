@@ -6,6 +6,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntryState, ConfigSubentryData
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -126,6 +127,23 @@ async def setup_integration(hass: HomeAssistant, entry: MockConfigEntry) -> None
     entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
+
+
+def find_device(
+    device_registry: dr.DeviceRegistry, entry_id: str, identifiers: set[tuple[str, str]]
+) -> dr.DeviceEntry | None:
+    """Return the device owned by entry_id carrying any of the identifiers.
+
+    Avoids ``async_get_device``, which Home Assistant 2026.9 deprecates.
+    """
+    return next(
+        (
+            device
+            for device in dr.async_entries_for_config_entry(device_registry, entry_id)
+            if identifiers & device.identifiers
+        ),
+        None,
+    )
 
 
 @pytest.fixture

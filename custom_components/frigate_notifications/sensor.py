@@ -47,7 +47,7 @@ async def async_setup_entry(
     for subentry in iter_profile_subentries(entry):
         fields = profile_common_fields(subentry)
         async_add_entities(
-            [FrigateNotificationsLastSentSensor(hass, entry, **fields)],
+            [FrigateNotificationsLastSentSensor(entry, **fields)],
             config_subentry_id=subentry.subentry_id,
         )
 
@@ -177,7 +177,6 @@ class FrigateNotificationsLastSentSensor(FrigateNotificationsProfileEntity, Rest
 
     def __init__(
         self,
-        hass: HomeAssistant,
         entry: ConfigEntry,
         subentry_id: str,
         *,
@@ -186,7 +185,7 @@ class FrigateNotificationsLastSentSensor(FrigateNotificationsProfileEntity, Rest
         provider: str,
     ) -> None:
         """Initialize last-sent sensor."""
-        super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
+        super().__init__(entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_last_sent"
         self._attr_native_value: str | None = None
         self._last_sent_attrs: dict[str, Any] = {}

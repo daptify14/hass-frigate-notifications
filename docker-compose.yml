@@ -1,7 +1,7 @@
 ---
 services:
   homeassistant:
-    image: "homeassistant/home-assistant:${HA_VERSION:-2026.8.3}"
+    image: "homeassistant/home-assistant:${HA_VERSION:-2026.9.0}"
     restart: unless-stopped
     depends_on:
       frigate-integration-init:
@@ -31,7 +31,7 @@ services:
     volumes:
       - frigate-integration:/out
     environment:
-      - FRIGATE_INTEG_VERSION=${FRIGATE_INTEG_VERSION:-v5.15.4}
+      - FRIGATE_INTEG_VERSION=${FRIGATE_INTEG_VERSION:-v5.15.6}
     command:
       - -c
       - |

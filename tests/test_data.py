@@ -448,15 +448,32 @@ class TestExpandUrgency:
 class TestFrigateHelpers:
     """Tests for Frigate integration helpers."""
 
+    @patch("custom_components.frigate_notifications.data.dr.async_entries_for_config_entry")
     @patch("custom_components.frigate_notifications.data.dr.async_get")
-    def test_get_camera_device_returns_device(self, mock_dr_get: MagicMock) -> None:
-        """get_frigate_camera_device returns device for valid camera."""
+    def test_get_camera_device_returns_device(
+        self, mock_dr_get: MagicMock, mock_entries: MagicMock
+    ) -> None:
+        """Match the camera identifier among the Frigate entry's own devices."""
         hass = MagicMock()
         hass.data = {"frigate": {"fid": {"config": {"cameras": {"cam1": {}}}}}}
-        mock_device = MagicMock()
-        mock_dr_get.return_value.async_get_device.return_value = mock_device
+        server_device = MagicMock(identifiers={("frigate", "fid")})
+        camera_device = MagicMock(identifiers={("frigate", "fid:cam1")})
+        mock_entries.return_value = [server_device, camera_device]
         result = get_frigate_camera_device(hass, "fid", "cam1")
-        assert result is mock_device
+        assert result is camera_device
+        mock_entries.assert_called_once_with(mock_dr_get.return_value, "fid")
+
+    @patch("custom_components.frigate_notifications.data.dr.async_entries_for_config_entry")
+    @patch("custom_components.frigate_notifications.data.dr.async_get")
+    def test_get_camera_device_returns_none_when_unregistered(
+        self, mock_dr_get: MagicMock, mock_entries: MagicMock
+    ) -> None:
+        """Return None when no device of the entry carries the camera identifier."""
+        hass = MagicMock()
+        hass.data = {"frigate": {"fid": {"config": {"cameras": {"cam1": {}}}}}}
+        mock_entries.return_value = [MagicMock(identifiers={("frigate", "fid")})]
+        assert get_frigate_camera_device(hass, "fid", "cam1") is None
+        mock_entries.assert_called_once_with(mock_dr_get.return_value, "fid")
 
     def test_get_camera_device_returns_none_for_missing(self) -> None:
         """get_frigate_camera_device returns None for camera not in config."""
