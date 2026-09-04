@@ -23,7 +23,7 @@ Extends the [Frigate integration](https://github.com/blakeblackshear/frigate-has
 - Home Assistant 2025.6 or newer
 - Frigate NVR v0.16.0+ (v0.17.0+ for Generative AI summaries)
 - MQTT configured in Home Assistant
-- [Frigate integration](https://github.com/blakeblackshear/frigate-hass-integration) installed in Home Assistant
+- [Frigate integration](https://github.com/blakeblackshear/frigate-hass-integration) v5.15.6 or newer installed in Home Assistant
 - iOS or Android Companion App (or Android TV / Fire TV integration for TV overlays)
 
 ## Installation

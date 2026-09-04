@@ -31,7 +31,7 @@ async def async_setup_entry(
     for subentry in iter_profile_subentries(entry):
         fields = profile_common_fields(subentry)
         async_add_entities(
-            [FrigateNotificationsSwitch(hass, entry, **fields)],
+            [FrigateNotificationsSwitch(entry, **fields)],
             config_subentry_id=subentry.subentry_id,
         )
 
@@ -44,7 +44,6 @@ class FrigateNotificationsSwitch(FrigateNotificationsProfileEntity, SwitchEntity
 
     def __init__(
         self,
-        hass: HomeAssistant,
         entry: ConfigEntry,
         subentry_id: str,
         *,
@@ -53,7 +52,7 @@ class FrigateNotificationsSwitch(FrigateNotificationsProfileEntity, SwitchEntity
         provider: str,
     ) -> None:
         """Initialize profile enabled switch."""
-        super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
+        super().__init__(entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_enabled"
         self._attr_is_on = True
 

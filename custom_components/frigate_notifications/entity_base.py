@@ -8,10 +8,10 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
 
-from .const import DOMAIN, FRIGATE_DOMAIN
+from .const import DOMAIN
 from .data import (
     get_frigate_camera_device,
-    get_frigate_camera_identifier,
+    get_frigate_server_device,
     get_profile_device_identifiers,
 )
 from .enums import Provider
@@ -25,7 +25,6 @@ _PROVIDER_MODEL: dict[str, str] = {
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
-    from homeassistant.core import HomeAssistant
 
 
 class FrigateNotificationsIntegrationEntity(Entity):
@@ -53,7 +52,6 @@ class FrigateNotificationsProfileEntity(Entity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
         entry: ConfigEntry,
         subentry_id: str,
         cameras: tuple[str, ...],
@@ -69,24 +67,15 @@ class FrigateNotificationsProfileEntity(Entity):
         self._profile_device_name = profile_name
         self._device_model = _PROVIDER_MODEL.get(provider, "Notification Profile")
 
-        device_info: DeviceInfo = DeviceInfo(
+        # The Frigate parent link is applied in _async_reconcile_profile_device
+        # through via_device_id; the via_device device-info key is deprecated.
+        self._attr_device_info = DeviceInfo(
             identifiers=get_profile_device_identifiers(entry.entry_id, subentry_id),
             entry_type=DeviceEntryType.SERVICE,
             manufacturer="Notifications for Frigate",
             model=self._device_model,
             name=self._profile_device_name,
         )
-        if self._frigate_entry_id:
-            if len(cameras) > 1:
-                # Multi-camera: link to Frigate server device
-                device_info["via_device"] = (FRIGATE_DOMAIN, self._frigate_entry_id)
-            else:
-                frigate_dev = get_frigate_camera_device(hass, self._frigate_entry_id, cameras[0])
-                if frigate_dev is not None:
-                    device_info["via_device"] = get_frigate_camera_identifier(
-                        self._frigate_entry_id, cameras[0]
-                    )
-        self._attr_device_info = device_info
 
     @override
     async def async_added_to_hass(self) -> None:
@@ -94,8 +83,17 @@ class FrigateNotificationsProfileEntity(Entity):
         await super().async_added_to_hass()
         await self._async_reconcile_profile_device()
 
+    def _resolve_parent_device(self) -> dr.DeviceEntry | None:
+        """Return the Frigate device this profile hangs off, if it is registered."""
+        if not self._frigate_entry_id:
+            return None
+        if len(self._cameras) > 1:
+            # Multi-camera: link to the Frigate server device
+            return get_frigate_server_device(self.hass, self._frigate_entry_id)
+        return get_frigate_camera_device(self.hass, self._frigate_entry_id, self._cameras[0])
+
     async def _async_reconcile_profile_device(self) -> None:
-        """Keep the child device metadata and parent link in sync on reloads."""
+        """Keep the child device metadata and Frigate parent link in sync."""
         device_id = None
         if self.registry_entry is not None:
             device_id = self.registry_entry.device_id
@@ -110,19 +108,7 @@ class FrigateNotificationsProfileEntity(Entity):
         if device is None:
             return
 
-        if self._frigate_entry_id:
-            if len(self._cameras) > 1:
-                # Multi-camera: resolve Frigate server device
-                parent_device = dev_reg.async_get_device(
-                    identifiers={(FRIGATE_DOMAIN, self._frigate_entry_id)}
-                )
-            else:
-                parent_device = get_frigate_camera_device(
-                    self.hass, self._frigate_entry_id, self._cameras[0]
-                )
-        else:
-            parent_device = None
-
+        parent_device = self._resolve_parent_device()
         name = self._profile_device_name if device.name_by_user is None else device.name
         updated_device = dev_reg.async_update_device(
             device_id,

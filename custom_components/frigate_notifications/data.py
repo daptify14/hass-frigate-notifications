@@ -238,6 +238,32 @@ def get_frigate_camera_identifier(frigate_entry_id: str, camera_name: str) -> tu
     return (FRIGATE_DOMAIN, f"{frigate_entry_id}:{slugify(camera_name)}")
 
 
+def get_frigate_device(
+    hass: HomeAssistant,
+    frigate_entry_id: str,
+    identifier: tuple[str, str],
+) -> dr.DeviceEntry | None:
+    """Return the device owned by the Frigate entry that carries the identifier.
+
+    Scoped to the Frigate config entry because identifiers are only unique per
+    entry; the global ``async_get_device`` lookup is deprecated for that reason.
+    """
+    dev_reg = dr.async_get(hass)
+    return next(
+        (
+            device
+            for device in dr.async_entries_for_config_entry(dev_reg, frigate_entry_id)
+            if identifier in device.identifiers
+        ),
+        None,
+    )
+
+
+def get_frigate_server_device(hass: HomeAssistant, frigate_entry_id: str) -> dr.DeviceEntry | None:
+    """Return the Frigate server device for an entry, if registered."""
+    return get_frigate_device(hass, frigate_entry_id, (FRIGATE_DOMAIN, frigate_entry_id))
+
+
 def get_frigate_camera_device(
     hass: HomeAssistant,
     frigate_entry_id: str,
@@ -246,9 +272,8 @@ def get_frigate_camera_device(
     """Return the existing Frigate device entry for a camera."""
     if camera_name not in get_available_frigate_cameras(hass, frigate_entry_id):
         return None
-    return dr.async_get(hass).async_get_device(
-        identifiers={get_frigate_camera_identifier(frigate_entry_id, camera_name)}
-    )
+    identifier = get_frigate_camera_identifier(frigate_entry_id, camera_name)
+    return get_frigate_device(hass, frigate_entry_id, identifier)
 
 
 def get_profile_device_identifiers(entry_id: str, subentry_id: str) -> set[tuple[str, str]]:

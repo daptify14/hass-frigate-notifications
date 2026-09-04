@@ -21,7 +21,7 @@ from custom_components.frigate_notifications.const import (
 )
 from custom_components.frigate_notifications.data import get_profile_device_identifiers
 
-from .conftest import FRIGATE_ENTRY_ID, get_profile_subentry_id, setup_integration
+from .conftest import FRIGATE_ENTRY_ID, find_device, get_profile_subentry_id, setup_integration
 
 pytestmark = pytest.mark.usefixtures("mqtt_mock_no_linger")
 
@@ -229,8 +229,8 @@ class TestAsyncSetupEntry:
         assert registry_entry is not None
         assert registry_entry.config_subentry_id == integration_subentry_id
 
-        integration_device = device_registry.async_get_device(
-            identifiers={(DOMAIN, mock_config_entry.entry_id)}
+        integration_device = find_device(
+            device_registry, mock_config_entry.entry_id, {(DOMAIN, mock_config_entry.entry_id)}
         )
         assert integration_device is not None
         assert integration_device.config_entries_subentries[mock_config_entry.entry_id] == {
@@ -310,8 +310,10 @@ class TestAsyncRemoveConfigEntryDevice:
         await setup_integration(hass, mock_config_entry)
         sub_id = get_profile_subentry_id(mock_config_entry)
 
-        profile_device = device_registry.async_get_device(
-            identifiers=get_profile_device_identifiers(mock_config_entry.entry_id, sub_id)
+        profile_device = find_device(
+            device_registry,
+            mock_config_entry.entry_id,
+            get_profile_device_identifiers(mock_config_entry.entry_id, sub_id),
         )
         assert profile_device is not None
 
@@ -325,8 +327,8 @@ class TestAsyncRemoveConfigEntryDevice:
         """Unmatched devices are not approved for removal."""
         await setup_integration(hass, mock_config_entry)
 
-        integration_device = device_registry.async_get_device(
-            identifiers={(DOMAIN, mock_config_entry.entry_id)}
+        integration_device = find_device(
+            device_registry, mock_config_entry.entry_id, {(DOMAIN, mock_config_entry.entry_id)}
         )
         assert integration_device is not None
 

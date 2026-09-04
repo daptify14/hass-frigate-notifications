@@ -39,7 +39,6 @@ async def async_setup_entry(
         async_add_entities(
             [
                 FrigateNotificationsSilenceDateTime(
-                    hass,
                     entry,
                     **fields,
                     silence_duration=int(
@@ -62,7 +61,6 @@ class FrigateNotificationsSilenceDateTime(
 
     def __init__(
         self,
-        hass: HomeAssistant,
         entry: ConfigEntry,
         subentry_id: str,
         *,
@@ -72,7 +70,7 @@ class FrigateNotificationsSilenceDateTime(
         silence_duration: int,
     ) -> None:
         """Initialize silence datetime entity."""
-        super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
+        super().__init__(entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_silenced_until"
         self._silence_duration = silence_duration
         self._cancel_timer: CALLBACK_TYPE | None = None

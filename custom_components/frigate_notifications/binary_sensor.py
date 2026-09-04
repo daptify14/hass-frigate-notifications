@@ -68,8 +68,8 @@ async def async_setup_entry(
         fields = profile_common_fields(subentry)
         async_add_entities(
             [
-                FrigateNotificationsSilencedBinarySensor(hass, entry, **fields),
-                FrigateNotificationsDispatchProblemBinarySensor(hass, entry, **fields),
+                FrigateNotificationsSilencedBinarySensor(entry, **fields),
+                FrigateNotificationsDispatchProblemBinarySensor(entry, **fields),
             ],
             config_subentry_id=subentry.subentry_id,
         )
@@ -128,7 +128,6 @@ class FrigateNotificationsSilencedBinarySensor(
 
     def __init__(
         self,
-        hass: HomeAssistant,
         entry: ConfigEntry,
         subentry_id: str,
         *,
@@ -137,7 +136,7 @@ class FrigateNotificationsSilencedBinarySensor(
         provider: str,
     ) -> None:
         """Initialize silence binary sensor."""
-        super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
+        super().__init__(entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_silenced"
         self._attr_is_on = False
         self._cancel_timer: CALLBACK_TYPE | None = None
@@ -253,7 +252,6 @@ class FrigateNotificationsDispatchProblemBinarySensor(
 
     def __init__(
         self,
-        hass: HomeAssistant,
         entry: ConfigEntry,
         subentry_id: str,
         *,
@@ -262,7 +260,7 @@ class FrigateNotificationsDispatchProblemBinarySensor(
         provider: str,
     ) -> None:
         """Initialize dispatch problem binary sensor."""
-        super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
+        super().__init__(entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_dispatch_problem"
         self._attr_is_on = False
         self._last_error: str | None = None

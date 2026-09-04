@@ -36,8 +36,8 @@ async def async_setup_entry(
         fields = profile_common_fields(subentry)
         async_add_entities(
             [
-                FrigateNotificationsSilenceButton(hass, entry, **fields),
-                FrigateNotificationsClearSilenceButton(hass, entry, **fields),
+                FrigateNotificationsSilenceButton(entry, **fields),
+                FrigateNotificationsClearSilenceButton(entry, **fields),
             ],
             config_subentry_id=subentry.subentry_id,
         )
@@ -51,7 +51,6 @@ class FrigateNotificationsSilenceButton(FrigateNotificationsProfileEntity, Butto
 
     def __init__(
         self,
-        hass: HomeAssistant,
         entry: ConfigEntry,
         subentry_id: str,
         *,
@@ -60,7 +59,7 @@ class FrigateNotificationsSilenceButton(FrigateNotificationsProfileEntity, Butto
         provider: str,
     ) -> None:
         """Initialize silence button."""
-        super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
+        super().__init__(entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_silence"
 
     @override
@@ -81,7 +80,6 @@ class FrigateNotificationsClearSilenceButton(FrigateNotificationsProfileEntity, 
 
     def __init__(
         self,
-        hass: HomeAssistant,
         entry: ConfigEntry,
         subentry_id: str,
         *,
@@ -90,7 +88,7 @@ class FrigateNotificationsClearSilenceButton(FrigateNotificationsProfileEntity, 
         provider: str,
     ) -> None:
         """Initialize clear-silence button."""
-        super().__init__(hass, entry, subentry_id, cameras, profile_name, provider=provider)
+        super().__init__(entry, subentry_id, cameras, profile_name, provider=provider)
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_clear_silence"
 
     @override
