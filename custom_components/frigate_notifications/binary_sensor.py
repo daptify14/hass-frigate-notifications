@@ -47,9 +47,7 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up binary sensor entities from config entry."""
-    mqtt_topic = ""
-    if entry.runtime_data is not None:
-        mqtt_topic = entry.runtime_data.mqtt_topic
+    mqtt_topic = entry.runtime_data.mqtt_topic
     integration_subentry_id = get_integration_subentry_id(entry)
     integration_entities: list[BinarySensorEntity] = [
         FrigateNotificationsMqttConnectedBinarySensor(entry, mqtt_topic),

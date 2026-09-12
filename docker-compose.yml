@@ -1,7 +1,7 @@
 ---
 services:
   homeassistant:
-    image: "homeassistant/home-assistant:${HA_VERSION:-2026.9.0}"
+    image: "homeassistant/home-assistant:${HA_VERSION:-2026.9.2}"
     restart: unless-stopped
     depends_on:
       frigate-integration-init:
@@ -47,7 +47,7 @@ services:
     restart: "no"
 
   frigate:
-    image: "ghcr.io/blakeblackshear/frigate:${FRIGATE_VERSION:-0.17.2}"
+    image: "ghcr.io/blakeblackshear/frigate:${FRIGATE_VERSION:-0.18.0}"
     restart: unless-stopped
     ports:
       - "127.0.0.1:5001:5000"
