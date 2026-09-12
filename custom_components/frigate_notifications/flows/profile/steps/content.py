@@ -21,9 +21,7 @@ def build_content_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema:
     """Build the content step form schema."""
     template_presets = ctx.hass.data.get(DOMAIN, {}).get("template_presets", {})
     schema_dict: dict[Any, Any] = {
-        vol.Optional("title_template", default=draft.get("title_template", "")): title_selector(
-            template_presets
-        ),
+        vol.Optional("title_template"): title_selector(template_presets),
     }
 
     enable_emojis = ctx.entry.options.get("enable_emojis", True)
@@ -35,14 +33,8 @@ def build_content_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema:
         phase_data = draft.get("phases", {}).get(phase_name, {})
         fields: dict[Any, Any] = {
             vol.Optional("enabled", default=phase_data.get("enabled", True)): BooleanSelector(),
-            vol.Optional(
-                "message_template",
-                default=phase_data.get("message_template", defaults.content.message_template),
-            ): content_selector(template_presets, phase=phase_name),
-            vol.Optional(
-                "subtitle_template",
-                default=phase_data.get("subtitle_template", defaults.content.subtitle_template),
-            ): content_selector(template_presets, phase=phase_name),
+            vol.Optional("message_template"): content_selector(template_presets, phase=phase_name),
+            vol.Optional("subtitle_template"): content_selector(template_presets, phase=phase_name),
         }
         if enable_emojis:
             fields[
@@ -72,17 +64,44 @@ def build_content_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema:
     fid = ctx.frigate_entry_id
     camera_zones = get_camera_zones(ctx.hass, fid, cameras[0]) if len(cameras) == 1 else []
     if camera_zones:
-        existing_overrides = draft.get("zone_overrides", {})
-        zone_fields: dict[Any, Any] = {}
-        for zone in camera_zones:
-            zone_fields[vol.Optional(zone, default=existing_overrides.get(zone, ""))] = (
-                zone_phrase_selector(template_presets)
-            )
+        zone_fields: dict[Any, Any] = {
+            vol.Optional(zone): zone_phrase_selector(template_presets) for zone in camera_zones
+        }
         schema_dict[vol.Optional("zone_overrides")] = section(
             vol.Schema(zone_fields), SectionConfig(collapsed=True)
         )
 
     return vol.Schema(schema_dict)
+
+
+def build_content_suggested(draft: dict[str, Any]) -> dict[str, Any]:
+    """Build suggested values for the content form."""
+    suggested: dict[str, Any] = {}
+    if draft.get("title_template"):
+        suggested["title_template"] = draft["title_template"]
+
+    phases = draft.get("phases", {})
+    for phase_name in PROFILE_PHASE_ORDER:
+        defaults = PROFILE_PHASE_DEFAULTS[phase_name].content
+        phase_data = phases.get(phase_name)
+        # Stored phase without a subtitle means none; unstored phase falls back to defaults.
+        subtitle = (
+            defaults.subtitle_template
+            if phase_data is None
+            else phase_data.get("subtitle_template", "")
+        )
+        templates = {
+            "message_template": (phase_data or {}).get(
+                "message_template", defaults.message_template
+            ),
+        }
+        if subtitle:
+            templates["subtitle_template"] = subtitle
+        suggested[f"{phase_name}_content"] = templates
+
+    if draft.get("zone_overrides"):
+        suggested["zone_overrides"] = dict(draft["zone_overrides"])
+    return suggested
 
 
 def validate_content_input(

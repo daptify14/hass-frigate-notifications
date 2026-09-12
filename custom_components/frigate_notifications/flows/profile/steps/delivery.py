@@ -153,6 +153,9 @@ def build_delivery_suggested(draft: dict[str, Any], ctx: FlowContext) -> dict[st
     if rate_suggested:
         suggested["rate_limiting"] = rate_suggested
 
+    if draft.get("android_color"):
+        suggested["android_delivery"] = {"android_color": draft["android_color"]}
+
     return suggested
 
 
@@ -183,9 +186,7 @@ def _build_android_delivery_schema(data: dict[str, Any]) -> dict[Any, Any]:
                     vol.Optional(
                         "android_auto", default=data.get("android_auto", False)
                     ): BooleanSelector(),
-                    vol.Optional(
-                        "android_color", default=data.get("android_color", "")
-                    ): TextSelector(),
+                    vol.Optional("android_color"): TextSelector(),
                 }
             ),
             SectionConfig(collapsed=True),
@@ -240,8 +241,11 @@ def _submit_rate_limiting(data: dict[str, Any], user_input: dict[str, Any]) -> N
 def _submit_android_delivery(data: dict[str, Any], user_input: dict[str, Any]) -> None:
     """Extract android delivery config from user_input."""
     android_sec = user_input.get("android_delivery", {})
-    if android_sec:
-        for key in _ANDROID_KEYS:
-            val = android_sec.get(key)
-            if val is not None:
-                data[key] = val
+    if not android_sec:
+        return
+    for key in _ANDROID_KEYS:
+        val = android_sec.get(key)
+        if val is not None:
+            data[key] = val
+    if not android_sec.get("android_color"):
+        data.pop("android_color", None)

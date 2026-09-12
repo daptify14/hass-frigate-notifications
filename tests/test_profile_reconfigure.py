@@ -23,6 +23,17 @@ async def _start_profile_reconfigure(
     )
 
 
+def _suggested_value(result: Any, section_name: str, field: str) -> Any:
+    """Return the suggested value for a field inside a section of a form result."""
+    for key, val in result["data_schema"].schema.items():
+        if key.schema != section_name:
+            continue
+        for inner_key in val.schema.schema:
+            if inner_key.schema == field:
+                return (inner_key.description or {}).get("suggested_value")
+    return None
+
+
 class TestProfileReconfigure:
     """Profile reconfigure tests."""
 
@@ -477,3 +488,57 @@ class TestProfileReconfigure:
         assert "provider" in keys
         # Editable target fields are also present.
         assert "notify_service" in keys
+
+    async def test_reconfigure_content_omitted_subtitle_clears_and_stays_cleared(
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
+    ) -> None:
+        """Omitting subtitle_template clears it, and the reopened form does not restore it."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={"frigate_entry_id": FRIGATE_ENTRY_ID},
+            options={},
+            title="Test",
+            subentries_data=[
+                ConfigSubentryData(
+                    data={
+                        **PROFILE_SUBENTRY_DATA,
+                        "phases": {
+                            "initial": {
+                                "message_template": "object_only",
+                                "subtitle_template": "merged_subjects",
+                            }
+                        },
+                    },
+                    subentry_type="profile",
+                    title="Test Profile",
+                    unique_id="test_profile_clear_subtitle",
+                ),
+            ],
+        )
+        entry.add_to_hass(hass)
+        subentry_id = next(
+            s.subentry_id for s in entry.subentries.values() if s.subentry_type == "profile"
+        )
+
+        result = await _start_profile_reconfigure(hass, entry, subentry_id)
+        flow_id = result["flow_id"]
+        result = await hass.config_entries.subentries.async_configure(
+            flow_id, {"next_step_id": "content"}
+        )
+        assert _suggested_value(result, "initial_content", "subtitle_template") == "merged_subjects"
+
+        result = await hass.config_entries.subentries.async_configure(
+            flow_id, {"initial_content": {"enabled": True, "message_template": "object_only"}}
+        )
+        assert result["type"] is FlowResultType.MENU
+        result = await hass.config_entries.subentries.async_configure(
+            flow_id, {"next_step_id": "save"}
+        )
+        assert result["reason"] == "reconfigure_successful"
+        assert "subtitle_template" not in entry.subentries[subentry_id].data["phases"]["initial"]
+
+        result = await _start_profile_reconfigure(hass, entry, subentry_id)
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"], {"next_step_id": "content"}
+        )
+        assert _suggested_value(result, "initial_content", "subtitle_template") is None
