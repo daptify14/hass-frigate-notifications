@@ -188,6 +188,13 @@ class TestDeliveryFieldPersistence:
         assert draft["android_channel"] == "test"
         assert draft["android_sticky"] is True
 
+    def test_android_color_omitted_clears_stored_value(self) -> None:
+        """Submitting the Android section without android_color removes the stored value."""
+        ctx = _make_ctx(Provider.ANDROID)
+        draft: dict[str, Any] = {"android_color": "#ff0000"}
+        apply_delivery_input(draft, {"android_delivery": {"android_channel": "frigate"}}, ctx)
+        assert "android_color" not in draft
+
     def test_tv_overlay_stored(self) -> None:
         """TV overlay delivery fields are persisted."""
         ctx = _make_ctx(Provider.ANDROID_TV)
@@ -259,6 +266,12 @@ class TestDeliverySuggested:
         draft: dict[str, Any] = {"alert_once": True}
         suggested = build_delivery_suggested(draft, ctx)
         assert suggested["rate_limiting"]["alert_once"] is True
+
+    def test_delivery_suggested_includes_android_color(self) -> None:
+        """Stored android_color is suggested back into the Android section."""
+        ctx = _make_ctx(Provider.ANDROID)
+        suggested = build_delivery_suggested({"android_color": "#ff0000"}, ctx)
+        assert suggested["android_delivery"] == {"android_color": "#ff0000"}
 
 
 class TestBasicsTagGroupByProvider:
