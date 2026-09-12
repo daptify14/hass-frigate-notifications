@@ -17,7 +17,12 @@ from .steps.basics import (
     build_basics_suggested,
     validate_basics_input,
 )
-from .steps.content import apply_content_input, build_content_schema, validate_content_input
+from .steps.content import (
+    apply_content_input,
+    build_content_schema,
+    build_content_suggested,
+    validate_content_input,
+)
 from .steps.delivery import (
     apply_delivery_input,
     build_delivery_schema,
@@ -205,9 +210,10 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
                 return await self._go_to_menu()
 
         schema = build_content_schema(self._data, ctx)
+        suggested = build_content_suggested(self._data)
         return self.async_show_form(
             step_id="content",
-            data_schema=schema,
+            data_schema=self.add_suggested_values_to_schema(schema, suggested),
             errors=errors,
             description_placeholders=self._placeholders(),
             last_step=False,

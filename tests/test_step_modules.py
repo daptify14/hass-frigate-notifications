@@ -3,11 +3,17 @@
 from typing import Any
 from unittest.mock import MagicMock
 
+from custom_components.frigate_notifications.config import DEFAULT_PHASE_INITIAL
 from custom_components.frigate_notifications.enums import Provider
 from custom_components.frigate_notifications.flows.profile.context import FlowContext
 from custom_components.frigate_notifications.flows.profile.steps.basics import (
     apply_basics_input,
     build_basics_schema,
+)
+from custom_components.frigate_notifications.flows.profile.steps.content import (
+    apply_content_input,
+    build_content_schema,
+    build_content_suggested,
 )
 from custom_components.frigate_notifications.flows.profile.steps.delivery import (
     apply_delivery_input,
@@ -292,3 +298,55 @@ class TestBasicsTagGroupByProvider:
         )
         assert draft["tag"] == "custom"
         assert draft["group"] == "cam"
+
+
+class TestContentSuggested:
+    """Test build_content_suggested."""
+
+    def test_content_suggested_stored_phase_without_subtitle_omits_it(self) -> None:
+        """A stored phase lacking subtitle_template gets no subtitle suggestion."""
+        draft: dict[str, Any] = {"phases": {"initial": {"message_template": "object_only"}}}
+        suggested = build_content_suggested(draft)
+        assert suggested["initial_content"] == {"message_template": "object_only"}
+
+    def test_content_suggested_unstored_phase_uses_phase_defaults(self) -> None:
+        """A phase with no stored data is suggested from the phase defaults."""
+        suggested = build_content_suggested({})
+        assert suggested["initial_content"] == {
+            "message_template": DEFAULT_PHASE_INITIAL.content.message_template,
+            "subtitle_template": DEFAULT_PHASE_INITIAL.content.subtitle_template,
+        }
+
+    def test_content_suggested_carries_title_and_zone_overrides(self) -> None:
+        """Stored title template and zone overrides are suggested back."""
+        draft: dict[str, Any] = {
+            "title_template": "my_title",
+            "zone_overrides": {"porch": "at the porch"},
+        }
+        suggested = build_content_suggested(draft)
+        assert suggested["title_template"] == "my_title"
+        assert suggested["zone_overrides"] == {"porch": "at the porch"}
+
+
+class TestContentClearedFields:
+    """Omitted template fields are stored as cleared instead of restoring old values."""
+
+    def test_content_schema_omitted_subtitle_not_filled_from_draft(self) -> None:
+        """Validating input without subtitle_template leaves the key absent."""
+        ctx = _make_ctx()
+        draft: dict[str, Any] = {
+            "cameras": ["driveway"],
+            "phases": {"initial": {"subtitle_template": "merged_subjects"}},
+        }
+        validated = build_content_schema(draft, ctx)({"initial_content": {"enabled": True}})
+        assert "subtitle_template" not in validated["initial_content"]
+
+    def test_apply_content_omitted_subtitle_clears_stored_value(self) -> None:
+        """Submitting a phase section without subtitle_template clears the stored one."""
+        ctx = _make_ctx()
+        draft: dict[str, Any] = {
+            "cameras": ["driveway"],
+            "phases": {"initial": {"subtitle_template": "merged_subjects"}},
+        }
+        apply_content_input(draft, {"initial_content": {"enabled": True}}, ctx)
+        assert draft["phases"]["initial"]["subtitle_template"] == ""
