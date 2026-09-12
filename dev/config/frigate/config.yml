@@ -1,5 +1,5 @@
 ---
-version: 0.17-0
+version: 0.18-0
 
 tls:
   enabled: false
@@ -15,9 +15,13 @@ mqtt:
   host: mqtt
 
 genai:
-  provider: openai
-  api_key: "dummy"
-  model: gpt-4o
+  default:
+    provider: openai
+    api_key: "dummy"
+    model: gpt-4o
+    roles:
+      - descriptions
+      - chat
 
 review:
   genai:

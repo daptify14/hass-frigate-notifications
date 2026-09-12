@@ -43,9 +43,7 @@ async def async_get_config_entry_diagnostics(
             )
         )
 
-    mqtt_topic = ""
-    if entry.runtime_data is not None:
-        mqtt_topic = entry.runtime_data.mqtt_topic
+    mqtt_topic = entry.runtime_data.mqtt_topic
 
     return {
         "entry": {

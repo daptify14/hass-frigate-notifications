@@ -127,18 +127,17 @@ class SubLabelFilter:
                     )
             return _PASS
 
-        if mode == RecognitionMode.EXCLUDE_SUB_LABELS:
-            excluded = ctx.profile.excluded_sub_labels
-            if not excluded:
-                return _PASS
-            actual = {s.lower() for s in ctx.review.sub_labels}
-            matched = actual & {s.lower() for s in excluded}
-            if matched:
-                return _reject(
-                    "sub_label",
-                    f"excluded sub_labels {sorted(matched)} present",
-                )
-
+        # Remaining mode: RecognitionMode.EXCLUDE_SUB_LABELS
+        excluded = ctx.profile.excluded_sub_labels
+        if not excluded:
+            return _PASS
+        actual = {s.lower() for s in ctx.review.sub_labels}
+        matched = actual & {s.lower() for s in excluded}
+        if matched:
+            return _reject(
+                "sub_label",
+                f"excluded sub_labels {sorted(matched)} present",
+            )
         return _PASS
 
 
@@ -170,7 +169,7 @@ class ZoneFilter:
                     "zone",
                     f"zones {actual} missing required {sorted(set(required) - set(actual))}",
                 )
-        elif mode == ZoneMatchMode.ORDERED:
+        else:  # ZoneMatchMode.ORDERED
             if required[0] != actual[0]:
                 return _reject(
                     "zone",
