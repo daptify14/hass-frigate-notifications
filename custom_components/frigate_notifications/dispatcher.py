@@ -338,6 +338,16 @@ class NotificationDispatcher:
         """Return the global zone alias map from runtime config."""
         return self._runtime.global_zone_aliases
 
+    @property
+    def runtime_config(self) -> RuntimeConfig:
+        """Return the runtime config this dispatcher was built with."""
+        return self._runtime
+
+    @property
+    def filter_chain(self) -> FilterChain:
+        """Return the filter chain this dispatcher evaluates."""
+        return self._filter_chain
+
     def get_profile(self, profile_id: str) -> ProfileRuntime | None:
         """Return a profile runtime by profile ID."""
         return self._profiles_by_id.get(profile_id)

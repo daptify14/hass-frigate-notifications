@@ -21,6 +21,17 @@ class Phase(StrEnum):
     GENAI = "genai"
 
 
+class ReplayOutcome(StrEnum):
+    """What a replayed review message would have produced."""
+
+    RENDERED = "rendered"
+    ABSORBED = "absorbed"
+    SUPERSEDED = "superseded"
+    SKIPPED = "skipped"
+    REJECTED = "rejected"
+    RENDER_ERROR = "render_error"
+
+
 class Severity(StrEnum):
     """Review severity levels."""
 
