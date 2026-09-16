@@ -28,6 +28,7 @@ from ..const import (
     DEFAULT_TITLE_GENAI_PREFIXES,
     DEFAULT_TITLE_TEMPLATE,
     DOMAIN,
+    OPTION_KEEP_REVIEW_HISTORY,
     PRESENCE_ENTITY_DOMAINS,
     humanize_zone,
 )
@@ -185,6 +186,17 @@ class OptionsFlowHandler(OptionsFlow):
                     ),
                     SectionConfig(collapsed=True),
                 ),
+                vol.Optional("diagnostics"): section(
+                    vol.Schema(
+                        {
+                            vol.Required(
+                                OPTION_KEEP_REVIEW_HISTORY,
+                                default=self._data.get(OPTION_KEEP_REVIEW_HISTORY, True),
+                            ): BooleanSelector(),
+                        }
+                    ),
+                    SectionConfig(collapsed=True),
+                ),
             }
         )
         suggested: dict[str, Any] = {
@@ -255,6 +267,9 @@ class OptionsFlowHandler(OptionsFlow):
             self._data["shared_presence_entities"] = pres["shared_presence_entities"]
         else:
             self._data.pop("shared_presence_entities", None)
+        diagnostics = user_input.get("diagnostics")
+        if diagnostics is not None:
+            self._data[OPTION_KEEP_REVIEW_HISTORY] = bool(diagnostics[OPTION_KEEP_REVIEW_HISTORY])
         sf = user_input.get("state_filter", {})
         if sf.get("shared_state_entity"):
             self._data["shared_state_entity"] = sf["shared_state_entity"]

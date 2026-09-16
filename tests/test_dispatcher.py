@@ -843,6 +843,41 @@ class TestDelayedRefilter:
         assert len(notify_calls) == 0
 
 
+class TestSentNotificationCapture:
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_sent_record_keeps_pre_delivery_review_state(self, hass: HomeAssistant) -> None:
+        """The last-sent record reflects the review as rendered, not as mutated mid-delivery."""
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+        from custom_components.frigate_notifications.const import SIGNAL_LAST_SENT
+        from custom_components.frigate_notifications.models import SentNotification
+
+        profile = make_profile()
+        dispatcher = NotificationDispatcher(
+            hass, make_runtime([profile]), build_default_filter_chain()
+        )
+        review = make_review(objects=["person"])
+
+        async def _mutating_notify(_call: ServiceCall) -> None:
+            review.objects.append("car")
+
+        hass.services.async_register("notify", "mobile_app_test_phone", _mutating_notify)
+        received: list[SentNotification] = []
+        async_dispatcher_connect(
+            hass, f"{SIGNAL_LAST_SENT}_{profile.entry_id}_{profile.profile_id}", received.append
+        )
+
+        await dispatcher.on_review_new(review)
+        await hass.async_block_till_done()
+
+        (sent,) = received
+        assert sent.objects == ("person",)
+        assert sent.review_id == review.review_id
+        assert sent.service == profile.notify_target
+        assert sent.phase is Phase.INITIAL
+        assert sent.lifecycle is Lifecycle.NEW
+
+
 class TestDelayedDispatchEdgeCases:
     @pytest.mark.usefixtures("_zero_delays")
     async def test_no_target_skips_bookkeeping(

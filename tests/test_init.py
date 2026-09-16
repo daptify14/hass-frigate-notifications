@@ -289,6 +289,58 @@ class TestMqttCallback:
         assert review.camera == "driveway"
 
 
+class TestReviewHistoryWiring:
+    """Tests for the retained review history."""
+
+    async def test_history_records_messages_and_survives_reload(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """MQTT messages are recorded and the history object outlives a reload."""
+        import json
+
+        from pytest_homeassistant_custom_component.common import async_fire_mqtt_message
+
+        from .payloads import REVIEW_NEW_PAYLOAD
+
+        await setup_integration(hass, mock_config_entry)
+        history = mock_config_entry.runtime_data.review_history
+        assert history is not None
+
+        async_fire_mqtt_message(hass, "frigate/reviews", json.dumps(REVIEW_NEW_PAYLOAD))
+        await hass.async_block_till_done()
+        assert history.get(REVIEW_NEW_PAYLOAD["after"]["id"]) is not None
+
+        await hass.config_entries.async_reload(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+        assert mock_config_entry.runtime_data.review_history is history
+
+    async def test_history_dropped_when_option_off(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Turning the option off discards the history and stops recording."""
+        await setup_integration(hass, mock_config_entry)
+        assert mock_config_entry.entry_id in hass.data[DOMAIN]
+
+        hass.config_entries.async_update_entry(
+            mock_config_entry,
+            options={**mock_config_entry.options, "keep_review_history": False},
+        )
+        await hass.async_block_till_done()
+
+        assert mock_config_entry.state is ConfigEntryState.LOADED
+        assert mock_config_entry.runtime_data.review_history is None
+        assert mock_config_entry.entry_id not in hass.data[DOMAIN]
+
+    async def test_history_removed_with_entry(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Removing the entry drops its history."""
+        await setup_integration(hass, mock_config_entry)
+        await hass.config_entries.async_remove(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+        assert mock_config_entry.entry_id not in hass.data[DOMAIN]
+
+
 class TestNoProfiles:
     """Tests for entries with no profiles."""
 

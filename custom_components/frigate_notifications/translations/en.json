@@ -115,6 +115,15 @@
             "data_description": {
               "shared_state_entity": "Only notify when this entity is in an allowed state."
             }
+          },
+          "diagnostics": {
+            "name": "Diagnostics",
+            "data": {
+              "keep_review_history": "Keep recent reviews for replay"
+            },
+            "data_description": {
+              "keep_review_history": "Retain the last few Frigate reviews in memory so the preview and test notification actions can replay them. Turn off to keep recognised names and plates out of memory; the actions then stop working."
+            }
           }
         }
       },
@@ -667,12 +676,21 @@
     },
     "clear_silence_failed": {
       "message": "Failed to clear silence"
+    },
+    "review_history_disabled": {
+      "message": "Review history retention is turned off in the integration options"
+    },
+    "review_not_found": {
+      "message": "Review {review_id} is not in history for this profile's cameras"
+    },
+    "no_review_history": {
+      "message": "No reviews have been retained for this profile's cameras yet"
     }
   },
   "entity": {
     "sensor": {
       "review_debug": {
-        "name": "Review debug"
+        "name": "Recent reviews"
       },
       "stats": {
         "name": "Notifications sent"
@@ -854,6 +872,82 @@
         "profile_id": {
           "name": "Profile ID",
           "description": "The unique identifier of the notification profile to un-silence."
+        }
+      }
+    },
+    "preview_notification": {
+      "name": "Preview notification",
+      "description": "Replay recent Frigate reviews through a profile and return what each message would have sent, without delivering anything.",
+      "fields": {
+        "entity_id": {
+          "name": "Profile",
+          "description": "The Enabled switch of the notification profile to replay through."
+        },
+        "review_id": {
+          "name": "Review ID",
+          "description": "Replay this retained review. Defaults to the newest review on the profile's cameras."
+        },
+        "run_filters": {
+          "name": "Run filters",
+          "description": "Evaluate the profile's filters for each message. Cooldown is never applied; filters that depend on Home Assistant state use the current state."
+        },
+        "title_template": {
+          "name": "Title template",
+          "description": "Try this title template (built-in ID or Jinja) instead of the profile's, in every phase."
+        },
+        "message_template": {
+          "name": "Message template",
+          "description": "Try this message template (built-in ID or Jinja) instead of the profile's, in every phase."
+        },
+        "subtitle_template": {
+          "name": "Subtitle template",
+          "description": "Try this subtitle template (built-in ID or Jinja) instead of the profile's, in every phase."
+        },
+        "last": {
+          "name": "Last reviews",
+          "description": "How many of the newest reviews on the profile's cameras to replay."
+        },
+        "include_payload": {
+          "name": "Include payload",
+          "description": "Add the full notify service data to each rendered row. Off shows just the title, message, subtitle, tag, group, click URL, and service."
+        }
+      }
+    },
+    "send_test_notification": {
+      "name": "Send test notification",
+      "description": "Replay a recent Frigate review through a profile and deliver each notification it would have sent. Does not update the last sent sensor, statistics, or cooldown.",
+      "fields": {
+        "entity_id": {
+          "name": "Profile",
+          "description": "The Enabled switch of the notification profile to replay through."
+        },
+        "review_id": {
+          "name": "Review ID",
+          "description": "Replay this retained review. Defaults to the newest review on the profile's cameras."
+        },
+        "run_filters": {
+          "name": "Run filters",
+          "description": "Evaluate the profile's filters for each message. Cooldown is never applied; filters that depend on Home Assistant state use the current state."
+        },
+        "title_template": {
+          "name": "Title template",
+          "description": "Try this title template (built-in ID or Jinja) instead of the profile's, in every phase."
+        },
+        "message_template": {
+          "name": "Message template",
+          "description": "Try this message template (built-in ID or Jinja) instead of the profile's, in every phase."
+        },
+        "subtitle_template": {
+          "name": "Subtitle template",
+          "description": "Try this subtitle template (built-in ID or Jinja) instead of the profile's, in every phase."
+        },
+        "notify_service": {
+          "name": "Notify service",
+          "description": "Deliver to this notify service instead of the profile's target."
+        },
+        "include_payload": {
+          "name": "Include payload",
+          "description": "Add the full notify service data to each rendered row. Off shows just the title, message, subtitle, tag, group, click URL, and service."
         }
       }
     }

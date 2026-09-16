@@ -86,3 +86,64 @@ All slots are optional. Leave them empty to skip.
 When a user taps a notification button, the integration looks up the review in its cache to provide full context variables. Reviews are cached for 30 minutes after the last MQTT update. If the review has expired (stale cleanup), the action still executes but with minimal context (camera and profile ID only). Most button-press actions (turn on a light, trigger a script) don't need review-specific variables.
 
 See [Profiles](profiles/index.md) for the full config flow field reference.
+
+## Home Assistant actions
+
+The integration registers these actions for scripts, automations, and Developer Tools.
+
+| Action | What it does |
+| -------- | ------------- |
+| `frigate_notifications.silence_profile` | Silences a profile for `duration` minutes (or the profile default). Takes `profile_id`. |
+| `frigate_notifications.clear_silence` | Clears a profile's silence timer. Takes `profile_id`. |
+| `frigate_notifications.preview_notification` | Replays recent Frigate reviews through a profile and returns what each message would have sent. Never delivers. |
+| `frigate_notifications.send_test_notification` | Replays one recent review through a profile and delivers the notifications it would have sent. |
+
+### Replaying recent reviews
+
+The integration keeps the last few Frigate reviews in memory (see the **Diagnostics** section in [Global Defaults](global-defaults.md)). The two replay actions run one of those reviews, message by message, through a profile's current templates and delay settings, so you can check what a profile sends without waiting for someone to walk in front of a camera.
+
+Both actions take:
+
+| Field | Description |
+| ------- | ------------- |
+| `entity_id` | The profile's **Enabled** switch. This is how the profile is selected. |
+| `review_id` | A specific retained review. Defaults to the newest review on the profile's cameras. Review IDs are listed on the **Recent reviews** sensor. |
+| `run_filters` | Evaluate the profile's filters for each message. Off by default. |
+| `include_payload` | Add the full notify service data to each rendered row. Off by default, so rows show just what you would read on the device. |
+| `title_template`, `message_template`, `subtitle_template` | Try a template (built-in ID or Jinja) in place of the profile's, in every phase. Handy for iterating on a template before saving it. |
+
+`preview_notification` also takes `last`, the number of newest reviews to replay (1 to 10), and always returns a response. `send_test_notification` also takes `notify_service` to deliver somewhere other than the profile's target.
+
+The response lists one row per retained message with an `outcome`:
+
+| Outcome | Meaning |
+| --------- | --------- |
+| `rendered` | A notification would have been sent. The row carries `phase`, `fired_at`, title, message, subtitle, tag, group, click URL, and the notify service; with `include_payload` also the full service data, including media URLs. |
+| `absorbed` | The message arrived while the initial notification was still waiting on its delay, so its data went into that notification instead. |
+| `superseded` | A newer message replaced this one before its delay expired. |
+| `skipped` | The phase is disabled on this profile. |
+| `rejected` | A filter rejected the message. `detail` names the filter and reason. Only with `run_filters`. |
+| `render_error` | A template failed to render. `detail` has the error. |
+
+Example, in Developer Tools > Actions (YAML mode):
+
+```yaml
+action: frigate_notifications.preview_notification
+data:
+  entity_id: switch.driveway_alerts_enabled
+  last: 3
+  run_filters: true
+  message_template: "{{ subjects }} {{ zone_phrase }}{% if added_subject %}, {{ added_subject }} joined{% endif %}"
+```
+
+In a script, capture the result with `response_variable`.
+
+!!! note "What replay does and does not model"
+
+    Timing comes from the real gaps between Frigate's messages and the profile's current delays, so absorption into a delayed initial notification and update debouncing are reproduced. Filters that depend on Home Assistant state (time, presence, state, guard, silence, enabled switch) are evaluated against the state **now**, not at the time of the review; the response says `filters: evaluated_now`. Cooldown never rejects during a replay. A review that hit the retained-message cap is flagged `truncated`.
+
+    Title and message templates that fail to render currently fall back to the raw template text instead of producing a `render_error` row.
+
+!!! warning "Test sends are real notifications"
+
+    `send_test_notification` delivers through the profile's real notify service with the real tag, so it can replace a live notification for the same review. Action buttons on a test notification work as usual, including **Silence**. Media links point at the event's own snapshot and clip, which stop working once Frigate's retention has expired. Android TV overlays have no tag or group, so replayed rows stack rather than replace.

@@ -5,7 +5,10 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .enums import Lifecycle, Phase
 
 
 @dataclass(frozen=True)
@@ -60,9 +63,17 @@ class Review:
     last_update: float = 0.0
 
     @classmethod
-    def from_review_mqtt(cls, payload: Mapping[str, Any]) -> Review:
-        """Create from frigate/reviews MQTT payload (type: new)."""
+    def from_message(cls, payload: Mapping[str, Any]) -> Review:
+        """Create the baseline for a review from any frigate/reviews message.
+
+        Uses ``before`` when it describes the same review (so a review first seen
+        on an update or end starts from the state Frigate had before that message),
+        otherwise ``after``. Call ``apply_message`` with the same payload afterwards.
+        """
         after = payload.get("after", {})
+        before = payload.get("before")
+        if isinstance(before, Mapping) and before.get("id") == after.get("id"):
+            return cls.from_snapshot(before)
         return cls.from_snapshot(after)
 
     @classmethod
@@ -106,6 +117,18 @@ class Review:
         if metadata:
             self.genai = GenAIData.from_metadata(metadata)
 
+    def apply_message(self, payload: Mapping[str, Any]) -> list[str]:
+        """Apply a message and return the detection ids it added.
+
+        Tracks ``latest_detection_id`` so attachments can follow the newest detection.
+        """
+        prev_ids = set(self.detection_ids)
+        self.update_from_review(payload)
+        new_ids = [det_id for det_id in self.detection_ids if det_id not in prev_ids]
+        if new_ids:
+            self.latest_detection_id = new_ids[-1]
+        return new_ids
+
     def summary(self) -> dict[str, Any]:
         """Return a summary dict for logging/debugging."""
         return {
@@ -125,6 +148,28 @@ class Review:
             if self.genai
             else None,
         }
+
+
+@dataclass(frozen=True)
+class SentNotification:
+    """What a profile last delivered, captured before the notify call is awaited."""
+
+    sent_at: float
+    review_id: str
+    camera: str
+    lifecycle: Lifecycle
+    phase: Phase
+    title: str
+    message: str
+    subtitle: str
+    tag: str
+    group: str
+    click_url: str
+    service: str
+    objects: tuple[str, ...]
+    zones: tuple[str, ...]
+    sub_labels: tuple[str, ...]
+    severity: str
 
 
 @dataclass

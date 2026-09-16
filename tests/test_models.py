@@ -59,9 +59,10 @@ class TestGenAIData:
 
 
 class TestReview:
-    def test_from_review_mqtt_extracts_fields(self) -> None:
+    def test_from_message_after_apply_extracts_fields(self) -> None:
         """NEW payload extracts all review and data fields."""
-        review = Review.from_review_mqtt(REVIEW_NEW_PAYLOAD)
+        review = Review.from_message(REVIEW_NEW_PAYLOAD)
+        review.apply_message(REVIEW_NEW_PAYLOAD)
         # Top-level fields
         assert review.review_id == "1773840946.10543-review1"
         assert review.camera == "driveway"
@@ -75,9 +76,9 @@ class TestReview:
         assert review.zones == ["driveway_approach"]
 
     @pytest.mark.parametrize("payload", [{"after": {}}, {}])
-    def test_from_review_mqtt_defaults(self, payload: dict[str, Any]) -> None:
+    def test_from_message_defaults(self, payload: dict[str, Any]) -> None:
         """Missing or empty payloads produce safe defaults."""
-        review = Review.from_review_mqtt(payload)
+        review = Review.from_message(payload)
         assert review.review_id == ""
         assert review.camera == ""
         assert review.start_time == 0.0
@@ -85,6 +86,36 @@ class TestReview:
         assert review.severity == ""
         assert review.detection_ids == []
         assert review.objects == []
+
+    def test_from_message_uses_before_for_unknown_review(self) -> None:
+        """A review first seen on an update starts from Frigate's before snapshot."""
+        review = Review.from_message(REVIEW_UPDATE_PAYLOAD)
+        assert review.objects == ["person"]
+        assert review.detection_ids == ["det_id_1"]
+
+    def test_from_message_ignores_before_for_other_review(self) -> None:
+        """A before snapshot for a different review id is not used as the baseline."""
+        payload = {**REVIEW_UPDATE_PAYLOAD, "before": {"id": "other", "data": {"objects": ["dog"]}}}
+        review = Review.from_message(payload)
+        assert review.objects == ["person", "car"]
+
+    def test_apply_message_tracks_latest_detection(self) -> None:
+        """Applying a message returns the new detection ids and tracks the newest."""
+        review = Review.from_message(REVIEW_NEW_PAYLOAD)
+        assert review.apply_message(REVIEW_NEW_PAYLOAD) == ["det_id_1"]
+        assert review.latest_detection_id == "det_id_1"
+        assert review.apply_message(REVIEW_UPDATE_PAYLOAD) == ["det_id_2"]
+        assert review.latest_detection_id == "det_id_2"
+        assert review.apply_message(REVIEW_UPDATE_PAYLOAD) == []
+        assert review.latest_detection_id == "det_id_2"
+
+    def test_apply_message_first_genai_populates_metadata(self) -> None:
+        """A review first seen on GenAI carries the metadata after apply."""
+        review = Review.from_message(REVIEW_GENAI_PAYLOAD)
+        assert review.genai is None
+        review.apply_message(REVIEW_GENAI_PAYLOAD)
+        assert review.genai is not None
+        assert review.genai.title == "Person and Vehicle in Driveway"
 
     def test_update_from_review_captures_before_data_first(self) -> None:
         review = make_review()

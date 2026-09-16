@@ -19,10 +19,34 @@ from custom_components.frigate_notifications.const import (
     SIGNAL_LAST_SENT,
     SIGNAL_STATS,
 )
+from custom_components.frigate_notifications.enums import Lifecycle, Phase
+from custom_components.frigate_notifications.models import SentNotification
 
 from .conftest import FRIGATE_DOMAIN, FRIGATE_ENTRY_ID, get_profile_subentry_id, setup_integration
 
 pytestmark = pytest.mark.usefixtures("mqtt_mock_no_linger")
+
+
+def _sent(**overrides: Any) -> SentNotification:
+    defaults: dict[str, Any] = {
+        "sent_at": 1773840946.0,
+        "review_id": "review_abc",
+        "camera": "driveway",
+        "lifecycle": Lifecycle.NEW,
+        "phase": Phase.INITIAL,
+        "title": "Motion Detected",
+        "message": "Person in yard",
+        "subtitle": "Bob",
+        "tag": "review_abc",
+        "group": "driveway-frigate-notification",
+        "click_url": "https://hass.test/clip",
+        "service": "notify.mobile_app_test_phone",
+        "objects": ("person",),
+        "zones": ("driveway_approach",),
+        "sub_labels": ("Bob",),
+        "severity": "alert",
+    }
+    return SentNotification(**{**defaults, **overrides})
 
 
 class TestReviewDebugSensor:
@@ -79,6 +103,74 @@ class TestReviewDebugSensor:
         assert state.attributes["camera"] == "driveway"
         assert state.attributes["detection_count"] == 2
         assert state.attributes["message_type"] == "new"
+
+    async def test_debug_sensor_lists_recent_reviews_from_history(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Retained reviews appear as compact rows, newest first, as soon as the sensor loads."""
+        from .payloads import REVIEW_NEW_PAYLOAD, REVIEW_UPDATE_VERIFIED_PAYLOAD
+
+        await setup_integration(hass, mock_config_entry)
+        history = mock_config_entry.runtime_data.review_history
+        assert history is not None
+        history.record(REVIEW_NEW_PAYLOAD, 1.0)
+        history.record(REVIEW_UPDATE_VERIFIED_PAYLOAD, 2.0)
+        other = {**REVIEW_NEW_PAYLOAD, "after": {**REVIEW_NEW_PAYLOAD["after"], "id": "later"}}
+        history.record(other, 3.0)
+
+        ent_reg = er.async_get(hass)
+        entity_id = ent_reg.async_get_entity_id(
+            "sensor", DOMAIN, f"{mock_config_entry.entry_id}_review_debug"
+        )
+        assert entity_id is not None
+        ent_reg.async_update_entity(entity_id, disabled_by=None)
+        await hass.config_entries.async_reload(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+        state = hass.states.get(entity_id)
+        assert state is not None
+        recent = state.attributes["recent"]
+        assert [row["review_id"] for row in recent] == [
+            "later",
+            REVIEW_NEW_PAYLOAD["after"]["id"],
+        ]
+        first = recent[1]
+        assert first["last_lifecycle"] == "update"
+        assert first["steps"] == 2
+        assert first["truncated"] is False
+        assert first["objects"] == ["person-verified"]
+        assert first["sub_labels"] == ["Bob"]
+        assert first["started_at"].startswith("19")
+
+    async def test_debug_sensor_has_no_recent_when_history_off(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Without retained history the sensor keeps only its latest-message attributes."""
+        mock_config_entry.add_to_hass(hass)
+        hass.config_entries.async_update_entry(
+            mock_config_entry,
+            options={**mock_config_entry.options, "keep_review_history": False},
+        )
+        ent_reg = er.async_get(hass)
+        ent_entry = ent_reg.async_get_or_create(
+            "sensor",
+            DOMAIN,
+            f"{mock_config_entry.entry_id}_review_debug",
+            config_entry=mock_config_entry,
+        )
+        ent_reg.async_update_entity(ent_entry.entity_id, disabled_by=None)
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+        sensor = mock_config_entry.runtime_data.debug_sensor
+        assert sensor is not None
+        sensor.update_from_review("new", {"after": {"id": "r1", "camera": "driveway"}})
+        await hass.async_block_till_done()
+
+        state = hass.states.get(ent_entry.entity_id)
+        assert state is not None
+        assert state.state == "r1"
+        assert "recent" not in state.attributes
 
 
 class TestCameraDiagnosticBinarySensor:
@@ -303,7 +395,14 @@ class TestLastSentSensor:
 
         signal = f"{SIGNAL_LAST_SENT}_{mock_config_entry.entry_id}_{sub_id}"
         async_dispatcher_send(
-            hass, signal, "review_abc", "initial", "Motion Detected", "Person in yard"
+            hass,
+            signal,
+            _sent(
+                review_id="review_abc",
+                title="Motion Detected",
+                message="x" * 300,
+                click_url="https://hass.test/api/camera_proxy_stream/camera.x?token=abc&foo=1",
+            ),
         )
         await hass.async_block_till_done()
 
@@ -311,8 +410,51 @@ class TestLastSentSensor:
         assert state is not None
         assert state.state == "review_abc"
         assert state.attributes["phase"] == "initial"
+        assert state.attributes["lifecycle"] == "new"
         assert state.attributes["title"] == "Motion Detected"
-        assert state.attributes["message"] == "Person in yard"
+        assert len(state.attributes["message"]) == 200
+        assert state.attributes["service"] == "notify.mobile_app_test_phone"
+        assert state.attributes["click_url"] == (
+            "https://hass.test/api/camera_proxy_stream/camera.x?foo=1"
+        )
+        assert state.attributes["objects"] == ["person"]
+        assert state.attributes["sub_labels"] == ["Bob"]
+        assert state.attributes["sent_at"].startswith("20")
+        assert state.attributes["recent"] == [
+            {
+                "sent_at": state.attributes["sent_at"],
+                "review_id": "review_abc",
+                "phase": "initial",
+                "title": "Motion Detected",
+            }
+        ]
+
+    async def test_last_sent_sensor_recent_is_bounded_newest_first(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """The recent list keeps the last ten deliveries, newest first."""
+        await setup_integration(hass, mock_config_entry)
+        sub_id = get_profile_subentry_id(mock_config_entry)
+        ent_reg = er.async_get(hass)
+        entity_id = ent_reg.async_get_entity_id(
+            "sensor", DOMAIN, f"{mock_config_entry.entry_id}_{sub_id}_last_sent"
+        )
+        assert entity_id is not None
+        ent_reg.async_update_entity(entity_id, disabled_by=None)
+        await hass.config_entries.async_reload(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+        signal = f"{SIGNAL_LAST_SENT}_{mock_config_entry.entry_id}_{sub_id}"
+        for n in range(12):
+            async_dispatcher_send(hass, signal, _sent(review_id=f"r{n}"))
+        await hass.async_block_till_done()
+
+        state = hass.states.get(entity_id)
+        assert state is not None
+        recent = state.attributes["recent"]
+        assert len(recent) == 10
+        assert recent[0]["review_id"] == "r11"
+        assert recent[-1]["review_id"] == "r2"
 
     async def test_last_sent_sensor_restores_state(
         self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
@@ -331,9 +473,16 @@ class TestLastSentSensor:
         # Enable it (disabled by default).
         ent_reg.async_update_entity(ent_entry.entity_id, disabled_by=None)
 
+        recent = [{"sent_at": "2026-09-16T08:00:00-04:00", "review_id": "review_xyz"}]
         mock_restore_cache(
             hass,
-            [State(ent_entry.entity_id, "review_xyz", {"phase": "end", "title": "Done"})],
+            [
+                State(
+                    ent_entry.entity_id,
+                    "review_xyz",
+                    {"phase": "end", "title": "Done", "recent": recent},
+                )
+            ],
         )
 
         await hass.config_entries.async_setup(mock_config_entry.entry_id)
@@ -343,6 +492,40 @@ class TestLastSentSensor:
         assert state is not None
         assert state.state == "review_xyz"
         assert state.attributes["phase"] == "end"
+        assert state.attributes["recent"] == recent
+
+        # A new delivery extends the restored list.
+        sub_id = get_profile_subentry_id(mock_config_entry)
+        signal = f"{SIGNAL_LAST_SENT}_{mock_config_entry.entry_id}_{sub_id}"
+        async_dispatcher_send(hass, signal, _sent(review_id="review_new"))
+        await hass.async_block_till_done()
+        state = hass.states.get(ent_entry.entity_id)
+        assert state is not None
+        assert [r["review_id"] for r in state.attributes["recent"]] == ["review_new", "review_xyz"]
+
+    async def test_last_sent_sensor_restores_legacy_attributes_without_recent(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Old stored attributes without a recent list restore cleanly."""
+        mock_config_entry.add_to_hass(hass)
+        sub_id = get_profile_subentry_id(mock_config_entry)
+        ent_reg = er.async_get(hass)
+        ent_entry = ent_reg.async_get_or_create(
+            "sensor",
+            DOMAIN,
+            f"{mock_config_entry.entry_id}_{sub_id}_last_sent",
+            config_entry=mock_config_entry,
+        )
+        ent_reg.async_update_entity(ent_entry.entity_id, disabled_by=None)
+        mock_restore_cache(hass, [State(ent_entry.entity_id, "review_old", {"phase": "end"})])
+
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+        state = hass.states.get(ent_entry.entity_id)
+        assert state is not None
+        assert state.attributes["phase"] == "end"
+        assert state.attributes["recent"] == []
 
 
 class TestDispatchProblemBinarySensor:

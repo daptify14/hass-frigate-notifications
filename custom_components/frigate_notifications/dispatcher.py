@@ -24,7 +24,7 @@ from .message_builder import (
     render_notification,
     render_template,
 )
-from .models import ProfileState, ReviewState
+from .models import ProfileState, ReviewState, SentNotification
 from .providers.base import get_provider
 from .providers.models import RenderedMedia, RenderedNotification
 
@@ -293,6 +293,34 @@ async def deliver_notification(
     return True
 
 
+def _capture_sent(
+    profile: ProfileRuntime,
+    review: Review,
+    lifecycle: Lifecycle,
+    phase: Phase,
+    rendered: RenderedNotification,
+) -> SentNotification:
+    """Snapshot what is about to be sent; the review can change while delivery awaits."""
+    return SentNotification(
+        sent_at=time.time(),
+        review_id=review.review_id,
+        camera=review.camera,
+        lifecycle=lifecycle,
+        phase=phase,
+        title=rendered.title,
+        message=rendered.message,
+        subtitle=rendered.subtitle,
+        tag=rendered.tag,
+        group=rendered.group,
+        click_url=rendered.click_url,
+        service=profile.notify_target,
+        objects=tuple(review.objects),
+        zones=tuple(review.zones),
+        sub_labels=tuple(review.sub_labels),
+        severity=review.severity,
+    )
+
+
 class NotificationDispatcher:
     """Dispatches notifications based on review lifecycle events."""
 
@@ -337,6 +365,16 @@ class NotificationDispatcher:
     def global_zone_aliases(self) -> dict[str, dict[str, str]]:
         """Return the global zone alias map from runtime config."""
         return self._runtime.global_zone_aliases
+
+    @property
+    def runtime_config(self) -> RuntimeConfig:
+        """Return the runtime config this dispatcher was built with."""
+        return self._runtime
+
+    @property
+    def filter_chain(self) -> FilterChain:
+        """Return the filter chain this dispatcher evaluates."""
+        return self._filter_chain
 
     def get_profile(self, profile_id: str) -> ProfileRuntime | None:
         """Return a profile runtime by profile ID."""
@@ -487,6 +525,7 @@ class NotificationDispatcher:
             self._retire_if_final_dispatch(profile, review, lifecycle, is_genai=is_genai)
             return
         phase, phase_cfg, rendered = result
+        sent = _capture_sent(profile, review, lifecycle, phase, rendered)
 
         try:
             success = await deliver_notification(self._hass, profile, review, rendered)
@@ -518,10 +557,10 @@ class NotificationDispatcher:
             profile,
             review,
             lifecycle,
-            phase,
             phase_cfg,
             rendered,
             review_state,
+            sent,
             is_initial=is_initial,
             is_genai=is_genai,
         )
@@ -531,23 +570,17 @@ class NotificationDispatcher:
         profile: ProfileRuntime,
         review: Review,
         lifecycle: Lifecycle,
-        phase: Phase,
         phase_cfg: PhaseConfig,
         rendered: RenderedNotification,
         review_state: ReviewState,
+        sent: SentNotification,
         *,
         is_initial: bool,
         is_genai: bool,
     ) -> None:
         """Run post-delivery bookkeeping after a successful notification send."""
         self._signal_dispatch_problem(profile, error_msg=None)
-        self._update_last_sent(
-            profile,
-            review,
-            str(phase),
-            rendered.title,
-            rendered.message,
-        )
+        self._update_last_sent(profile, sent)
         self._update_stats(profile, review)
 
         if phase_cfg.custom_actions:
@@ -665,22 +698,12 @@ class NotificationDispatcher:
         if should_retire:
             self.retire_profile_review(profile.profile_id, review.review_id)
 
-    def _update_last_sent(
-        self,
-        profile: ProfileRuntime,
-        review: Review,
-        phase: str,
-        title: str,
-        message: str,
-    ) -> None:
+    def _update_last_sent(self, profile: ProfileRuntime, sent: SentNotification) -> None:
         """Signal the profile's last_sent sensor to update."""
         async_dispatcher_send(
             self._hass,
             f"{SIGNAL_LAST_SENT}_{profile.entry_id}_{profile.profile_id}",
-            review.review_id,
-            phase,
-            title,
-            message,
+            sent,
         )
 
     def _update_stats(self, profile: ProfileRuntime, review: Review) -> None:

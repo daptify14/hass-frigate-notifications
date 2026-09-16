@@ -20,3 +20,76 @@ clear_silence:
       example: "01ABCDEF1234567890ABCDEF12"
       selector:
         text:
+
+preview_notification:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          filter:
+            integration: frigate_notifications
+            domain: switch
+    review_id:
+      example: "1726480000.123456-abc123"
+      selector:
+        text:
+    last:
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 10
+          mode: box
+    run_filters:
+      default: false
+      selector:
+        boolean:
+    include_payload:
+      default: false
+      selector:
+        boolean:
+    title_template:
+      selector:
+        template:
+    message_template:
+      selector:
+        template:
+    subtitle_template:
+      selector:
+        template:
+
+send_test_notification:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          filter:
+            integration: frigate_notifications
+            domain: switch
+    review_id:
+      example: "1726480000.123456-abc123"
+      selector:
+        text:
+    run_filters:
+      default: false
+      selector:
+        boolean:
+    include_payload:
+      default: false
+      selector:
+        boolean:
+    title_template:
+      selector:
+        template:
+    message_template:
+      selector:
+        template:
+    subtitle_template:
+      selector:
+        template:
+    notify_service:
+      example: "notify.mobile_app_my_phone"
+      selector:
+        text:
