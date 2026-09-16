@@ -5,7 +5,10 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .enums import Lifecycle, Phase
 
 
 @dataclass(frozen=True)
@@ -145,6 +148,28 @@ class Review:
             if self.genai
             else None,
         }
+
+
+@dataclass(frozen=True)
+class SentNotification:
+    """What a profile last delivered, captured before the notify call is awaited."""
+
+    sent_at: float
+    review_id: str
+    camera: str
+    lifecycle: Lifecycle
+    phase: Phase
+    title: str
+    message: str
+    subtitle: str
+    tag: str
+    group: str
+    click_url: str
+    service: str
+    objects: tuple[str, ...]
+    zones: tuple[str, ...]
+    sub_labels: tuple[str, ...]
+    severity: str
 
 
 @dataclass

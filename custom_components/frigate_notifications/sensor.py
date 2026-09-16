@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING, Any, override
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from homeassistant.components.sensor import RestoreSensor, SensorEntity, SensorStateClass
 from homeassistant.const import EntityCategory
@@ -11,6 +12,8 @@ from homeassistant.core import callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
+    LAST_SENT_RECENT_LIMIT,
+    LAST_SENT_TEXT_LIMIT,
     SIGNAL_LAST_SENT,
     SIGNAL_STATS,
 )
@@ -30,6 +33,7 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+    from .models import SentNotification
     from .review_history import ReviewRecord
 
 _LOGGER = logging.getLogger(__name__)
@@ -199,12 +203,44 @@ class FrigateNotificationsStatsSensor(FrigateNotificationsIntegrationEntity, Res
         return {"by_camera": self._by_camera, "by_profile": self._by_profile}
 
 
+def _without_token(url: str) -> str:
+    """Drop the camera access token from a URL before it is persisted as an attribute."""
+    parts = urlsplit(url)
+    if not parts.query:
+        return url
+    query = urlencode([(k, v) for k, v in parse_qsl(parts.query) if k != "token"])
+    return urlunsplit(parts._replace(query=query))
+
+
+def _sent_attributes(sent: SentNotification) -> dict[str, Any]:
+    """Full attribute set for the latest delivered notification."""
+    return {
+        "sent_at": isoformat_timestamp(sent.sent_at),
+        "review_id": sent.review_id,
+        "camera": sent.camera,
+        "lifecycle": str(sent.lifecycle),
+        "phase": str(sent.phase),
+        "title": sent.title[:LAST_SENT_TEXT_LIMIT],
+        "message": sent.message[:LAST_SENT_TEXT_LIMIT],
+        "subtitle": sent.subtitle[:LAST_SENT_TEXT_LIMIT],
+        "tag": sent.tag,
+        "group": sent.group,
+        "click_url": _without_token(sent.click_url),
+        "service": sent.service,
+        "objects": list(sent.objects),
+        "zones": list(sent.zones),
+        "sub_labels": list(sent.sub_labels),
+        "severity": sent.severity,
+    }
+
+
 class FrigateNotificationsLastSentSensor(FrigateNotificationsProfileEntity, RestoreSensor):
-    """Sensor showing the last notification sent for a profile."""
+    """Sensor showing the last notification sent for a profile and its recent history."""
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
     _attr_translation_key = "last_sent"
+    _unrecorded_attributes = frozenset({"recent"})
 
     def __init__(
         self,
@@ -220,6 +256,7 @@ class FrigateNotificationsLastSentSensor(FrigateNotificationsProfileEntity, Rest
         self._attr_unique_id = f"{entry.entry_id}_{subentry_id}_last_sent"
         self._attr_native_value: str | None = None
         self._last_sent_attrs: dict[str, Any] = {}
+        self._recent: list[dict[str, Any]] = []
 
     @override
     async def async_added_to_hass(self) -> None:
@@ -229,25 +266,27 @@ class FrigateNotificationsLastSentSensor(FrigateNotificationsProfileEntity, Rest
         last_state = await self.async_get_last_state()
         if last_state and last_state.state not in ("unknown", "unavailable"):
             self._attr_native_value = last_state.state
-            self._last_sent_attrs = dict(last_state.attributes)
+            attrs = dict(last_state.attributes)
+            recent = attrs.pop("recent", [])
+            self._recent = list(recent) if isinstance(recent, list) else []
+            self._last_sent_attrs = attrs
 
         signal = f"{SIGNAL_LAST_SENT}_{self._entry.entry_id}_{self._subentry_id}"
         self.async_on_remove(async_dispatcher_connect(self.hass, signal, self._on_last_sent_signal))
 
     @callback
-    def _on_last_sent_signal(self, review_id: str, phase: str, title: str, message: str) -> None:
+    def _on_last_sent_signal(self, sent: SentNotification) -> None:
         """Update from dispatcher signal."""
-        self._attr_native_value = review_id
-        self._last_sent_attrs = {
-            "review_id": review_id,
-            "phase": phase,
-            "title": title,
-            "message": message,
+        self._attr_native_value = sent.review_id
+        self._last_sent_attrs = _sent_attributes(sent)
+        row = {
+            key: self._last_sent_attrs[key] for key in ("sent_at", "review_id", "phase", "title")
         }
+        self._recent = [row, *self._recent][:LAST_SENT_RECENT_LIMIT]
         self.async_write_ha_state()
 
     @property
     @override
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return last sent notification details."""
-        return self._last_sent_attrs
+        """Return last sent notification details and the recent list."""
+        return {**self._last_sent_attrs, "recent": self._recent}
