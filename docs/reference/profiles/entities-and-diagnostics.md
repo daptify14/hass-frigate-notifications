@@ -16,7 +16,7 @@ Each profile creates a **device** in Home Assistant. The device name matches the
 | Entity | Type | Category | Default | Persistent | Description |
 | --- | --- | --- | --- | --- | --- |
 | Enabled | Switch | Config | On | Yes | Toggle notification dispatch for this profile |
-| Last sent | Sensor | Diagnostic | Disabled | Yes | State = review ID; attributes: review_id, phase, title, message |
+| Last sent | Sensor | Diagnostic | Disabled | Yes | State = review ID; attributes describe the last delivery (time, camera, lifecycle, phase, title, message, subtitle, tag, group, click URL, notify service, objects, zones, sub-labels, severity) plus `recent`, the last ten deliveries |
 | Silenced until | Datetime | Config | -- | Yes | Silence expiry timestamp, set via action tap or dashboard |
 | Silenced | Binary sensor | -- | Off | -- | Whether the profile is currently silenced (derived from datetime) |
 | Dispatch problem | Binary sensor | Diagnostic | Off | -- | On when a dispatch failure occurs; `last_error` attribute |
@@ -38,11 +38,11 @@ The integration also creates a shared integration-level device for entry-wide di
 | MQTT connected | Binary sensor | Diagnostic | Off | No | Whether Home Assistant's MQTT client is currently connected |
 | Notifications sent | Sensor | -- | On | Yes | Running total of notifications sent, with per-camera and per-profile counters |
 | Reset stats | Button | Config | -- | -- | Resets the notifications-sent counter |
-| Review debug | Sensor | Diagnostic | Disabled | No | Latest raw review summary seen by the integration for debugging |
+| Recent reviews | Sensor | Diagnostic | Disabled | No | Latest raw review summary seen by the integration, plus `recent`: the retained reviews with their IDs for the [replay actions](../actions.md#replaying-recent-reviews) |
 | Camera `<name>` | Binary sensor | Diagnostic | Disabled | No | `On` when the camera still exists in Frigate config; attributes include discovered capabilities such as `genai` |
 
 ---
 
 ## Diagnostics export
 
-Download diagnostics at Settings > Devices & Services > Notifications for Frigate > (three-dot menu) > Download diagnostics. The export includes config entry data, options, per-profile settings, and MQTT status. Profile names and notify targets are redacted for privacy.
+Download diagnostics at Settings > Devices & Services > Notifications for Frigate > (three-dot menu) > Download diagnostics. The export includes config entry data, options, per-profile settings, MQTT status, and a summary of the retained review history (objects, zones, and severity per message; sub-labels are left out). Profile names and notify targets are redacted for privacy.

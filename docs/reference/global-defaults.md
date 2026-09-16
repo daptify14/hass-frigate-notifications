@@ -27,6 +27,12 @@ Core delivery settings and shared gating filters.
 | **Silence duration** | Number (1--480 min) | How long the "Silence" action button mutes a profile. | `30` |
 | **Cooldown** | Number (0--3600s) | Min seconds between new notifications per camera. 0 = disabled. | `0` |
 
+### Diagnostics section (collapsed)
+
+| Field | Type | Description | Default |
+| ------- | ------ | ------------- | --------- |
+| **Keep recent reviews for replay** | Toggle | Retain the last ten Frigate reviews in memory so the [replay actions](actions.md#replaying-recent-reviews) can run them through a profile. Turn off to keep recognised names and plates out of memory; the replay actions then report that history is disabled. The buffer survives options changes and is cleared on restart. | On |
+
 ### Guard entity section (collapsed)
 
 | Field | Type | Description | Default |

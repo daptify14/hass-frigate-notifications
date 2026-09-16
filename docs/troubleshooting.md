@@ -50,7 +50,14 @@ Check these in order:
 5. **Zone filter**: are required zones configured? The review must include a matching zone. Clear required zones temporarily to test
 6. **Guard entity**: is the guard entity (if configured) in the ON state?
 7. **Notify service**: is the mobile app device registered and online? Check Settings > Devices & Services > Mobile App. For Android TV, check the Android TV / Fire TV integration
-8. **Logs**: [enable debug logging](#reading-logs) and check Settings > Logs. The filter chain logs exactly which filter rejected the review
+8. **Replay the review**: call `frigate_notifications.preview_notification` with `run_filters: true` from Developer Tools > Actions. Each message of the newest review comes back with the filter that rejected it, evaluated against the profile's current settings. See [Replaying recent reviews](reference/actions.md#replaying-recent-reviews)
+9. **Logs**: [enable debug logging](#reading-logs) and check Settings > Logs. The filter chain logs exactly which filter rejected the review
+
+---
+
+## Testing templates without a real event
+
+Use `frigate_notifications.preview_notification` to render a profile's templates against a recent real review and read the result inline, then adjust and run again. Pass `title_template`, `message_template`, or `subtitle_template` to try a template before saving it to the profile, and `last: 3` to see it across the last few events. `send_test_notification` delivers the same replay to your device. Both are described under [Replaying recent reviews](reference/actions.md#replaying-recent-reviews).
 
 ---
 
