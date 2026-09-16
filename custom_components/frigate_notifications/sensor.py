@@ -14,7 +14,12 @@ from .const import (
     SIGNAL_LAST_SENT,
     SIGNAL_STATS,
 )
-from .data import get_integration_subentry_id, iter_profile_subentries, profile_common_fields
+from .data import (
+    get_integration_subentry_id,
+    isoformat_timestamp,
+    iter_profile_subentries,
+    profile_common_fields,
+)
 from .entity_base import (
     FrigateNotificationsIntegrationEntity,
     FrigateNotificationsProfileEntity,
@@ -24,6 +29,8 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+
+    from .review_history import ReviewRecord
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,12 +59,32 @@ async def async_setup_entry(
         )
 
 
+def _recent_review_row(record: ReviewRecord) -> dict[str, Any]:
+    """Compact attribute row for one retained review."""
+    last = record.steps[-1]
+    after = last.payload.get("after", {})
+    data = after.get("data", {})
+    return {
+        "review_id": record.review_id,
+        "camera": record.camera,
+        "started_at": isoformat_timestamp(record.started_at),
+        "last_lifecycle": str(last.lifecycle),
+        "steps": len(record.steps),
+        "truncated": record.truncated,
+        "objects": list(data.get("objects", [])),
+        "zones": list(data.get("zones", [])),
+        "sub_labels": list(data.get("sub_labels", [])),
+        "severity": after.get("severity", ""),
+    }
+
+
 class FrigateNotificationsReviewDebugSensor(FrigateNotificationsIntegrationEntity, SensorEntity):
-    """Sensor showing the latest review message for debugging."""
+    """Sensor showing the latest review message and the retained recent reviews."""
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
     _attr_translation_key = "review_debug"
+    _unrecorded_attributes = frozenset({"recent"})
 
     def __init__(self, entry: ConfigEntry) -> None:
         """Initialize review debug sensor."""
@@ -96,8 +123,12 @@ class FrigateNotificationsReviewDebugSensor(FrigateNotificationsIntegrationEntit
     @property
     @override
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return debug attributes."""
-        return self._review_attrs
+        """Return the latest message attributes plus the retained recent reviews."""
+        history = self._entry.runtime_data.review_history
+        if history is None:
+            return self._review_attrs
+        recent = [_recent_review_row(record) for record in history.records()]
+        return {**self._review_attrs, "recent": recent}
 
 
 class FrigateNotificationsStatsSensor(FrigateNotificationsIntegrationEntity, RestoreSensor):

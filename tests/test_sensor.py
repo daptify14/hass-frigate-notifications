@@ -80,6 +80,74 @@ class TestReviewDebugSensor:
         assert state.attributes["detection_count"] == 2
         assert state.attributes["message_type"] == "new"
 
+    async def test_debug_sensor_lists_recent_reviews_from_history(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Retained reviews appear as compact rows, newest first, as soon as the sensor loads."""
+        from .payloads import REVIEW_NEW_PAYLOAD, REVIEW_UPDATE_VERIFIED_PAYLOAD
+
+        await setup_integration(hass, mock_config_entry)
+        history = mock_config_entry.runtime_data.review_history
+        assert history is not None
+        history.record(REVIEW_NEW_PAYLOAD, 1.0)
+        history.record(REVIEW_UPDATE_VERIFIED_PAYLOAD, 2.0)
+        other = {**REVIEW_NEW_PAYLOAD, "after": {**REVIEW_NEW_PAYLOAD["after"], "id": "later"}}
+        history.record(other, 3.0)
+
+        ent_reg = er.async_get(hass)
+        entity_id = ent_reg.async_get_entity_id(
+            "sensor", DOMAIN, f"{mock_config_entry.entry_id}_review_debug"
+        )
+        assert entity_id is not None
+        ent_reg.async_update_entity(entity_id, disabled_by=None)
+        await hass.config_entries.async_reload(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+        state = hass.states.get(entity_id)
+        assert state is not None
+        recent = state.attributes["recent"]
+        assert [row["review_id"] for row in recent] == [
+            "later",
+            REVIEW_NEW_PAYLOAD["after"]["id"],
+        ]
+        first = recent[1]
+        assert first["last_lifecycle"] == "update"
+        assert first["steps"] == 2
+        assert first["truncated"] is False
+        assert first["objects"] == ["person-verified"]
+        assert first["sub_labels"] == ["Bob"]
+        assert first["started_at"].startswith("19")
+
+    async def test_debug_sensor_has_no_recent_when_history_off(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Without retained history the sensor keeps only its latest-message attributes."""
+        mock_config_entry.add_to_hass(hass)
+        hass.config_entries.async_update_entry(
+            mock_config_entry,
+            options={**mock_config_entry.options, "keep_review_history": False},
+        )
+        ent_reg = er.async_get(hass)
+        ent_entry = ent_reg.async_get_or_create(
+            "sensor",
+            DOMAIN,
+            f"{mock_config_entry.entry_id}_review_debug",
+            config_entry=mock_config_entry,
+        )
+        ent_reg.async_update_entity(ent_entry.entity_id, disabled_by=None)
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+        sensor = mock_config_entry.runtime_data.debug_sensor
+        assert sensor is not None
+        sensor.update_from_review("new", {"after": {"id": "r1", "camera": "driveway"}})
+        await hass.async_block_till_done()
+
+        state = hass.states.get(ent_entry.entity_id)
+        assert state is not None
+        assert state.state == "r1"
+        assert "recent" not in state.attributes
+
 
 class TestCameraDiagnosticBinarySensor:
     """Tests for per-camera diagnostic binary sensors."""

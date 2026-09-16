@@ -681,7 +681,7 @@
   "entity": {
     "sensor": {
       "review_debug": {
-        "name": "Review debug"
+        "name": "Recent reviews"
       },
       "stats": {
         "name": "Notifications sent"

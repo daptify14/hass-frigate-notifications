@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.helpers import device_registry as dr
-from homeassistant.util import slugify
+from homeassistant.util import dt as dt_util, slugify
 
 from .action_presets import DEFAULT_PRESET_IDS
 from .config import (
@@ -224,6 +224,11 @@ class RuntimeConfig:
     initial_delay: float = DEFAULT_INITIAL_DELAY
     global_zone_aliases: dict[str, dict[str, str]] = field(default_factory=dict)
     template_id_map: dict[str, str] = field(default_factory=dict)
+
+
+def isoformat_timestamp(timestamp: float) -> str:
+    """Format a Unix timestamp as a local ISO 8601 string for attributes and responses."""
+    return dt_util.as_local(dt_util.utc_from_timestamp(timestamp)).isoformat()
 
 
 # Shared Frigate / subentry helpers.
