@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.core import SupportsResponse
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
@@ -41,6 +42,7 @@ _REPLAY_FIELDS = {
     vol.Required("entity_id"): cv.entity_id,
     vol.Optional("review_id"): str,
     vol.Optional("run_filters", default=False): bool,
+    vol.Optional("include_payload", default=False): bool,
     vol.Optional("title_template", default=""): str,
     vol.Optional("message_template", default=""): str,
     vol.Optional("subtitle_template", default=""): str,
@@ -54,6 +56,8 @@ PREVIEW_SCHEMA = vol.Schema(
         ),
     }
 )
+
+SEND_TEST_SCHEMA = vol.Schema({**_REPLAY_FIELDS, vol.Optional("notify_service"): str})
 
 
 def _get_silence_entity(
@@ -172,7 +176,13 @@ def _replay_for_call(call: ServiceCall) -> list[ReplayResult]:
     ]
 
 
-def _serialize_result(result: ReplayResult) -> dict[str, Any]:
+def _serialize_result(
+    result: ReplayResult,
+    *,
+    include_payload: bool,
+    delivery: Mapping[int, str] | None = None,
+    service: str | None = None,
+) -> dict[str, Any]:
     """Turn a replay into plain dicts for an action response."""
     rows = []
     for row in result.rows:
@@ -197,10 +207,13 @@ def _serialize_result(result: ReplayResult) -> dict[str, Any]:
                     "tag": row.rendered.tag,
                     "group": row.rendered.group,
                     "click_url": row.rendered.click_url,
-                    "service": f"notify.{row.notify_call.service}",
-                    "service_data": row.notify_call.service_data,
+                    "service": f"notify.{service or row.notify_call.service}",
                 }
             )
+            if include_payload:
+                item["service_data"] = row.notify_call.service_data
+        if delivery and row.step in delivery:
+            item["result"] = delivery[row.step]
         rows.append(item)
     record = result.record
     return {
@@ -212,16 +225,51 @@ def _serialize_result(result: ReplayResult) -> dict[str, Any]:
     }
 
 
-def _build_response(call: ServiceCall, results: list[ReplayResult]) -> ServiceResponse:
-    return {
+def _build_response(call: ServiceCall, reviews: list[dict[str, Any]]) -> ServiceResponse:
+    response: dict[str, Any] = {
         "filters": "evaluated_now" if call.data["run_filters"] else "none",
-        "reviews": [_serialize_result(result) for result in results],
+        "reviews": reviews,
     }
+    return cast("ServiceResponse", response)
 
 
 async def _handle_preview_notification(call: ServiceCall) -> ServiceResponse:
     """Handle the preview_notification action."""
-    return _build_response(call, _replay_for_call(call))
+    results = _replay_for_call(call)
+    include_payload = call.data["include_payload"]
+    return _build_response(
+        call, [_serialize_result(r, include_payload=include_payload) for r in results]
+    )
+
+
+async def _handle_send_test_notification(call: ServiceCall) -> ServiceResponse:
+    """Handle the send_test_notification action: replay one review and deliver its rows."""
+    (result,) = _replay_for_call(call)
+    override = call.data.get("notify_service")
+    service = override.removeprefix("notify.") if override else None
+    delivery: dict[int, str] = {}
+    for row in result.rows:
+        if row.notify_call is None:
+            continue
+        try:
+            await call.hass.services.async_call(
+                "notify",
+                service or row.notify_call.service,
+                service_data=row.notify_call.service_data,
+                blocking=True,
+            )
+        except HomeAssistantError as err:
+            if not call.return_response:
+                raise
+            delivery[row.step] = f"failed: {err}"
+            break
+        delivery[row.step] = "sent"
+    if not call.return_response:
+        return None
+    serialized = _serialize_result(
+        result, include_payload=call.data["include_payload"], delivery=delivery, service=service
+    )
+    return _build_response(call, [serialized])
 
 
 def register_services(hass: HomeAssistant) -> None:
@@ -247,5 +295,12 @@ def register_services(hass: HomeAssistant) -> None:
         _handle_preview_notification,
         schema=PREVIEW_SCHEMA,
         supports_response=SupportsResponse.ONLY,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "send_test_notification",
+        _handle_send_test_notification,
+        schema=SEND_TEST_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
     )
     _LOGGER.debug("Registered %s services", DOMAIN)

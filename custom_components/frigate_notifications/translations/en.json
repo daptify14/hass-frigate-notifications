@@ -906,6 +906,48 @@
         "last": {
           "name": "Last reviews",
           "description": "How many of the newest reviews on the profile's cameras to replay."
+        },
+        "include_payload": {
+          "name": "Include payload",
+          "description": "Add the full notify service data to each rendered row. Off shows just the title, message, subtitle, tag, group, click URL, and service."
+        }
+      }
+    },
+    "send_test_notification": {
+      "name": "Send test notification",
+      "description": "Replay a recent Frigate review through a profile and deliver each notification it would have sent. Does not update the last sent sensor, statistics, or cooldown.",
+      "fields": {
+        "entity_id": {
+          "name": "Profile",
+          "description": "The Enabled switch of the notification profile to replay through."
+        },
+        "review_id": {
+          "name": "Review ID",
+          "description": "Replay this retained review. Defaults to the newest review on the profile's cameras."
+        },
+        "run_filters": {
+          "name": "Run filters",
+          "description": "Evaluate the profile's filters for each message. Cooldown is never applied; filters that depend on Home Assistant state use the current state."
+        },
+        "title_template": {
+          "name": "Title template",
+          "description": "Try this title template (built-in ID or Jinja) instead of the profile's, in every phase."
+        },
+        "message_template": {
+          "name": "Message template",
+          "description": "Try this message template (built-in ID or Jinja) instead of the profile's, in every phase."
+        },
+        "subtitle_template": {
+          "name": "Subtitle template",
+          "description": "Try this subtitle template (built-in ID or Jinja) instead of the profile's, in every phase."
+        },
+        "notify_service": {
+          "name": "Notify service",
+          "description": "Deliver to this notify service instead of the profile's target."
+        },
+        "include_payload": {
+          "name": "Include payload",
+          "description": "Add the full notify service data to each rendered row. Off shows just the title, message, subtitle, tag, group, click URL, and service."
         }
       }
     }

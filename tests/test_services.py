@@ -212,11 +212,29 @@ class TestPreviewNotificationService:
         assert first["phase"] == "initial"
         assert first["service"] == "notify.mobile_app_test_phone"
         assert first["title"]
-        assert isinstance(first["service_data"], dict)
+        assert "service_data" not in first
         assert second["outcome"] == "rendered"
         assert second["phase"] == "update"
         json.dumps(response)
         assert notify_calls == []
+
+    async def test_preview_include_payload_adds_service_data(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Rows carry the full notify service data only when asked."""
+        await setup_integration(hass, mock_config_entry)
+        history = mock_config_entry.runtime_data.review_history
+        assert history is not None
+        history.record(REVIEW_NEW_PAYLOAD, 1.0)
+
+        response = await _preview(
+            hass,
+            {"entity_id": _profile_switch_entity_id(mock_config_entry), "include_payload": True},
+        )
+        (row,) = response["reviews"][0]["rows"]
+        assert row["service_data"]["title"] == row["title"]
+        assert "attachment" in row["service_data"]["data"]
+        json.dumps(response)
 
     async def test_preview_with_filters_and_overrides(
         self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
@@ -299,3 +317,114 @@ class TestPreviewNotificationService:
         with pytest.raises(ServiceValidationError) as exc:
             await _preview(hass, {"entity_id": "switch.something_else"})
         assert exc.value.translation_key == "profile_not_found"
+
+
+async def _send(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+    response = await hass.services.async_call(
+        DOMAIN, "send_test_notification", data, blocking=True, return_response=True
+    )
+    assert response is not None
+    return dict(response)
+
+
+class TestSendTestNotificationService:
+    """Tests for the send_test_notification action."""
+
+    async def _setup_with_history(
+        self, hass: HomeAssistant, entry: MockConfigEntry
+    ) -> tuple[str, list[Any]]:
+        await setup_integration(hass, entry)
+        notify_calls = async_mock_service(hass, "notify", "mobile_app_test_phone")
+        history = entry.runtime_data.review_history
+        assert history is not None
+        history.record(REVIEW_NEW_PAYLOAD, 1.0)
+        history.record(REVIEW_UPDATE_VERIFIED_PAYLOAD, 2.0)
+        return _profile_switch_entity_id(entry), notify_calls
+
+    async def test_send_delivers_rendered_rows_in_order(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Each rendered row becomes one notify call, in message order, with overrides."""
+        entity_id, notify_calls = await self._setup_with_history(hass, mock_config_entry)
+
+        response = await _send(hass, {"entity_id": entity_id, "title_template": "T {{ phase }}"})
+
+        assert [c.data["title"] for c in notify_calls] == ["T initial", "T update"]
+        rows = response["reviews"][0]["rows"]
+        assert [r["result"] for r in rows] == ["sent", "sent"]
+        assert rows[0]["service"] == "notify.mobile_app_test_phone"
+
+    async def test_send_without_response_and_with_service_override(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """A notify service override redirects delivery; no response is fine."""
+        entity_id, notify_calls = await self._setup_with_history(hass, mock_config_entry)
+        other_calls = async_mock_service(hass, "notify", "mobile_app_other")
+
+        response = await hass.services.async_call(
+            DOMAIN,
+            "send_test_notification",
+            {"entity_id": entity_id, "notify_service": "notify.mobile_app_other"},
+            blocking=True,
+        )
+
+        assert response is None
+        assert notify_calls == []
+        assert len(other_calls) == 2
+
+    async def test_send_stops_at_first_failed_delivery(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """A failing notify call is reported on its row and later rows are not attempted."""
+        entity_id, notify_calls = await self._setup_with_history(hass, mock_config_entry)
+
+        response = await _send(hass, {"entity_id": entity_id, "notify_service": "missing_service"})
+
+        assert notify_calls == []
+        first, second = response["reviews"][0]["rows"]
+        assert first["result"].startswith("failed:")
+        assert first["service"] == "notify.missing_service"
+        assert "result" not in second
+
+    async def test_send_without_response_raises_on_failed_delivery(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """A caller that asked for no response still learns about a failed delivery."""
+        entity_id, _ = await self._setup_with_history(hass, mock_config_entry)
+
+        with pytest.raises(HomeAssistantError):
+            await hass.services.async_call(
+                DOMAIN,
+                "send_test_notification",
+                {"entity_id": entity_id, "notify_service": "missing_service"},
+                blocking=True,
+            )
+
+    async def test_send_leaves_live_bookkeeping_untouched(
+        self, hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    ) -> None:
+        """Test sends do not touch last sent, stats, or cooldown state."""
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+        from custom_components.frigate_notifications.const import SIGNAL_LAST_SENT
+
+        entity_id, notify_calls = await self._setup_with_history(hass, mock_config_entry)
+        sub_id = get_profile_subentry_id(mock_config_entry)
+        last_sent_received: list[tuple[object, ...]] = []
+        async_dispatcher_connect(
+            hass,
+            f"{SIGNAL_LAST_SENT}_{mock_config_entry.entry_id}_{sub_id}",
+            lambda *a: last_sent_received.append(a),
+        )
+
+        await hass.services.async_call(
+            DOMAIN, "send_test_notification", {"entity_id": entity_id}, blocking=True
+        )
+
+        assert len(notify_calls) == 2
+        assert last_sent_received == []
+        stats = mock_config_entry.runtime_data.stats_sensor
+        assert stats is not None
+        assert stats.native_value == 0
+        dispatcher = mock_config_entry.runtime_data.dispatcher
+        assert dispatcher._get_profile_state(sub_id).last_sent_at == {}
