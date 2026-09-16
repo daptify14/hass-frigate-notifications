@@ -98,12 +98,14 @@ class TestOptionsFlowMenu:
                     "shared_state_entity": "binary_sensor.test",
                     "shared_state_filter_states": ["on"],
                 },
+                "diagnostics": {"keep_review_history": False},
             },
         )
         assert result["type"] is FlowResultType.MENU
 
         result = await _save_from_menu(hass, flow_id)
         data = result["data"]
+        assert data["keep_review_history"] is False
         assert data["shared_guard_entity"] == "input_boolean.armed"
         assert data["shared_time_filter_mode"] == "notify_only_during"
         assert data["shared_time_filter_start"] == "08:00:00"
@@ -127,6 +129,7 @@ class TestOptionsFlowMenu:
                 "shared_presence_entities": ["person.user"],
                 "shared_state_entity": "binary_sensor.test",
                 "shared_state_filter_states": ["on"],
+                "keep_review_history": False,
             },
             title="Notifications for Frigate",
         )
@@ -140,6 +143,8 @@ class TestOptionsFlowMenu:
 
         result = await _save_from_menu(hass, flow_id)
         data = result["data"]
+        # An omitted section keeps the stored value rather than resetting it.
+        assert data["keep_review_history"] is False
         assert "shared_guard_entity" not in data
         assert "shared_time_filter_mode" not in data
         assert "shared_time_filter_start" not in data

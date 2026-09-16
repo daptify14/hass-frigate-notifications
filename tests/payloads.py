@@ -149,3 +149,38 @@ REVIEW_GENAI_PAYLOAD: dict[str, Any] = {
         },
     },
 }
+
+REVIEW_UPDATE_VERIFIED_PAYLOAD: dict[str, Any] = {
+    "type": "update",
+    "before": {
+        "id": "1773840946.10543-review1",
+        "camera": "driveway",
+        "start_time": 1773840946.10543,
+        "end_time": None,
+        "severity": "alert",
+        "data": {
+            "detections": ["det_id_1"],
+            "objects": ["person"],
+            "sub_labels": [],
+            "zones": ["driveway_approach"],
+            "audio": [],
+            "metadata": None,
+        },
+    },
+    "after": {
+        "id": "1773840946.10543-review1",
+        "camera": "driveway",
+        "start_time": 1773840946.10543,
+        "end_time": None,
+        "severity": "alert",
+        "data": {
+            "detections": ["det_id_1"],
+            "objects": ["person-verified"],
+            "verified_objects": ["person-verified"],
+            "sub_labels": ["Bob"],
+            "zones": ["driveway_approach"],
+            "audio": [],
+            "metadata": None,
+        },
+    },
+}

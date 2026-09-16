@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import timedelta
 import logging
+import time
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.components import mqtt
 from homeassistant.config_entries import SIGNAL_CONFIG_ENTRY_CHANGED, ConfigSubentry
@@ -23,6 +24,7 @@ from .actions import setup_action_listener
 from .const import (
     CLEANUP_INTERVAL,
     DOMAIN,
+    OPTION_KEEP_REVIEW_HISTORY,
     SUBENTRY_TYPE_INTEGRATION,
     SUBENTRY_TYPE_PROFILE,
     TOPIC_SUFFIX_REVIEWS,
@@ -39,6 +41,7 @@ from .frigate_config import get_frigate_config_view
 from .presets import async_ensure_preset_cache
 from .processor import ReviewProcessor
 from .repairs import delete_all_issues_for_entry, sync_repair_issues
+from .review_history import ReviewHistory
 from .services import register_services
 
 if TYPE_CHECKING:
@@ -88,8 +91,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
     runtime_config = build_runtime_config(hass, entry)
     filter_chain = build_default_filter_chain()
     dispatcher = NotificationDispatcher(hass, runtime_config, filter_chain)
+    review_history = _resolve_review_history(hass, entry)
 
     def _on_review_message(msg_type: str, payload: dict[str, Any]) -> None:
+        if review_history is not None:
+            review_history.record(payload, time.time())
         sensor = entry.runtime_data.debug_sensor
         if sensor is not None:
             sensor.update_from_review(msg_type, payload)
@@ -121,6 +127,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FrigateNotificationsConf
     entry.runtime_data = FrigateNotificationsRuntimeData(
         processor=processor,
         dispatcher=dispatcher,
+        review_history=review_history,
         mqtt_topic=mqtt_topic,
         integration_subentry_id=get_integration_subentry_id(entry),
     )
@@ -181,8 +188,20 @@ async def async_remove_config_entry_device(
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Clean up repair issues when entry is fully removed."""
+    """Clean up repair issues and retained review history when entry is fully removed."""
     delete_all_issues_for_entry(hass, entry)
+    hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
+
+
+def _resolve_review_history(hass: HomeAssistant, entry: ConfigEntry) -> ReviewHistory | None:
+    """Return the entry's review history, kept outside runtime_data so reloads preserve it."""
+    store = cast("dict[str, ReviewHistory]", hass.data.setdefault(DOMAIN, {}))
+    if not entry.options.get(OPTION_KEEP_REVIEW_HISTORY, True):
+        store.pop(entry.entry_id, None)
+        return None
+    if entry.entry_id not in store:
+        store[entry.entry_id] = ReviewHistory()
+    return store[entry.entry_id]
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:

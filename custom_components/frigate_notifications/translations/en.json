@@ -115,6 +115,15 @@
             "data_description": {
               "shared_state_entity": "Only notify when this entity is in an allowed state."
             }
+          },
+          "diagnostics": {
+            "name": "Diagnostics",
+            "data": {
+              "keep_review_history": "Keep recent reviews for replay"
+            },
+            "data_description": {
+              "keep_review_history": "Retain the last few Frigate reviews in memory so the preview and test notification actions can replay them. Turn off to keep recognised names and plates out of memory; the actions then stop working."
+            }
           }
         }
       },

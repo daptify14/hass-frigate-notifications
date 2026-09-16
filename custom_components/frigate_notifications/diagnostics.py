@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
     from .data import FrigateNotificationsConfigEntry
+    from .review_history import ReviewHistory
 
 REDACT_KEYS = {
     "base_url",
@@ -44,6 +45,7 @@ async def async_get_config_entry_diagnostics(
         )
 
     mqtt_topic = entry.runtime_data.mqtt_topic
+    history = entry.runtime_data.review_history
 
     return {
         "entry": {
@@ -55,4 +57,34 @@ async def async_get_config_entry_diagnostics(
         "cameras": cameras,
         "profiles": profiles,
         "mqtt": {"topic": mqtt_topic},
+        "review_history": _summarize_history(history) if history is not None else None,
     }
+
+
+def _summarize_history(history: ReviewHistory) -> list[dict[str, Any]]:
+    """Summarize retained reviews without sub-labels or GenAI text."""
+    summaries = []
+    for record in history.records():
+        steps = []
+        for step in record.steps:
+            data = step.payload.get("after", {}).get("data", {})
+            steps.append(
+                {
+                    "lifecycle": str(step.lifecycle),
+                    "received_at": step.received_at,
+                    "objects": list(data.get("objects", [])),
+                    "zones": list(data.get("zones", [])),
+                    "severity": step.payload.get("after", {}).get("severity", ""),
+                    "detection_count": len(data.get("detections", [])),
+                }
+            )
+        summaries.append(
+            {
+                "review_id": record.review_id,
+                "camera": record.camera,
+                "started_at": record.started_at,
+                "truncated": record.truncated,
+                "steps": steps,
+            }
+        )
+    return summaries

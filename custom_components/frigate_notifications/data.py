@@ -76,6 +76,7 @@ if TYPE_CHECKING:
     from .datetime import FrigateNotificationsSilenceDateTime
     from .dispatcher import NotificationDispatcher
     from .processor import ReviewProcessor
+    from .review_history import ReviewHistory
     from .sensor import FrigateNotificationsReviewDebugSensor, FrigateNotificationsStatsSensor
     from .switch import FrigateNotificationsSwitch
 
@@ -110,6 +111,7 @@ class FrigateNotificationsRuntimeData:
 
     processor: ReviewProcessor
     dispatcher: NotificationDispatcher
+    review_history: ReviewHistory | None = None
     mqtt_topic: str = ""
     integration_subentry_id: str | None = None
     debug_sensor: FrigateNotificationsReviewDebugSensor | None = None
