@@ -1,7 +1,7 @@
 """Targeted unit tests for profile step modules — coverage for provider-specific branches."""
 
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -368,10 +368,12 @@ class TestContentSuggested:
         draft: dict[str, Any] = {
             "title_template": "my_title",
             "zone_overrides": {"porch": "at the porch"},
+            "last_zone_overrides": {"porch": "on the porch"},
         }
         suggested = build_content_suggested(draft)
         assert suggested["title_template"] == "my_title"
         assert suggested["zone_overrides"] == {"porch": "at the porch"}
+        assert suggested["last_zone_overrides"] == {"porch": "on the porch"}
 
 
 class TestContentClearedFields:
@@ -396,3 +398,36 @@ class TestContentClearedFields:
         }
         apply_content_input(draft, {"initial_content": {"enabled": True}}, ctx)
         assert draft["phases"]["initial"]["subtitle_template"] == ""
+
+
+class TestContentLatestZonePhrases:
+    """The latest-zone phrase table is stored, cleared, and left alone when not shown."""
+
+    CONTENT = "custom_components.frigate_notifications.flows.profile.steps.content"
+
+    def _apply(self, draft: dict[str, Any], user_input: dict[str, Any]) -> None:
+        with patch(f"{self.CONTENT}.get_camera_zones", return_value=["porch", "yard"]):
+            apply_content_input(draft, user_input, _make_ctx())
+
+    def test_phrases_stored_for_known_zones_only(self) -> None:
+        draft: dict[str, Any] = {"cameras": ["driveway"]}
+        self._apply(draft, {"last_zone_overrides": {"porch": " on ", "yard": "", "gone": "x"}})
+        assert draft["last_zone_overrides"] == {"porch": "on"}
+
+    def test_emptied_section_clears_stored_phrases(self) -> None:
+        draft: dict[str, Any] = {"cameras": ["driveway"], "last_zone_overrides": {"porch": "on"}}
+        self._apply(draft, {"last_zone_overrides": {}})
+        assert "last_zone_overrides" not in draft
+
+    def test_absent_section_keeps_stored_phrases(self) -> None:
+        draft: dict[str, Any] = {"cameras": ["driveway"], "last_zone_overrides": {"porch": "on"}}
+        self._apply(draft, {})
+        assert draft["last_zone_overrides"] == {"porch": "on"}
+
+    def test_multi_camera_profile_drops_phrases(self) -> None:
+        draft: dict[str, Any] = {
+            "cameras": ["driveway", "yard"],
+            "last_zone_overrides": {"porch": "on"},
+        }
+        self._apply(draft, {})
+        assert "last_zone_overrides" not in draft

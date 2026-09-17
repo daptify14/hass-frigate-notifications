@@ -394,7 +394,12 @@
               }
             },
             "zone_overrides": {
-              "name": "Zone phrase overrides"
+              "name": "Zone phrases",
+              "description": "The action word used with the first zone of a review, as in \"entered the driveway\"."
+            },
+            "last_zone_overrides": {
+              "name": "Zone phrases for the latest zone (optional)",
+              "description": "Used by last_zone_phrase for the newest zone a review has reached. Leave a zone empty to reuse its phrase from the table above."
             }
           }
         },

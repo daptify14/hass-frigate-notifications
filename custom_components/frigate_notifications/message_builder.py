@@ -42,6 +42,25 @@ def _get_emoji(item: str, profile: ProfileRuntime) -> str:
     return profile.emoji_map.get(item.lower().replace(" ", "_"), profile.default_emoji)
 
 
+def _with_emoji(items: list[str], profile: ProfileRuntime, *, emoji_mode: bool) -> list[str]:
+    """Prefix each item with its emoji when emoji mode is on."""
+    if not emoji_mode:
+        return items
+    return [f"{emoji} {item}" if (emoji := _get_emoji(item, profile)) else item for item in items]
+
+
+def _unique_names(sub_labels: list[str]) -> list[str]:
+    """Deduplicate sub-labels case-insensitively, preserving order and case."""
+    seen: set[str] = set()
+    names: list[str] = []
+    for sl in sub_labels:
+        key = sl.lower()
+        if key not in seen:
+            seen.add(key)
+            names.append(sl)
+    return names
+
+
 def _build_subjects(
     objects: list[str],
     sub_labels: list[str],
@@ -53,13 +72,8 @@ def _build_subjects(
     non_verified = [o for o in objects if not o.endswith("-verified")]
     clean = _clean_objects(non_verified)
 
-    seen: set[str] = set()
-    merged: list[str] = []
-    for sl in sub_labels:
-        key = sl.lower()
-        if key not in seen:
-            seen.add(key)
-            merged.append(sl)
+    merged = _unique_names(sub_labels)
+    seen = {name.lower() for name in merged}
 
     for obj in clean:
         key = obj.lower()
@@ -68,13 +82,7 @@ def _build_subjects(
             display = obj.replace("_", " ").title()
             merged.append(display)
 
-    if emoji_mode:
-        result: list[str] = []
-        for item in merged:
-            emoji = _get_emoji(item, profile)
-            result.append(f"{emoji} {item}" if emoji else item)
-        return result
-    return merged
+    return _with_emoji(merged, profile, emoji_mode=emoji_mode)
 
 
 class TemplateCache:
@@ -210,6 +218,9 @@ def _build_subject_context(
         "subject": subjects[0] if subjects else "",
         "subjects": ", ".join(subjects),
         "added_subject": ", ".join(added),
+        "names": ", ".join(
+            _with_emoji(_unique_names(review.sub_labels), config, emoji_mode=emoji_mode)
+        ),
         "sub_label": review.sub_labels[0] if review.sub_labels else "",
         "sub_labels": ", ".join(dict.fromkeys(review.sub_labels)),
         "sub_labels_raw": ", ".join(review.sub_labels),
@@ -226,16 +237,15 @@ def _build_zone_context(
     first_zone = review.zones[0] if review.zones else ""
     last_zone = review.zones[-1] if review.zones else ""
 
-    if first_zone:
+    def alias(zone: str) -> str:
+        if not zone:
+            return ""
         if config.zone_aliases:
-            zone_alias = config.zone_aliases.get(first_zone, humanize_zone(first_zone))
-        elif global_zone_aliases:
-            camera_aliases = global_zone_aliases.get(review.camera, {})
-            zone_alias = camera_aliases.get(first_zone, humanize_zone(first_zone))
-        else:
-            zone_alias = humanize_zone(first_zone)
-    else:
-        zone_alias = ""
+            return config.zone_aliases.get(zone, humanize_zone(zone))
+        camera_aliases = (global_zone_aliases or {}).get(review.camera, {})
+        return camera_aliases.get(zone, humanize_zone(zone))
+
+    zone_alias = alias(first_zone)
 
     zone_text = config.zone_overrides.get(first_zone, zone_alias) if first_zone else ""
     before_zones_set = set(baseline.zones if baseline else review.before_zones)
@@ -253,29 +263,53 @@ def _build_zone_context(
         "zone_text": zone_text,
         "zone_alias": zone_alias,
         "zone_phrase": "detected",
+        "last_zone_alias": alias(last_zone),
+        "last_zone_phrase": "detected",
         "added_zones": added_zones,
     }
 
 
 def _render_zone_phrase(
-    review: Review,
-    profile: ProfileRuntime,
+    zone: str,
+    phrase_tpl: str,
     ctx: dict[str, Any],
     hass: HomeAssistant | None,
 ) -> str | None:
-    """Render zone_phrase override template. Returns None if no override applies."""
-    first_zone = review.zones[0] if review.zones else ""
-    zone_override_tpl = profile.zone_overrides.get(first_zone, "") if first_zone else ""
-    if not zone_override_tpl:
+    """Render a zone phrase template. Returns None if no phrase applies."""
+    if not phrase_tpl:
         return None
     if hass is None:
-        return zone_override_tpl
+        return phrase_tpl
     try:
-        rendered = render_template(hass, zone_override_tpl, ctx)
+        rendered = render_template(hass, phrase_tpl, ctx)
         return rendered.strip() or "detected"
     except TemplateError as err:
-        _LOGGER.warning("Zone phrase template failed for zone '%s': %s", first_zone, err)
+        _LOGGER.warning("Zone phrase template failed for zone '%s': %s", zone, err)
         return None
+
+
+def _apply_zone_phrases(
+    ctx: dict[str, Any], review: Review, profile: ProfileRuntime, hass: HomeAssistant | None
+) -> None:
+    """Set zone_phrase and last_zone_phrase from the profile's phrase tables.
+
+    Phrases may be Jinja2, so they render against the otherwise complete context.
+    The latest zone reuses the first-zone table where it has no phrase of its own.
+    """
+    if not review.zones:
+        return
+    first_zone, last_zone = review.zones[0], review.zones[-1]
+    first_tpl = profile.zone_overrides.get(first_zone, "")
+    last_tpl = profile.last_zone_overrides.get(last_zone) or profile.zone_overrides.get(
+        last_zone, ""
+    )
+    for key, zone, tpl in (
+        ("zone_phrase", first_zone, first_tpl),
+        ("last_zone_phrase", last_zone, last_tpl),
+    ):
+        phrase = _render_zone_phrase(zone, tpl, ctx, hass)
+        if phrase is not None:
+            ctx[key] = phrase
 
 
 def build_context(
@@ -320,11 +354,7 @@ def build_context(
         **_build_time_context(review),
     }
 
-    # Render zone_phrase override against full context (override may be Jinja2).
-    zone_phrase = _render_zone_phrase(review, config, ctx, hass)
-    if zone_phrase is not None:
-        ctx["zone_phrase"] = zone_phrase
-
+    _apply_zone_phrases(ctx, review, config, hass)
     return ctx
 
 
@@ -357,9 +387,7 @@ def _build_emoji_overlay(
         **_build_object_context(review, profile, emoji_mode=emoji_mode),
         **_build_subject_context(review, profile, emoji_mode=emoji_mode, baseline=baseline),
     }
-    zone_phrase = _render_zone_phrase(review, profile, overlay, hass)
-    if zone_phrase is not None:
-        overlay["zone_phrase"] = zone_phrase
+    _apply_zone_phrases(overlay, review, profile, hass)
     return overlay
 
 
@@ -427,6 +455,6 @@ def render_notification(
             _LOGGER.warning("Subtitle template render failed: %s", err)
             subtitle = ctx.get("subjects", "")
     else:
-        subtitle = str(ctx.get("subjects", ""))
+        subtitle = ""
 
     return RenderedContent(title=title, message=message, subtitle=subtitle)

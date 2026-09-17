@@ -1,0 +1,71 @@
+schema_version: 1
+id: room
+version: 1
+name: Indoor Room
+summary: Indoor rooms - who and where, quiet follow-ups only when something changes
+description: >-
+  For a camera inside a room, with or without face recognition. Each
+  notification is a single sentence saying who did what and where, under the
+  camera name, with no subtitle. Follow-ups are silent and only sent when
+  someone new appears or a new zone is reached, and the end card shows who was
+  there and for how long. After creating the profile, fill in the zone phrases
+  for this camera's zones.
+sort_order: 7
+
+profile_defaults:
+  title_template: "camera_only"
+  update_triggers:
+    - zone
+    - subject
+  alert_once: true
+
+phases:
+  initial:
+    message_template: "subject_action_zone"
+    subtitle_template: ""
+    emoji_message: true
+    emoji_subtitle: false
+    sound: default
+    volume: 1.0
+    interruption_level: active
+    attachment: snapshot_cropped
+    delay: 0.0
+
+  update:
+    enabled: true
+    message_template: "update_delta_zone"
+    subtitle_template: ""
+    emoji_message: true
+    emoji_subtitle: false
+    sound: none
+    volume: 0.0
+    interruption_level: passive
+    attachment: snapshot_cropped
+    delay: 5.0
+    use_latest_detection: true
+
+  end:
+    enabled: true
+    message_template: "subject_duration"
+    subtitle_template: ""
+    emoji_message: true
+    emoji_subtitle: false
+    sound: none
+    volume: 0.0
+    interruption_level: passive
+    attachment: review_gif
+    delay: 5.0
+    use_latest_detection: true
+
+  genai:
+    enabled: true
+    message_template: "genai_summary"
+    subtitle_template: "names_or_subjects"
+    emoji_message: false
+    emoji_subtitle: true
+    sound: default
+    volume: 1.0
+    interruption_level: passive
+    attachment: review_gif
+    delay: 0.0
+    use_latest_detection: true

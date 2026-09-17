@@ -237,6 +237,61 @@ class TestBuildContextZones:
         ctx_override = build_context(review2, profile, Phase.INITIAL, Lifecycle.NEW, hass=hass)
         assert ctx_override["zone_phrase"] == "spotted near Front Yard"
 
+    def test_last_zone_alias_resolves_like_zone_alias(self) -> None:
+        review = make_review(camera="backyard", zones=["patio", "pool"])
+        aliases = {"backyard": {"pool": "the pool"}}
+        ctx = build_context(
+            review, make_profile(), Phase.UPDATE, Lifecycle.UPDATE, global_zone_aliases=aliases
+        )
+        assert ctx["zone_alias"] == "Patio"
+        assert ctx["last_zone_alias"] == "the pool"
+
+        single = build_context(
+            make_review(zones=["patio"]), make_profile(), Phase.UPDATE, Lifecycle.UPDATE
+        )
+        assert single["last_zone_alias"] == single["zone_alias"]
+
+    @pytest.mark.parametrize(
+        ("first_table", "last_table", "expected"),
+        [
+            ({}, {}, "detected"),
+            ({"pool": "by"}, {}, "by"),
+            ({"pool": "by"}, {"pool": "reached {{ last_zone_name }}"}, "reached Pool"),
+            ({"patio": "left"}, {"patio": "on"}, "detected"),
+        ],
+        ids=["no-phrase", "falls-back-to-first-table", "latest-table-wins", "other-zone-ignored"],
+    )
+    def test_last_zone_phrase(
+        self,
+        hass: HomeAssistant,
+        first_table: dict[str, str],
+        last_table: dict[str, str],
+        expected: str,
+    ) -> None:
+        profile = make_profile(zone_overrides=first_table, last_zone_overrides=last_table)
+        review = make_review(zones=["patio", "pool"])
+        ctx = build_context(review, profile, Phase.UPDATE, Lifecycle.UPDATE, hass=hass)
+        assert ctx["last_zone_phrase"] == expected
+
+    def test_zone_variables_empty_without_zones(self) -> None:
+        ctx = build_context(make_review(zones=[]), make_profile(), Phase.UPDATE, Lifecycle.UPDATE)
+        assert ctx["last_zone_alias"] == ""
+        assert ctx["last_zone_phrase"] == "detected"
+
+    def test_names_lists_recognized_people_only(self) -> None:
+        profile = make_profile(sub_label_overrides={"Alice": "A"}, default_emoji="")
+        review = make_review(
+            objects=["person-verified", "person", "car"], sub_labels=["Alice", "alice", "Bob"]
+        )
+        with_emoji = build_context(review, profile, Phase.UPDATE, Lifecycle.UPDATE)
+        assert with_emoji["names"] == "A Alice, Bob"
+
+        plain = build_context(review, profile, Phase.UPDATE, Lifecycle.UPDATE, emoji_mode=False)
+        assert plain["names"] == "Alice, Bob"
+
+        nobody = build_context(make_review(), profile, Phase.UPDATE, Lifecycle.UPDATE)
+        assert nobody["names"] == ""
+
     def test_added_zones_delta(self) -> None:
         review = make_review(
             zones=["front_yard", "back_yard"],
@@ -445,7 +500,7 @@ class TestRenderNotification:
         )
         assert result.subtitle == "Garage"
 
-    def test_empty_subtitle_falls_back_to_subjects(self, hass: HomeAssistant) -> None:
+    def test_empty_subtitle_renders_empty(self, hass: HomeAssistant) -> None:
         phase = PhaseConfig(
             content=PhaseContent(
                 message_template="{{ object }}",
@@ -456,7 +511,7 @@ class TestRenderNotification:
         result = render_notification(
             hass, make_profile(), review, Phase.INITIAL, phase, Lifecycle.NEW
         )
-        assert "Person" in result.subtitle
+        assert result.subtitle == ""
 
     def test_genai_phase_render(self, hass: HomeAssistant, template_id_map: dict[str, str]) -> None:
         review = make_review(genai=make_genai(short_summary="A person on the porch."))

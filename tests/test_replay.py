@@ -6,7 +6,11 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 import pytest
 
-from custom_components.frigate_notifications.config import PhaseDelivery
+from custom_components.frigate_notifications.config import (
+    PhaseConfig,
+    PhaseContent,
+    PhaseDelivery,
+)
 from custom_components.frigate_notifications.data import ProfileRuntime
 from custom_components.frigate_notifications.enums import (
     Lifecycle,
@@ -16,6 +20,10 @@ from custom_components.frigate_notifications.enums import (
     UpdateTrigger,
 )
 from custom_components.frigate_notifications.filters import build_default_filter_chain
+from custom_components.frigate_notifications.presets import (
+    build_template_id_map,
+    load_template_presets,
+)
 from custom_components.frigate_notifications.replay import (
     ReplayOverrides,
     ReplayResult,
@@ -332,3 +340,67 @@ class TestUpdateTriggers:
         rendered = result.rows[1].rendered
         assert rendered is not None
         assert rendered.ctx["added_zones"] == "Driveway Main"
+
+
+class TestBuiltInRoomTemplates:
+    async def test_room_templates_read_well_across_a_review(self, hass: HomeAssistant) -> None:
+        """New, a late face, a new zone, end: each card says what changed."""
+        id_map = build_template_id_map(load_template_presets())
+
+        def phase(message_id: str) -> PhaseConfig:
+            return make_phase(content=PhaseContent(message_template=id_map[message_id]))
+
+        profile = make_profile(
+            default_emoji="",
+            zone_overrides={"driveway_approach": "entered", "driveway_main": "reached"},
+            phases={
+                Phase.INITIAL: phase("subject_action_zone"),
+                Phase.UPDATE: phase("update_delta_zone"),
+                Phase.END: phase("subject_duration"),
+            },
+        )
+        new_zone = copy.deepcopy(REVIEW_UPDATE_VERIFIED_PAYLOAD)
+        new_zone["before"] = copy.deepcopy(REVIEW_UPDATE_VERIFIED_PAYLOAD["after"])
+        new_zone["after"]["data"]["zones"] = ["driveway_approach", "driveway_main"]
+        end = copy.deepcopy(REVIEW_END_PAYLOAD)
+        end["before"]["data"] = copy.deepcopy(new_zone["after"]["data"])
+        end["after"]["data"] = copy.deepcopy(new_zone["after"]["data"])
+        end["after"]["end_time"] = end["after"]["start_time"] + 154
+
+        result = _replay(
+            hass,
+            _record(
+                (Lifecycle.NEW, 0.0, REVIEW_NEW_PAYLOAD),
+                (Lifecycle.UPDATE, 5.0, REVIEW_UPDATE_VERIFIED_PAYLOAD),
+                (Lifecycle.UPDATE, 30.0, new_zone),
+                (Lifecycle.END, 160.0, end),
+            ),
+            profile,
+        )
+        messages = [row.rendered.message for row in result.rows if row.rendered]
+        assert messages == [
+            "Person entered Driveway Approach",
+            "Bob detected",
+            "Bob reached Driveway Main",
+            "Bob · lasted 2m 34s",
+        ]
+
+    async def test_update_with_new_name_and_new_zone_says_both(self, hass: HomeAssistant) -> None:
+        id_map = build_template_id_map(load_template_presets())
+        update = make_phase(content=PhaseContent(message_template=id_map["update_delta_zone"]))
+        profile = make_profile(
+            default_emoji="",
+            zone_overrides={"driveway_main": "reached"},
+            phases={Phase.UPDATE: update},
+        )
+        both = copy.deepcopy(REVIEW_UPDATE_VERIFIED_PAYLOAD)
+        both["after"]["data"]["zones"] = ["driveway_approach", "driveway_main"]
+
+        result = _replay(
+            hass,
+            _record((Lifecycle.NEW, 0.0, REVIEW_NEW_PAYLOAD), (Lifecycle.UPDATE, 5.0, both)),
+            profile,
+        )
+        rendered = result.rows[1].rendered
+        assert rendered is not None
+        assert rendered.message == "Bob reached Driveway Main"

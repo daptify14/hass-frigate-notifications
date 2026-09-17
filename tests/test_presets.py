@@ -8,6 +8,7 @@ import voluptuous as vol
 
 from custom_components.frigate_notifications.const import DOMAIN
 from custom_components.frigate_notifications.presets import (
+    PROFILE_PRESET_SCHEMA,
     TemplateOption,
     async_ensure_preset_cache,
     build_template_id_map,
@@ -37,6 +38,7 @@ class TestPresetLoaders:
             "snapshot_pager",
             "latest_event",
             "activity_log",
+            "room",
         ]
         assert names == [
             "Live Alerts",
@@ -45,6 +47,7 @@ class TestPresetLoaders:
             "Snapshot Only",
             "Latest Only",
             "Silent Log",
+            "Indoor Room",
         ]
 
     def test_detailed_preset_uses_rich_alert_layout(self) -> None:
@@ -81,6 +84,34 @@ class TestPresetLoaders:
             data["phases"]["end"]["message_template"]
             == data["phases"]["update"]["message_template"]
         )
+
+    def test_room_preset_seeds_update_triggers_and_known_templates(self) -> None:
+        """The room preset carries profile-level defaults and only references built-in ids."""
+        preset = next(p for p in load_profile_presets() if p.id == "room")
+        id_map = build_template_id_map(load_template_presets())
+
+        data = preset.to_profile_data()
+
+        assert data["update_triggers"] == ["zone", "subject"]
+        assert data["alert_once"] is True
+        assert data["title_template"] in id_map
+        for phase in data["phases"].values():
+            assert phase["message_template"] in id_map
+            assert phase["subtitle_template"] in ("", *id_map)
+
+    def test_profile_defaults_reject_unknown_update_trigger(self) -> None:
+        """A preset naming a trigger this version does not know fails validation."""
+        raw = {
+            "schema_version": 1,
+            "id": "bad",
+            "version": 1,
+            "name": "Bad",
+            "summary": "Bad trigger",
+            "profile_defaults": {"update_triggers": ["bogus"]},
+            "phases": {"initial": {"message_template": "{{ object }}"}},
+        }
+        with pytest.raises(vol.Invalid):
+            PROFILE_PRESET_SCHEMA(raw)
 
     def test_build_template_id_map_contains_all_ids(self) -> None:
         """ID map contains every content and title ID."""
@@ -165,6 +196,7 @@ phases:
             "snapshot_pager",
             "latest_event",
             "activity_log",
+            "room",
         }
         assert "Skipping preset future.yaml" in caplog.text
         assert "Skipping preset broken.yaml" in caplog.text
@@ -181,6 +213,7 @@ phases:
             "snapshot_pager",
             "latest_event",
             "activity_log",
+            "room",
         ]
         assert any(
             option.value == "{{ subjects }}"

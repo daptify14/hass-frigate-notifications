@@ -37,7 +37,7 @@ _OPTIONAL_LIST_KEYS = (
     "update_triggers",
 )
 
-_OPTIONAL_DICT_KEYS = ("zone_overrides",)
+_OPTIONAL_DICT_KEYS = ("zone_overrides", "last_zone_overrides")
 
 _OPTIONAL_COLLECTION_KEYS = ("action_config",)
 
