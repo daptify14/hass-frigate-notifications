@@ -62,7 +62,7 @@ Example: `Alice, Car`
 
 ### `added_subject`
 
-Delta: new subjects since the last phase. Useful in update messages to show what changed.
+Delta: subjects that were not part of this profile's previous notification for the review. Useful in update messages to show what changed.
 
 Example: `Person`
 
@@ -126,7 +126,7 @@ Example: `crossed`
 
 ### `added_zones`
 
-Zones added since the last update, humanized.
+Zones that were not part of this profile's previous notification for the review, humanized.
 
 Example: `Porch`
 

@@ -52,6 +52,18 @@ Per-phase overlay settings:
 
 ---
 
+## Update triggers
+
+Shown at the top of the update phase section, for every provider.
+
+| Field | Type | Description | Default |
+| --- | --- | --- | --- |
+| **Send updates when** | Multi-select | Send an update only when one of the selected changes happens: a new zone, a new recognized person or object type, a new detection. Empty sends every update. | (empty) |
+
+See [Update triggers](../notification-lifecycle.md#update-triggers) for how each change is detected.
+
+---
+
 ## Rate limiting
 
 | Field | Type | Description | Default |

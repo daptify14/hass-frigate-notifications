@@ -49,6 +49,27 @@ When the initial notification is triggered, the dispatcher waits for the configu
 
 This gives Frigate time to refine snapshots and detect zone transitions before the first notification goes out.
 
+### Update triggers
+
+By default every `update` Frigate publishes for a review sends an update notification. Frigate publishes one whenever anything about the review changes, including each time tracking loses an object and picks it up again under a new detection. On a busy indoor camera that can mean a run of updates that say nothing new.
+
+**Send updates when**, in the update phase of [Delivery & Timing](profiles/delivery-and-timing.md#update-triggers), limits updates to the changes you pick. An update is sent when at least one selected change is true:
+
+| Trigger | True when |
+| --- | --- |
+| **A new zone is entered** | The review reaches a zone it has not been in before. |
+| **A new person is recognized or a new object type appears** | A sub-label (face, plate) appears that was not on the review before, or a different kind of object joins it, such as a car pulling in while a person is tracked. |
+| **A new detection is added** | Frigate adds a detection to the review. This is also what a re-acquired object looks like, so on its own it behaves much like leaving the option empty. |
+
+Changes are measured against what this profile has already reported for the review, not against Frigate's previous message. A change that arrives while an update is waiting on its delay is still reported by that update, and one that has been reported is not reported again.
+
+Frigate only ever adds zones to a review. The zone trigger therefore fires the first time a zone is entered and not when an object returns to a zone it visited earlier in the same review. Recognized names are remembered the same way: a person who is lost and recognized again is not a new person.
+
+!!! note "A second unrecognized person is not a new subject"
+    Frigate reports object types, not how many of each are present. A second person who is never recognized looks exactly like the first person being lost and picked up again: one more detection, no new name, no new object type. With only the zone and subject triggers selected, that person sends an update only on entering a zone the review has not reached yet. Select the detection trigger as well if that matters more than avoiding repeats.
+
+Updates held back this way never cancel a pending update, and they are listed as `filtered` by the [preview action](actions.md#replaying-recent-reviews). The initial, end, and GenAI phases are not affected.
+
 ### Update and end debouncing
 
 After the initial notification, each `update` or `end` event schedules a delayed task. If a new event arrives while a task is pending, the old task is cancelled and replaced. This debounces rapid updates into a single notification.
