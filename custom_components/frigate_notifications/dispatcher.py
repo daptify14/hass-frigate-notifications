@@ -16,7 +16,7 @@ from homeassistant.helpers.template import TemplateError
 
 from .action_presets import resolve_tap_url
 from .const import DOMAIN, SIGNAL_DISPATCH_PROBLEM, SIGNAL_LAST_SENT, SIGNAL_STATS
-from .enums import Lifecycle, Phase
+from .enums import Lifecycle, Phase, UpdateTrigger
 from .filters import FilterChain, FilterContext
 from .message_builder import (
     TemplateCache,
@@ -24,7 +24,7 @@ from .message_builder import (
     render_notification,
     render_template,
 )
-from .models import ProfileState, ReviewState, SentNotification
+from .models import ProfileState, ReviewSnapshot, ReviewState, SentNotification, update_reasons
 from .providers.base import get_provider
 from .providers.models import RenderedMedia, RenderedNotification
 
@@ -56,13 +56,14 @@ def lifecycle_to_phase(lifecycle: Lifecycle, *, is_initial: bool) -> Phase:
 class DispatchPlan:
     """Resolved action, phase, and delay for a lifecycle event."""
 
-    action: Literal["dispatch", "fire_independent", "absorb", "skip"]
+    action: Literal["dispatch", "fire_independent", "absorb", "skip", "filtered"]
     phase: Phase
     delay: float
     is_initial: bool
     is_genai: bool
     cancel_pending: bool = False
     mark_initial_sent: bool = False
+    detail: str = ""
 
 
 def resolve_dispatch_plan(
@@ -72,8 +73,13 @@ def resolve_dispatch_plan(
     initial_delay: float,
     *,
     has_pending_task: bool,
+    reasons: frozenset[UpdateTrigger] = frozenset(UpdateTrigger),
 ) -> DispatchPlan:
-    """Determine what action to take for a lifecycle event against a profile."""
+    """Determine what action to take for a lifecycle event against a profile.
+
+    ``reasons`` are the update triggers that are true for this message; an update
+    is filtered when the profile names triggers and none of them is among the reasons.
+    """
     # GenAI fires independently, no interaction with pending tasks.
     if lifecycle == Lifecycle.GENAI:
         phase_cfg = profile.get_phase(Phase.GENAI)
@@ -103,6 +109,17 @@ def resolve_dispatch_plan(
                 delay=0,
                 is_initial=False,
                 is_genai=False,
+            )
+        if profile.update_triggers and not profile.update_triggers & reasons:
+            wanted = ", ".join(sorted(profile.update_triggers))
+            found = ", ".join(sorted(reasons)) or "nothing"
+            return DispatchPlan(
+                action="filtered",
+                phase=Phase.UPDATE,
+                delay=0,
+                is_initial=False,
+                is_genai=False,
+                detail=f"update_triggers: none of [{wanted}] (new: {found})",
             )
     if lifecycle == Lifecycle.END:
         phase_cfg = profile.get_phase(Phase.END)
@@ -199,6 +216,7 @@ class DispatchRequest:
 def assemble_notification(request: DispatchRequest) -> RenderedNotification:
     """Render notification content into a provider-neutral payload."""
     r = request
+    baseline = r.review_state.notified
     ctx = build_context(
         r.review,
         r.profile,
@@ -207,6 +225,7 @@ def assemble_notification(request: DispatchRequest) -> RenderedNotification:
         emoji_mode=r.phase_config.content.emoji_message,
         hass=r.hass,
         global_zone_aliases=r.global_zone_aliases,
+        baseline=baseline,
     )
 
     content = render_notification(
@@ -219,6 +238,7 @@ def assemble_notification(request: DispatchRequest) -> RenderedNotification:
         r.template_cache,
         ctx=ctx,
         template_id_map=r.template_id_map,
+        baseline=baseline,
     )
 
     title = content.title
@@ -465,12 +485,23 @@ class NotificationDispatcher:
             review_state,
             self._runtime.initial_delay,
             has_pending_task=has_pending,
+            reasons=update_reasons(review, review_state.scheduled),
         )
 
         if plan.mark_initial_sent:
             review_state.initial_sent = True
+        # An absorbed message rides along with the pending initial, which renders it.
+        if plan.mark_initial_sent or plan.action == "absorb":
+            review_state.scheduled = ReviewSnapshot.of(review, review_state.scheduled)
 
-        if plan.action in ("skip", "absorb"):
+        if plan.action == "filtered":
+            _LOGGER.debug(
+                "Profile %s filtered update for review %s: %s",
+                profile.name,
+                review.review_id[:25],
+                plan.detail,
+            )
+        if plan.action in ("skip", "absorb", "filtered"):
             return
 
         if (
@@ -479,6 +510,10 @@ class NotificationDispatcher:
             and not review_state.pending_task.done()
         ):
             review_state.pending_task.cancel()
+
+        # Before the task exists: an eager task can run to completion inside create.
+        if plan.action == "dispatch":
+            review_state.scheduled = ReviewSnapshot.of(review, review_state.scheduled)
 
         task = self._hass.async_create_task(
             self._delayed_dispatch(
@@ -508,6 +543,38 @@ class NotificationDispatcher:
         delay: float,
         review_state: ReviewState,
     ) -> None:
+        """Run one dispatch, then pull the trigger baseline back to what was delivered.
+
+        Anything accepted but not delivered (a failed send, a rejected recheck, a message
+        absorbed after the render) must look new again to the next update. Skipped when
+        a newer dispatch owns the review state.
+        """
+        try:
+            await self._dispatch_after_delay(
+                profile,
+                review,
+                lifecycle,
+                is_initial=is_initial,
+                is_genai=is_genai,
+                delay=delay,
+                review_state=review_state,
+            )
+        finally:
+            owner = review_state.pending_task
+            if owner is None or owner.done() or owner is asyncio.current_task():
+                review_state.scheduled = review_state.notified
+
+    async def _dispatch_after_delay(
+        self,
+        profile: ProfileRuntime,
+        review: Review,
+        lifecycle: Lifecycle,
+        *,
+        is_initial: bool,
+        is_genai: bool,
+        delay: float,
+        review_state: ReviewState,
+    ) -> None:
         """Sleep for any configured delay, then render and send the notification."""
         if delay > 0:
             try:
@@ -526,6 +593,7 @@ class NotificationDispatcher:
             return
         phase, phase_cfg, rendered = result
         sent = _capture_sent(profile, review, lifecycle, phase, rendered)
+        snapshot = ReviewSnapshot.of(review, review_state.notified)
 
         try:
             success = await deliver_notification(self._hass, profile, review, rendered)
@@ -561,6 +629,7 @@ class NotificationDispatcher:
             rendered,
             review_state,
             sent,
+            snapshot,
             is_initial=is_initial,
             is_genai=is_genai,
         )
@@ -574,11 +643,13 @@ class NotificationDispatcher:
         rendered: RenderedNotification,
         review_state: ReviewState,
         sent: SentNotification,
+        snapshot: ReviewSnapshot,
         *,
         is_initial: bool,
         is_genai: bool,
     ) -> None:
         """Run post-delivery bookkeeping after a successful notification send."""
+        review_state.notified = snapshot
         self._signal_dispatch_problem(profile, error_msg=None)
         self._update_last_sent(profile, sent)
         self._update_stats(profile, review)

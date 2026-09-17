@@ -145,6 +145,7 @@ class TestProfileReconfigure:
             "silence_duration": 45.0,
             "cooldown_override": 120,
             "alert_once": True,
+            "update_triggers": ["zone", "subject"],
             # Phase configs (all 4 phases with non-default values).
             "phases": {
                 "initial": {
@@ -410,6 +411,8 @@ class TestProfileReconfigure:
         assert saved["silence_duration"] == 45.0
         assert saved["cooldown_override"] == 120
         assert saved["alert_once"] is True
+        # The update phase is disabled, so its hidden section must not clear this.
+        assert saved["update_triggers"] == ["zone", "subject"]
 
         # -- Assert all 4 phases --
         for phase_name in ("initial", "update", "end", "genai"):

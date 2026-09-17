@@ -28,6 +28,7 @@ from custom_components.frigate_notifications.data import (
     _resolve_presence,
     _resolve_state_filter,
     _resolve_time_filter,
+    _resolve_update_triggers,
     build_runtime_config,
     get_frigate_camera_device,
 )
@@ -39,6 +40,7 @@ from custom_components.frigate_notifications.enums import (
     RecognitionMode,
     Severity,
     TimeFilterMode,
+    UpdateTrigger,
 )
 from custom_components.frigate_notifications.providers.models import (
     AndroidTvConfig,
@@ -211,6 +213,13 @@ def test__resolve_state_filter(
     entity, states = _resolve_state_filter(profile_data, global_opts)
     assert entity == expected_entity
     assert states == expected_states
+
+
+def test__resolve_update_triggers_drops_unknown_values() -> None:
+    assert _resolve_update_triggers({}) == frozenset()
+    assert _resolve_update_triggers({"update_triggers": ["zone", "bogus"]}) == frozenset(
+        {UpdateTrigger.ZONE}
+    )
 
 
 class TestBuildEmojiMap:

@@ -4,10 +4,13 @@ from typing import Any
 
 import pytest
 
+from custom_components.frigate_notifications.enums import UpdateTrigger
 from custom_components.frigate_notifications.models import (
     GenAIData,
     ProfileState,
     Review,
+    ReviewSnapshot,
+    update_reasons,
 )
 from tests.factories import make_genai, make_review
 from tests.payloads import (
@@ -172,3 +175,63 @@ class TestProfileState:
         state2 = ProfileState()
         state1.last_sent_at["driveway"] = 100.0
         assert "driveway" not in state2.last_sent_at
+
+
+class TestReviewSnapshot:
+    def test_of_collapses_repeats_and_ignores_order(self) -> None:
+        review = make_review(sub_labels=["Alice", "Alice"], detection_ids=["b", "a"])
+        snapshot = ReviewSnapshot.of(review)
+        assert snapshot.sub_labels == frozenset({"Alice"})
+        assert snapshot.detection_ids == frozenset({"a", "b"})
+
+    def test_of_keeps_values_that_left_the_review(self) -> None:
+        earlier = ReviewSnapshot.of(make_review(objects=["person"], sub_labels=["Alice"]))
+        later = ReviewSnapshot.of(
+            make_review(objects=["person-verified"], sub_labels=["Bob"]), earlier
+        )
+        assert later.objects == frozenset({"person", "person-verified"})
+        assert later.sub_labels == frozenset({"Alice", "Bob"})
+
+
+class TestUpdateReasons:
+    def _baseline(self) -> ReviewSnapshot:
+        return ReviewSnapshot.of(make_review(sub_labels=["Alice"]))
+
+    def test_no_baseline_returns_every_trigger(self) -> None:
+        assert update_reasons(make_review(), None) == frozenset(UpdateTrigger)
+
+    @pytest.mark.parametrize(
+        ("overrides", "expected"),
+        [
+            ({}, set()),
+            ({"zones": ["driveway_approach", "porch"]}, {UpdateTrigger.ZONE}),
+            ({"sub_labels": ["Alice", "Bob"]}, {UpdateTrigger.SUBJECT}),
+            ({"sub_labels": ["ALICE", "Alice"]}, set()),
+            ({"objects": ["person", "car"]}, {UpdateTrigger.SUBJECT}),
+            ({"objects": ["person-verified", "person"]}, set()),
+            ({"detection_ids": ["det_id_1", "det_id_2"]}, {UpdateTrigger.DETECTION}),
+            (
+                {"detection_ids": ["det_id_2", "det_id_1"], "zones": ["porch"]},
+                {UpdateTrigger.ZONE, UpdateTrigger.DETECTION},
+            ),
+        ],
+        ids=[
+            "unchanged",
+            "new-zone",
+            "new-name",
+            "repeated-name-any-case",
+            "new-object-type",
+            "verified-and-unverified-are-one-type",
+            "new-detection",
+            "zone-and-detection",
+        ],
+    )
+    def test_reasons_against_baseline(
+        self, overrides: dict[str, Any], expected: set[UpdateTrigger]
+    ) -> None:
+        review = make_review(**{"sub_labels": ["Alice"], **overrides})
+        assert update_reasons(review, self._baseline()) == expected
+
+    def test_returning_name_is_not_new(self) -> None:
+        baseline = ReviewSnapshot.of(make_review(sub_labels=["Bob"]), self._baseline())
+        assert update_reasons(make_review(sub_labels=["Alice"]), baseline) == frozenset()

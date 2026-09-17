@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
     from .config import PhaseConfig
     from .data import ProfileRuntime
-    from .models import Review
+    from .models import Review, ReviewSnapshot
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -191,12 +191,18 @@ def _build_object_context(
 
 
 def _build_subject_context(
-    review: Review, config: ProfileRuntime, *, emoji_mode: bool
+    review: Review,
+    config: ProfileRuntime,
+    *,
+    emoji_mode: bool,
+    baseline: ReviewSnapshot | None = None,
 ) -> dict[str, Any]:
     """Build subject-related template variables."""
     subjects = _build_subjects(review.objects, review.sub_labels, config, emoji_mode=emoji_mode)
+    before_objects = list(baseline.objects) if baseline else review.before_objects
+    before_sub_labels = list(baseline.sub_labels) if baseline else review.before_sub_labels
     before_subjects = _build_subjects(
-        review.before_objects, review.before_sub_labels, config, emoji_mode=emoji_mode
+        before_objects, before_sub_labels, config, emoji_mode=emoji_mode
     )
     before_set = {s.lower() for s in before_subjects}
     added = [s for s in subjects if s.lower() not in before_set]
@@ -214,6 +220,7 @@ def _build_zone_context(
     review: Review,
     config: ProfileRuntime,
     global_zone_aliases: dict[str, dict[str, str]] | None,
+    baseline: ReviewSnapshot | None = None,
 ) -> dict[str, Any]:
     """Build zone-related template variables."""
     first_zone = review.zones[0] if review.zones else ""
@@ -231,7 +238,7 @@ def _build_zone_context(
         zone_alias = ""
 
     zone_text = config.zone_overrides.get(first_zone, zone_alias) if first_zone else ""
-    before_zones_set = set(review.before_zones)
+    before_zones_set = set(baseline.zones if baseline else review.before_zones)
     added_zones = ", ".join(humanize_zone(z) for z in sorted(set(review.zones) - before_zones_set))
 
     return {
@@ -280,8 +287,13 @@ def build_context(
     emoji_mode: bool = True,
     hass: HomeAssistant | None = None,
     global_zone_aliases: dict[str, dict[str, str]] | None = None,
+    baseline: ReviewSnapshot | None = None,
 ) -> dict[str, Any]:
-    """Build the complete variable context dict for template rendering."""
+    """Build the complete variable context dict for template rendering.
+
+    ``baseline`` is what the profile last delivered for this review; the added_*
+    variables are measured against it, or against the previous message when absent.
+    """
     phase_emoji = config.phase_emoji_map.get(phase.value, "")
 
     ctx: dict[str, Any] = {
@@ -301,8 +313,8 @@ def build_context(
         "frigate_url": config.frigate_url,
         "client_id": config.client_id,
         **_build_object_context(review, config, emoji_mode=emoji_mode),
-        **_build_subject_context(review, config, emoji_mode=emoji_mode),
-        **_build_zone_context(review, config, global_zone_aliases),
+        **_build_subject_context(review, config, emoji_mode=emoji_mode, baseline=baseline),
+        **_build_zone_context(review, config, global_zone_aliases, baseline),
         **_build_detection_context(review),
         **_build_genai_context(review),
         **_build_time_context(review),
@@ -337,12 +349,13 @@ def _build_emoji_overlay(
     *,
     emoji_mode: bool,
     hass: HomeAssistant | None,
+    baseline: ReviewSnapshot | None,
 ) -> dict[str, Any]:
     """Build a shallow overlay with emoji-dependent keys recomputed."""
     overlay = {
         **ctx,
         **_build_object_context(review, profile, emoji_mode=emoji_mode),
-        **_build_subject_context(review, profile, emoji_mode=emoji_mode),
+        **_build_subject_context(review, profile, emoji_mode=emoji_mode, baseline=baseline),
     }
     zone_phrase = _render_zone_phrase(review, profile, overlay, hass)
     if zone_phrase is not None:
@@ -362,6 +375,7 @@ def render_notification(
     ctx: dict[str, Any] | None = None,
     global_zone_aliases: dict[str, dict[str, str]] | None = None,
     template_id_map: dict[str, str] | None = None,
+    baseline: ReviewSnapshot | None = None,
 ) -> RenderedContent:
     """Render title/message/subtitle from phase config."""
     _map = template_id_map or {}
@@ -375,6 +389,7 @@ def render_notification(
             emoji_mode=phase_config.content.emoji_message,
             hass=hass,
             global_zone_aliases=global_zone_aliases,
+            baseline=baseline,
         )
 
     message_tpl = _resolve_template(phase_config.content.message_template, _map)
@@ -402,6 +417,7 @@ def render_notification(
                 profile,
                 emoji_mode=phase_config.content.emoji_subtitle,
                 hass=hass,
+                baseline=baseline,
             )
         else:
             subtitle_ctx = ctx

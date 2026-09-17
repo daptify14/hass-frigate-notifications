@@ -9,11 +9,14 @@ from homeassistant.helpers.selector import (
     BooleanSelector,
     NumberSelector,
     NumberSelectorConfig,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
 )
 import voluptuous as vol
 
-from ....enums import Provider
+from ....enums import Phase, Provider, UpdateTrigger
 from ...helpers import (
     DELAY_SELECTOR,
     IMPORTANCE_SELECTOR,
@@ -61,6 +64,15 @@ def build_delivery_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema
         defaults = PROFILE_PHASE_DEFAULTS[phase_name]
         phase_data = draft.get("phases", {}).get(phase_name, {})
         fields: dict[Any, Any] = {}
+        if phase_name == Phase.UPDATE:
+            fields[vol.Optional("update_triggers")] = SelectSelector(
+                SelectSelectorConfig(
+                    options=list(UpdateTrigger),
+                    multiple=True,
+                    translation_key="update_trigger",
+                    mode=SelectSelectorMode.LIST,
+                )
+            )
         if caps.delivery_variant == "mobile_app":
             if provider == Provider.APPLE:
                 fields[
@@ -153,6 +165,9 @@ def build_delivery_suggested(draft: dict[str, Any], ctx: FlowContext) -> dict[st
     if rate_suggested:
         suggested["rate_limiting"] = rate_suggested
 
+    if draft.get("update_triggers"):
+        suggested["update_delivery"] = {"update_triggers": draft["update_triggers"]}
+
     if draft.get("android_color"):
         suggested["android_delivery"] = {"android_color": draft["android_color"]}
 
@@ -164,6 +179,7 @@ def apply_delivery_input(
 ) -> None:
     """Apply delivery input to draft data."""
     _submit_delivery_phases(draft, user_input)
+    _submit_update_triggers(draft, user_input)
     _submit_rate_limiting(draft, user_input)
     _submit_android_delivery(draft, user_input)
 
@@ -217,6 +233,17 @@ def _submit_delivery_phases(data: dict[str, Any], user_input: dict[str, Any]) ->
             if tv_key in phase_sec:
                 phase[tv_key] = phase_sec[tv_key]
         phases[phase_name] = phase
+
+
+def _submit_update_triggers(data: dict[str, Any], user_input: dict[str, Any]) -> None:
+    """Extract update triggers; an absent section means the update phase is disabled."""
+    if "update_delivery" not in user_input:
+        return
+    triggers = user_input["update_delivery"].get("update_triggers") or []
+    if triggers:
+        data["update_triggers"] = triggers
+    else:
+        data.pop("update_triggers", None)
 
 
 def _submit_rate_limiting(data: dict[str, Any], user_input: dict[str, Any]) -> None:

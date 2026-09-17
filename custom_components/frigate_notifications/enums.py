@@ -28,8 +28,17 @@ class ReplayOutcome(StrEnum):
     ABSORBED = "absorbed"
     SUPERSEDED = "superseded"
     SKIPPED = "skipped"
+    FILTERED = "filtered"
     REJECTED = "rejected"
     RENDER_ERROR = "render_error"
+
+
+class UpdateTrigger(StrEnum):
+    """Changes that are worth an update notification."""
+
+    ZONE = "zone"
+    SUBJECT = "subject"
+    DETECTION = "detection"
 
 
 class Severity(StrEnum):
