@@ -8,7 +8,7 @@ Complete behavior and field documentation for every part of the integration.
 
 **[Global defaults](global-defaults.md) & inheritance**: Shared settings that profiles can inherit from. Each option in a profile can inherit the global value, override it, or disable it entirely. Set your baseline in the integration options flow (reconfigure any time), then only customize what differs per profile.
 
-**[Presets](presets.md)**: Starting templates that pre-fill a profile's configuration during the wizard. The integration ships with six (Live Alerts, Rich Alerts, End Only, Snapshot Only, Latest Only, Silent Log). All preset values are editable after profile creation.
+**[Presets](presets.md)**: Starting templates that pre-fill a profile's configuration during the wizard. The integration ships with seven (Live Alerts, Rich Alerts, End Only, Snapshot Only, Latest Only, Silent Log, Indoor Room). All preset values are editable after profile creation.
 
 **[Templates](templates.md)**: Notification titles, messages, and subtitles are Jinja2 templates with access to 40+ [context variables](context-variables.md) (camera name, detected objects, zones, severity, AI summaries, and more). Built-in templates cover common patterns; override at the profile or phase level for full control.
 

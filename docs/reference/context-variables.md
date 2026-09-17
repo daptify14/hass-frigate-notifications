@@ -66,6 +66,12 @@ Delta: subjects that were not part of this profile's previous notification for t
 
 Example: `Person`
 
+### `names`
+
+Recognized people only: sub-labels, comma-joined, with their emoji when emoji is on for the field being rendered. Generic objects such as `Person` are left out. Empty when nobody is recognized, so `{{ names or subjects }}` shows names when there are any and falls back to the full subject list.
+
+Example: `Alice, Bob`
+
 ---
 
 ## Zones & location
@@ -123,6 +129,21 @@ Example: `the Front Yard`
 Rendered zone phrase override (from the profile's Content & Templates section), or "detected" if no override is set.
 
 Example: `crossed`
+
+### `last_zone_alias`
+
+The newest zone's friendly alias, resolved the same way as `zone_alias`.
+
+Example: `the Porch`
+
+### `last_zone_phrase`
+
+Phrase for the newest zone: taken from the profile's latest-zone phrases, then from its zone phrases, then "detected".
+
+Example: `reached`
+
+!!! note "Newest zone, not current zone"
+    Frigate only adds zones to a review, in the order they are first entered. The `last_zone*` variables describe the most recently **entered** zone. An object that goes from the porch to the driveway and back to the porch still has the driveway as its last zone.
 
 ### `added_zones`
 
