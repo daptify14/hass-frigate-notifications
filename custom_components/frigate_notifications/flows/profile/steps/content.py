@@ -17,6 +17,9 @@ if TYPE_CHECKING:
     from ..context import FlowContext
 
 
+_ZONE_PHRASE_KEYS = ("zone_overrides", "last_zone_overrides")
+
+
 def build_content_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema:
     """Build the content step form schema."""
     template_presets = ctx.hass.data.get(DOMAIN, {}).get("template_presets", {})
@@ -70,6 +73,9 @@ def build_content_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema:
         schema_dict[vol.Optional("zone_overrides")] = section(
             vol.Schema(zone_fields), SectionConfig(collapsed=True)
         )
+        schema_dict[vol.Optional("last_zone_overrides")] = section(
+            vol.Schema(dict(zone_fields)), SectionConfig(collapsed=True)
+        )
 
     return vol.Schema(schema_dict)
 
@@ -99,8 +105,9 @@ def build_content_suggested(draft: dict[str, Any]) -> dict[str, Any]:
             templates["subtitle_template"] = subtitle
         suggested[f"{phase_name}_content"] = templates
 
-    if draft.get("zone_overrides"):
-        suggested["zone_overrides"] = dict(draft["zone_overrides"])
+    for key in _ZONE_PHRASE_KEYS:
+        if draft.get(key):
+            suggested[key] = dict(draft[key])
     return suggested
 
 
@@ -127,11 +134,12 @@ def validate_content_input(
     cameras = draft.get("cameras", [])
     fid = ctx.frigate_entry_id
     if len(cameras) == 1:
-        zone_sec = user_input.get("zone_overrides", {})
-        for zone in get_camera_zones(ctx.hass, fid, cameras[0]):
-            val = (zone_sec.get(zone) or "").strip()
-            if val:
-                candidates.append(val)
+        for key in _ZONE_PHRASE_KEYS:
+            zone_sec = user_input.get(key, {})
+            for zone in get_camera_zones(ctx.hass, fid, cameras[0]):
+                val = (zone_sec.get(zone) or "").strip()
+                if val:
+                    candidates.append(val)
 
     for candidate in candidates:
         try:
@@ -166,8 +174,17 @@ def apply_content_input(
             draft["zone_overrides"] = zone_overrides
         else:
             draft.pop("zone_overrides", None)
+        # Written only when shown, so a form without the section keeps stored phrases.
+        if "last_zone_overrides" in user_input:
+            last_sec = user_input["last_zone_overrides"]
+            last_overrides = {z: v for z in camera_zones if (v := (last_sec.get(z) or "").strip())}
+            if last_overrides:
+                draft["last_zone_overrides"] = last_overrides
+            else:
+                draft.pop("last_zone_overrides", None)
     else:
         draft.pop("zone_overrides", None)
+        draft.pop("last_zone_overrides", None)
 
 
 def _submit_content_phases(data: dict[str, Any], user_input: dict[str, Any]) -> None:

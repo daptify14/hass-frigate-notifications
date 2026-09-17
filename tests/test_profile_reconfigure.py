@@ -290,6 +290,7 @@ class TestProfileReconfigure:
         content_input: dict[str, Any] = {
             "title_template": full_data["title_template"],
             "zone_overrides": {"driveway_approach": "arrived at"},
+            "last_zone_overrides": {"driveway_approach": "now at"},
         }
         for phase_name in ("initial", "update", "end", "genai"):
             p = full_data["phases"][phase_name]
@@ -399,6 +400,7 @@ class TestProfileReconfigure:
         # -- Assert content --
         assert saved["title_template"] == "Custom: {{ camera_name }}"
         assert saved["zone_overrides"] == {"driveway_approach": "arrived at"}
+        assert saved["last_zone_overrides"] == {"driveway_approach": "now at"}
         # Profile-level prefix text is removed; global-only.
         assert "title_genai_prefixes" not in saved
 

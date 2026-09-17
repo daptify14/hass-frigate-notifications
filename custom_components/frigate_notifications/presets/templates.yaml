@@ -52,6 +52,35 @@ content:
       - update
       - end
 
+  - id: names_or_subjects
+    value: "{{ names or subjects }}"
+    label: "Recognized names, else subjects"
+
+  - id: subject_action_zone
+    value: "{{ names or subjects }} {{ zone_phrase }} {{ zone_alias }}"
+    label: "Names or subjects + action + zone"
+
+  - id: update_delta_zone
+    value: >-
+      {% if added_subject and added_zones %}{{ added_subject }} {{ last_zone_phrase }}
+      {{ last_zone_alias }}{% elif added_subject %}{{ added_subject }} detected{% else %}{{ names or
+      subjects }} {{ last_zone_phrase }} {{ last_zone_alias }}{% endif %}
+    label: "What changed (new subject, latest zone, or both)"
+    phases:
+      - update
+
+  - id: subject_duration
+    value: "{{ names or subjects }} · lasted {{ duration_human }}"
+    label: "Names or subjects + duration"
+    phases:
+      - end
+
+  - id: duration_human_summary
+    value: "Lasted {{ duration_human }}"
+    label: "Duration (Lasted 2m 34s)"
+    phases:
+      - end
+
   - id: camera_zone
     value: "{{ camera_name }} {{ zone_alias }}"
     label: "Camera + zone"
@@ -119,6 +148,10 @@ titles:
   - id: camera_subject
     value: "{{ camera_name }} - {{ subject }}"
     label: "Camera + subject"
+
+  - id: names_or_subjects_title
+    value: "{{ names or subjects }}"
+    label: "Recognized names, else subjects"
   # GenAI-specific titles (genai phase)
   - id: genai_title
     value: "{{ genai_title }}"

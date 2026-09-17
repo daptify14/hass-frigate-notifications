@@ -44,7 +44,7 @@ Prefix text for all three severity levels (0, 1, 2+) is configured globally. Pro
 
 ---
 
-## Zone phrase overrides
+## Zone phrases
 
 !!! note "Conditional visibility"
 
@@ -53,3 +53,7 @@ Prefix text for all three severity levels (0, 1, 2+) is configured globally. Pro
 One text field per zone on the selected camera. Enter an action word or phrase (e.g., "entered", "arrived at", "near") to set the `zone_phrase` template variable. Leave blank to use the default ("detected").
 
 Zone phrases can be Jinja2 templates, rendered with the full [context variables](../context-variables.md).
+
+### Zone phrases for the latest zone
+
+A second, optional table with the same zones. It sets `last_zone_phrase`, which describes the newest zone a review has reached and is what update messages usually want. A zone left empty here reuses its phrase from the first table, so only fill in the zones that read differently as a destination than as a starting point: a door zone might be "entered" in the first table and "at" in this one.

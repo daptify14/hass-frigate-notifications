@@ -4,7 +4,7 @@ Presets are starting templates that pre-fill your [profile](profiles/index.md) c
 
 ## Built-in presets
 
-The integration ships with six built-in presets.
+The integration ships with seven built-in presets.
 
 !!! note "Template IDs"
 
@@ -18,6 +18,7 @@ The integration ships with six built-in presets.
 | `snapshot_pager` | Snapshot Only | One immediate snapshot, no follow-ups |
 | `latest_event` | Latest Only | Single rolling notification card |
 | `activity_log` | Silent Log | Silent history in notification center only |
+| `room` | Indoor Room | Indoor rooms -- who and where, quiet follow-ups only when something changes |
 
 ---
 
@@ -97,6 +98,23 @@ Completely silent. Every phase uses `passive` interruption level -- no screen wa
 | Update | `object_action_zone` + emoji, latest detection | `merged_subjects` | thumbnail | none, passive |
 | End | inherits update (5s delay) | inherits update | review_gif | inherits update |
 | GenAI | `genai_summary`, latest detection | (none) | review_gif | none, passive |
+
+---
+
+### Indoor Room (`room`)
+
+For a camera inside a room. Each notification is one sentence saying who did what and where ("Alice entered the room", "Alice by the chair", "Alice · lasted 8m 42s"), under a title that is just the camera name, with no subtitle. Follow-ups are silent. It also turns on **Alert once** and sets [update triggers](notification-lifecycle.md#update-triggers) to a new zone or a new subject, so an object that is lost and picked up again does not send another update.
+
+| Phase | Message | Subtitle | Attachment | Sound / Interruption |
+| ------- | --------- | ---------- | ------------ | ---------------------- |
+| Initial | `subject_action_zone` + emoji | (none) | snapshot_cropped | default, active |
+| Update | `update_delta_zone` + emoji, latest detection (5s delay) | (none) | snapshot_cropped | none, passive |
+| End | `subject_duration` + emoji (5s delay) | (none) | review_gif | none, passive |
+| GenAI | `genai_summary`, latest detection | `names_or_subjects` + emoji | review_gif | default, passive |
+
+Title: `camera_only`.
+
+Zone names belong to each camera, so the preset cannot set zone phrases. After creating the profile, fill in [zone phrases](profiles/content-and-templates.md#zone-phrases) so messages read "entered the room" instead of "detected the room".
 
 ---
 
@@ -182,7 +200,7 @@ genai_disabled_overrides:
 | ------- | ------------- | --------- |
 | `description` | Longer description shown when selected. | (empty) |
 | `sort_order` | Position in dropdown. Lower = higher. | `99` |
-| `profile_defaults` | Sets `tag` and/or `group` for the profile. | (none) |
+| `profile_defaults` | Sets profile-level values: `tag`, `group`, `title_template`, `update_triggers` (list of `zone`, `subject`, `detection`), `alert_once`. | (none) |
 | `phases.update` | Update phase config. | Built-in defaults |
 | `phases.end` | End phase config. | Inherits from resolved update |
 | `phases.genai` | GenAI phase config. | Built-in defaults |

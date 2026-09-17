@@ -8,7 +8,7 @@ Select a starting template. [Presets](../presets.md) pre-fill phase configs, tem
 
 | Field | Type | Description | Default |
 | --- | --- | --- | --- |
-| **Preset** | Dropdown | Starting template: Live Alerts, Rich Alerts, End Only, Snapshot Only, Latest Only, Silent Log | Live Alerts |
+| **Preset** | Dropdown | Starting template: Live Alerts, Rich Alerts, End Only, Snapshot Only, Latest Only, Silent Log, Indoor Room | Live Alerts |
 
 If any of the profile's selected cameras has GenAI review descriptions enabled in Frigate, GenAI sections appear automatically throughout the wizard. See [Presets](../presets.md#genai-auto-detection) for details.
 

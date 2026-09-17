@@ -177,6 +177,9 @@ class ProfileRuntime:
     # Empty sends every update.
     update_triggers: frozenset[UpdateTrigger] = frozenset()
 
+    # Phrases for the newest zone a review reached; zone_overrides fills the gaps.
+    last_zone_overrides: dict[str, str] = field(default_factory=dict)
+
     snapshot_url: str = DEFAULT_SNAPSHOT_URL
     gif_url: str = DEFAULT_GIF_URL
 
@@ -645,6 +648,7 @@ def _build_profile(
         excluded_sub_labels=tuple(p.get("exclude_sub_labels", [])),
         title_template=(p.get("title_template") or defaults.default_title_template),
         zone_overrides=zone_overrides,
+        last_zone_overrides=dict(p.get("last_zone_overrides", {})),
         zone_aliases=zone_aliases,
         sub_label_overrides=dict(defaults.sub_label_overrides),
         emoji_map=dict(defaults.emoji_map),

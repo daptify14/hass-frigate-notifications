@@ -117,6 +117,31 @@ class TestProfileWizard:
         assert result["data"]["_preset_id"] == "simple"
         assert result["data"]["_preset_version"] == 1
 
+    async def test_room_preset_saves_its_profile_level_defaults(
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
+    ) -> None:
+        """Update triggers and alert-once from the preset reach the saved profile."""
+        entry = _make_profile_entry(hass, mock_frigate_data)
+        result = await hass.config_entries.subentries.async_init(
+            (entry.entry_id, "profile"), context={"source": "user"}
+        )
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"], {"preset": "room"}
+        )
+        flow_id = result["flow_id"]
+        result = await _basics_to_menu(
+            hass, flow_id, name="Room Test", cameras=["driveway"], provider="apple"
+        )
+        # Save straight from the menu, as a user accepting the preset would.
+        result = await _complete_wizard_via_menu(hass, flow_id)
+
+        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["data"]["update_triggers"] == ["zone", "subject"]
+        assert result["data"]["alert_once"] is True
+        assert result["data"]["phases"]["update"]["message_template"] == "update_delta_zone"
+        assert result["data"]["title_template"] == "camera_only"
+        assert "subtitle_template" not in result["data"]["phases"]["initial"]
+
     @patch(
         "custom_components.frigate_notifications.flows.profile.context.supports_genai",
         return_value=False,

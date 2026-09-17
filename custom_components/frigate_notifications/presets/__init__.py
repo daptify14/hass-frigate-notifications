@@ -17,6 +17,7 @@ from ..config import (
     VALID_INTERRUPTION_LEVELS,
 )
 from ..const import DOMAIN
+from ..enums import UpdateTrigger
 from ..media import VALID_ATTACHMENTS, VALID_VIDEOS
 
 if TYPE_CHECKING:
@@ -49,6 +50,9 @@ PROFILE_DEFAULTS_SCHEMA = vol.Schema(
     {
         vol.Optional("tag"): str,
         vol.Optional("group"): str,
+        vol.Optional("title_template"): str,
+        vol.Optional("update_triggers"): [vol.In(list(UpdateTrigger))],
+        vol.Optional("alert_once"): bool,
     },
     extra=vol.PREVENT_EXTRA,
 )
@@ -156,7 +160,7 @@ class ProfilePreset:
     description: str
     sort_order: int
     phases: dict[str, dict[str, Any]]
-    profile_defaults: dict[str, str] = field(default_factory=dict)
+    profile_defaults: dict[str, Any] = field(default_factory=dict)
     genai_disabled_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     @classmethod

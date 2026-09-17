@@ -142,6 +142,56 @@ Update delta. Update and end phases.
 
 ---
 
+### `names_or_subjects`
+
+Recognized names, else subjects. Works as a message or a subtitle.
+
+`{{ names or subjects }}`
+
+**Example:** Alice, Bob
+
+---
+
+### `subject_action_zone`
+
+Names or subjects + action + zone, as one sentence. Reads well with no subtitle.
+
+`{{ names or subjects }} {{ zone_phrase }} {{ zone_alias }}`
+
+**Example:** Alice entered the Driveway
+
+---
+
+### `update_delta_zone`
+
+What changed. Update phase. A new subject that arrives with a new zone is placed there; a new subject on its own is "detected"; a new zone on its own is reported for everyone on the review. The newest zone belongs to the review rather than to one person, so a name is only tied to a zone when both arrive together.
+
+`{% if added_subject and added_zones %}{{ added_subject }} {{ last_zone_phrase }} {{ last_zone_alias }}{% elif added_subject %}{{ added_subject }} detected{% else %}{{ names or subjects }} {{ last_zone_phrase }} {{ last_zone_alias }}{% endif %}`
+
+**Example:** Alice reached the Porch / Alice detected
+
+---
+
+### `subject_duration`
+
+Names or subjects + readable duration. End phase.
+
+`{{ names or subjects }} · lasted {{ duration_human }}`
+
+**Example:** Alice · lasted 2m 34s
+
+---
+
+### `duration_human_summary`
+
+Readable duration. End phase. Says "lasted" so a bare "10m" is not mistaken for how long ago the notification arrived.
+
+`Lasted {{ duration_human }}`
+
+**Example:** Lasted 2m 34s
+
+---
+
 ### `camera_zone`
 
 Camera + zone. All phases. Works best when camera and zone names differ.
@@ -269,6 +319,16 @@ Camera + subject (with sub-label).
 `{{ camera_name }} - {{ subject }}`
 
 **Example:** Driveway - Alice
+
+---
+
+### `names_or_subjects_title`
+
+Recognized names, else subjects.
+
+`{{ names or subjects }}`
+
+**Example:** Alice, Bob
 
 ---
 
