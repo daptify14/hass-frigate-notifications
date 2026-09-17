@@ -122,6 +122,7 @@ The response lists one row per retained message with an `outcome`:
 | `absorbed` | The message arrived while the initial notification was still waiting on its delay, so its data went into that notification instead. |
 | `superseded` | A newer message replaced this one before its delay expired. |
 | `skipped` | The phase is disabled on this profile. |
+| `filtered` | The update carried none of the changes selected in the profile's update triggers. `detail` lists the selected triggers and what was new. |
 | `rejected` | A filter rejected the message. `detail` names the filter and reason. Only with `run_filters`. |
 | `render_error` | A template failed to render. `detail` has the error. |
 

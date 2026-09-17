@@ -34,6 +34,7 @@ _OPTIONAL_LIST_KEYS = (
     "required_zones",
     "include_sub_labels",
     "exclude_sub_labels",
+    "update_triggers",
 )
 
 _OPTIONAL_DICT_KEYS = ("zone_overrides",)

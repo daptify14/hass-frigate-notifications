@@ -522,6 +522,7 @@
             "update_delivery": {
               "name": "Update phase",
               "data": {
+                "update_triggers": "Send updates when",
                 "sound": "Sound",
                 "volume": "Volume",
                 "interruption_level": "Interruption level",
@@ -536,6 +537,7 @@
                 "tv_color": "Color"
               },
               "data_description": {
+                "update_triggers": "Leave empty to send every update Frigate publishes. A new detection is also added whenever tracking loses and re-acquires the same object.",
                 "delay": "Seconds to wait before sending this phase.",
                 "critical": "Overrides DND and silent mode.",
                 "tv_interrupt": "Pauses media playback."
@@ -746,6 +748,13 @@
         "alert": "Alert",
         "detection": "Detection",
         "any": "Any"
+      }
+    },
+    "update_trigger": {
+      "options": {
+        "zone": "A new zone is entered",
+        "subject": "A new person is recognized or a new object type appears",
+        "detection": "A new detection is added"
       }
     },
     "zone_match_mode": {

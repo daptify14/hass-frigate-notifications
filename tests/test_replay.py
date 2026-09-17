@@ -13,6 +13,7 @@ from custom_components.frigate_notifications.enums import (
     Phase,
     RecognitionMode,
     ReplayOutcome,
+    UpdateTrigger,
 )
 from custom_components.frigate_notifications.filters import build_default_filter_chain
 from custom_components.frigate_notifications.replay import (
@@ -274,3 +275,60 @@ class TestRendering:
         # The replay carries on past a broken row.
         assert second.outcome is ReplayOutcome.RENDER_ERROR
         assert second.phase is Phase.END
+
+
+class TestUpdateTriggers:
+    async def test_reacquire_after_recognition_is_filtered(self, hass: HomeAssistant) -> None:
+        """New, a late face, a re-acquired track, end: only the re-acquire says nothing new."""
+        reacquired = copy.deepcopy(REVIEW_UPDATE_VERIFIED_PAYLOAD)
+        reacquired["before"] = copy.deepcopy(REVIEW_UPDATE_VERIFIED_PAYLOAD["after"])
+        reacquired["after"]["data"]["detections"] = ["det_id_1", "det_id_2"]
+        reacquired["after"]["data"]["sub_labels"] = ["Bob", "Bob"]
+        profile = make_profile(
+            update_triggers=frozenset({UpdateTrigger.ZONE, UpdateTrigger.SUBJECT})
+        )
+        result = _replay(
+            hass,
+            _record(
+                (Lifecycle.NEW, 0.0, REVIEW_NEW_PAYLOAD),
+                (Lifecycle.UPDATE, 5.0, REVIEW_UPDATE_VERIFIED_PAYLOAD),
+                (Lifecycle.UPDATE, 60.0, reacquired),
+                (Lifecycle.END, 120.0, REVIEW_END_PAYLOAD),
+            ),
+            profile,
+        )
+        assert [row.outcome for row in result.rows] == [
+            ReplayOutcome.RENDERED,
+            ReplayOutcome.RENDERED,
+            ReplayOutcome.FILTERED,
+            ReplayOutcome.RENDERED,
+        ]
+        assert result.rows[2].phase == Phase.UPDATE
+        assert result.rows[2].detail == "update_triggers: none of [subject, zone] (new: detection)"
+
+    async def test_filtered_update_does_not_supersede_pending_update(
+        self, hass: HomeAssistant
+    ) -> None:
+        no_change = copy.deepcopy(REVIEW_UPDATE_PAYLOAD)
+        no_change["before"] = copy.deepcopy(REVIEW_UPDATE_PAYLOAD["after"])
+        profile = make_profile(
+            phases={Phase.UPDATE: make_phase(delivery=PhaseDelivery(delay=10.0))},
+            update_triggers=frozenset({UpdateTrigger.ZONE}),
+        )
+        result = _replay(
+            hass,
+            _record(
+                (Lifecycle.NEW, 0.0, REVIEW_NEW_PAYLOAD),
+                (Lifecycle.UPDATE, 1.0, REVIEW_UPDATE_PAYLOAD),
+                (Lifecycle.UPDATE, 2.0, no_change),
+            ),
+            profile,
+        )
+        assert [row.outcome for row in result.rows] == [
+            ReplayOutcome.RENDERED,
+            ReplayOutcome.RENDERED,
+            ReplayOutcome.FILTERED,
+        ]
+        rendered = result.rows[1].rendered
+        assert rendered is not None
+        assert rendered.ctx["added_zones"] == "Driveway Main"

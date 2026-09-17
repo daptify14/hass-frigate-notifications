@@ -7,6 +7,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from .enums import UpdateTrigger
+
 if TYPE_CHECKING:
     from .enums import Lifecycle, Phase
 
@@ -151,6 +153,57 @@ class Review:
 
 
 @dataclass(frozen=True)
+class ReviewSnapshot:
+    """What a review has contained so far, as unordered sets."""
+
+    zones: frozenset[str]
+    objects: frozenset[str]
+    sub_labels: frozenset[str]
+    detection_ids: frozenset[str]
+
+    @classmethod
+    def of(cls, review: Review, previous: ReviewSnapshot | None = None) -> ReviewSnapshot:
+        """Snapshot a review, keeping everything ``previous`` already held.
+
+        Frigate rewrites objects and sub-labels per detection, so a value can leave
+        the payload and return; accumulating stops a returning value counting as new.
+        """
+        current = cls(
+            zones=frozenset(review.zones),
+            objects=frozenset(review.objects),
+            sub_labels=frozenset(review.sub_labels),
+            detection_ids=frozenset(review.detection_ids),
+        )
+        if previous is None:
+            return current
+        return cls(
+            zones=current.zones | previous.zones,
+            objects=current.objects | previous.objects,
+            sub_labels=current.sub_labels | previous.sub_labels,
+            detection_ids=current.detection_ids | previous.detection_ids,
+        )
+
+
+def update_reasons(review: Review, baseline: ReviewSnapshot | None) -> frozenset[UpdateTrigger]:
+    """Return the triggers that are true for a review measured against a baseline."""
+    if baseline is None:
+        return frozenset(UpdateTrigger)
+    reasons: set[UpdateTrigger] = set()
+    if set(review.zones) - baseline.zones:
+        reasons.add(UpdateTrigger.ZONE)
+    known_names = {s.lower() for s in baseline.sub_labels}
+    new_names = {s.lower() for s in review.sub_labels} - known_names
+    # Recognition is carried by the name, so person and person-verified are one type.
+    known_types = {o.replace("-verified", "") for o in baseline.objects}
+    new_types = {o.replace("-verified", "") for o in review.objects} - known_types
+    if new_names or new_types:
+        reasons.add(UpdateTrigger.SUBJECT)
+    if set(review.detection_ids) - baseline.detection_ids:
+        reasons.add(UpdateTrigger.DETECTION)
+    return frozenset(reasons)
+
+
+@dataclass(frozen=True)
 class SentNotification:
     """What a profile last delivered, captured before the notify call is awaited."""
 
@@ -178,6 +231,10 @@ class ReviewState:
 
     initial_sent: bool = False
     pending_task: asyncio.Task[Any] | None = field(default=None, repr=False)
+    # Baselines for update triggers and added_* variables: what has been accepted for
+    # dispatch, and what has actually been delivered.
+    scheduled: ReviewSnapshot | None = None
+    notified: ReviewSnapshot | None = None
 
 
 @dataclass

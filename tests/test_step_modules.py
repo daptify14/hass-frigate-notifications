@@ -3,6 +3,8 @@
 from typing import Any
 from unittest.mock import MagicMock
 
+import pytest
+
 from custom_components.frigate_notifications.config import DEFAULT_PHASE_INITIAL
 from custom_components.frigate_notifications.enums import Provider
 from custom_components.frigate_notifications.flows.profile.context import FlowContext
@@ -171,6 +173,37 @@ class TestDeliveryRateLimiting:
         assert "silence_duration" not in draft
         assert "cooldown_override" not in draft
         assert "alert_once" not in draft
+
+
+class TestDeliveryUpdateTriggers:
+    """Test the update triggers field in the update delivery section."""
+
+    def test_field_only_in_update_section(self) -> None:
+        schema = build_delivery_schema({}, _make_ctx(Provider.APPLE))
+        sections = {str(k): v.schema.schema for k, v in schema.schema.items()}
+        assert "update_triggers" in {str(k) for k in sections["update_delivery"]}
+        assert "update_triggers" not in {str(k) for k in sections["initial_delivery"]}
+
+    def test_selection_stored_and_suggested_back(self) -> None:
+        ctx = _make_ctx(Provider.APPLE)
+        draft: dict[str, Any] = {}
+        apply_delivery_input(draft, {"update_delivery": {"update_triggers": ["zone"]}}, ctx)
+        assert draft["update_triggers"] == ["zone"]
+        suggested = build_delivery_suggested(draft, ctx)
+        assert suggested["update_delivery"] == {"update_triggers": ["zone"]}
+
+    @pytest.mark.parametrize(
+        "section", [{"update_triggers": []}, {"delay": 0}], ids=["empty-list", "key-absent"]
+    )
+    def test_cleared_selection_removed(self, section: dict[str, Any]) -> None:
+        draft: dict[str, Any] = {"update_triggers": ["zone"]}
+        apply_delivery_input(draft, {"update_delivery": section}, _make_ctx(Provider.APPLE))
+        assert "update_triggers" not in draft
+
+    def test_hidden_update_section_keeps_stored_selection(self) -> None:
+        draft: dict[str, Any] = {"update_triggers": ["zone"]}
+        apply_delivery_input(draft, {"initial_delivery": {"delay": 0}}, _make_ctx(Provider.APPLE))
+        assert draft["update_triggers"] == ["zone"]
 
 
 class TestDeliveryFieldPersistence:

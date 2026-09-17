@@ -13,6 +13,7 @@ from custom_components.frigate_notifications.config import (
     DEFAULT_PHASE_GENAI,
     DEFAULT_PHASE_INITIAL,
     PhaseConfig,
+    PhaseContent,
     PhaseDelivery,
 )
 from custom_components.frigate_notifications.const import SIGNAL_DISPATCH_PROBLEM
@@ -21,7 +22,7 @@ from custom_components.frigate_notifications.dispatcher import (
     lifecycle_to_phase,
     resolve_dispatch_plan,
 )
-from custom_components.frigate_notifications.enums import Lifecycle, Phase
+from custom_components.frigate_notifications.enums import Lifecycle, Phase, UpdateTrigger
 from custom_components.frigate_notifications.filters import (
     FilterChain,
     FilterResult,
@@ -30,6 +31,8 @@ from custom_components.frigate_notifications.filters import (
 from custom_components.frigate_notifications.models import ReviewState
 
 from .factories import make_genai, make_profile, make_review, make_runtime
+
+DISPATCHER = "custom_components.frigate_notifications.dispatcher"
 
 
 @pytest.mark.parametrize(
@@ -1035,6 +1038,7 @@ class TestDispatcherLifecycleRouting:
         has_pending_task: bool = False,
         initial_delay: float = 0.0,
         profile=None,
+        reasons: frozenset[UpdateTrigger] = frozenset(),
     ):
         return resolve_dispatch_plan(
             lifecycle,
@@ -1042,6 +1046,7 @@ class TestDispatcherLifecycleRouting:
             ReviewState(initial_sent=initial_sent),
             initial_delay,
             has_pending_task=has_pending_task,
+            reasons=reasons,
         )
 
     def test_new_lifecycle_dispatches_as_initial(self) -> None:
@@ -1122,3 +1127,197 @@ class TestDispatcherLifecycleRouting:
             profile=profile,
         )
         assert plan.delay == 2.0
+
+    def test_update_with_no_wanted_reason_is_filtered(self) -> None:
+        profile = make_profile(update_triggers=frozenset({UpdateTrigger.ZONE}))
+        plan = self._plan(
+            Lifecycle.UPDATE,
+            initial_sent=True,
+            has_pending_task=True,
+            profile=profile,
+            reasons=frozenset({UpdateTrigger.DETECTION}),
+        )
+        assert plan.action == "filtered"
+        assert plan.cancel_pending is False
+        assert plan.detail == "update_triggers: none of [zone] (new: detection)"
+
+    @pytest.mark.parametrize("reason", list(UpdateTrigger))
+    def test_update_with_any_wanted_reason_dispatches(self, reason: UpdateTrigger) -> None:
+        profile = make_profile(update_triggers=frozenset(UpdateTrigger))
+        plan = self._plan(
+            Lifecycle.UPDATE, initial_sent=True, profile=profile, reasons=frozenset({reason})
+        )
+        assert plan.action == "dispatch"
+        assert plan.phase == Phase.UPDATE
+
+    def test_update_serving_as_initial_is_never_filtered(self) -> None:
+        profile = make_profile(update_triggers=frozenset({UpdateTrigger.ZONE}))
+        plan = self._plan(Lifecycle.UPDATE, initial_sent=False, profile=profile)
+        assert plan.action == "dispatch"
+        assert plan.phase == Phase.INITIAL
+
+    def test_disabled_update_skips_before_triggers_apply(self) -> None:
+        disabled = PhaseConfig(delivery=PhaseDelivery(enabled=False))
+        profile = make_profile(
+            phases={Phase.UPDATE: disabled}, update_triggers=frozenset({UpdateTrigger.ZONE})
+        )
+        plan = self._plan(Lifecycle.UPDATE, initial_sent=True, profile=profile)
+        assert plan.action == "skip"
+
+    def test_end_ignores_update_triggers(self) -> None:
+        profile = make_profile(update_triggers=frozenset({UpdateTrigger.ZONE}))
+        plan = self._plan(Lifecycle.END, initial_sent=True, profile=profile)
+        assert plan.action == "dispatch"
+        assert plan.phase == Phase.END
+
+
+class TestDispatcherUpdateTriggers:
+    def _dispatcher(
+        self, hass: HomeAssistant, triggers: set[UpdateTrigger], *, update_delay: float = 0.0
+    ) -> tuple[NotificationDispatcher, ReviewState]:
+        update_phase = PhaseConfig(
+            content=PhaseContent(message_template="added: {{ added_zones }}"),
+            delivery=PhaseDelivery(delay=update_delay),
+        )
+        profile = make_profile(
+            phases={Phase.UPDATE: update_phase}, update_triggers=frozenset(triggers)
+        )
+        dispatcher = NotificationDispatcher(
+            hass, make_runtime([profile]), build_default_filter_chain()
+        )
+        state = dispatcher._get_review_state(profile.profile_id, make_review().review_id)
+        return dispatcher, state
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_reacquire_is_filtered_but_new_object_type_sends(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        dispatcher, _ = self._dispatcher(hass, {UpdateTrigger.ZONE, UpdateTrigger.SUBJECT})
+        review = make_review()
+        await dispatcher.on_review_new(review)
+        await hass.async_block_till_done()
+
+        review.detection_ids = ["det_id_1", "det_id_2"]
+        await dispatcher.on_review_update(review)
+        await hass.async_block_till_done()
+        assert len(notify_calls) == 1
+
+        review.objects = ["person", "car"]
+        await dispatcher.on_review_update(review)
+        await hass.async_block_till_done()
+        assert len(notify_calls) == 2
+
+    async def test_filtered_update_leaves_pending_update_and_its_delta_intact(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        dispatcher, state = self._dispatcher(hass, {UpdateTrigger.ZONE}, update_delay=10.0)
+        review = make_review()
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            await dispatcher.on_review_new(review)
+            await hass.async_block_till_done()
+
+        import asyncio
+
+        blocker = cast("asyncio.Future[None]", hass.loop.create_future())
+
+        async def _wait(delay: float) -> None:
+            await blocker
+
+        with patch("asyncio.sleep", side_effect=_wait):
+            review.before_zones = list(review.zones)
+            review.zones = [*review.zones, "porch"]
+            await dispatcher.on_review_update(review)
+            pending = state.pending_task
+
+            # The next message changes no zone and overwrites the per-message delta.
+            review.before_zones = list(review.zones)
+            review.detection_ids = ["det_id_1", "det_id_2"]
+            await dispatcher.on_review_update(review)
+            assert state.pending_task is pending
+
+            blocker.set_result(None)
+            await hass.async_block_till_done()
+
+        assert len(notify_calls) == 2
+        assert notify_calls[1].data["message"] == "added: Porch"
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_message_absorbed_into_initial_is_not_new_afterwards(
+        self, hass: HomeAssistant, notify_calls: list[ServiceCall]
+    ) -> None:
+        dispatcher, state = self._dispatcher(hass, {UpdateTrigger.ZONE})
+        review = make_review()
+        import asyncio
+
+        blocker = cast("asyncio.Future[None]", hass.loop.create_future())
+
+        async def _wait(delay: float) -> None:
+            await blocker
+
+        dispatcher._runtime = replace(dispatcher._runtime, initial_delay=5.0)
+        with patch("asyncio.sleep", side_effect=_wait):
+            await dispatcher.on_review_new(review)
+            review.zones = [*review.zones, "porch"]
+            await dispatcher.on_review_update(review)
+            blocker.set_result(None)
+            await hass.async_block_till_done()
+        assert len(notify_calls) == 1
+
+        await dispatcher.on_review_update(review)
+        await hass.async_block_till_done()
+        assert len(notify_calls) == 1
+        assert state.notified is not None
+        assert "porch" in state.notified.zones
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_change_in_failed_update_is_still_new_to_the_next_update(
+        self, hass: HomeAssistant
+    ) -> None:
+        from homeassistant.exceptions import HomeAssistantError
+
+        dispatcher, _ = self._dispatcher(hass, {UpdateTrigger.ZONE})
+        review = make_review()
+        deliver = AsyncMock(side_effect=[True, HomeAssistantError("outage"), True])
+        with patch(f"{DISPATCHER}.deliver_notification", deliver):
+            await dispatcher.on_review_new(review)
+            await hass.async_block_till_done()
+
+            review.zones = [*review.zones, "porch"]
+            await dispatcher.on_review_update(review)
+            await hass.async_block_till_done()
+            assert deliver.call_count == 2
+
+            await dispatcher.on_review_update(review)
+            await hass.async_block_till_done()
+        assert deliver.call_count == 3
+        assert deliver.call_args.args[3].message == "added: Porch"
+
+    @pytest.mark.usefixtures("_zero_delays")
+    async def test_change_absorbed_after_initial_render_is_still_new_afterwards(
+        self, hass: HomeAssistant
+    ) -> None:
+        import asyncio
+
+        dispatcher, _ = self._dispatcher(hass, {UpdateTrigger.ZONE})
+        review = make_review()
+        sending = cast("asyncio.Future[None]", hass.loop.create_future())
+
+        async def _deliver(*args: Any) -> bool:
+            if not sending.done():
+                await sending
+            return True
+
+        deliver = AsyncMock(side_effect=_deliver)
+        with patch(f"{DISPATCHER}.deliver_notification", deliver):
+            await dispatcher.on_review_new(review)
+            # The initial is rendered and mid-send when the zone arrives.
+            review.zones = [*review.zones, "porch"]
+            await dispatcher.on_review_update(review)
+            sending.set_result(None)
+            await hass.async_block_till_done()
+            assert deliver.call_count == 1
+
+            await dispatcher.on_review_update(review)
+            await hass.async_block_till_done()
+        assert deliver.call_count == 2
+        assert deliver.call_args.args[3].message == "added: Porch"

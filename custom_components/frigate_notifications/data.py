@@ -52,6 +52,7 @@ from .enums import (
     StateFilterMode,
     TimeFilterMode,
     TimeFilterOverride,
+    UpdateTrigger,
     VideoType,
     ZoneMatchMode,
     provider_family,
@@ -172,6 +173,9 @@ class ProfileRuntime:
     tag: str
     group: str
     base_url: str
+
+    # Empty sends every update.
+    update_triggers: frozenset[UpdateTrigger] = frozenset()
 
     snapshot_url: str = DEFAULT_SNAPSHOT_URL
     gif_url: str = DEFAULT_GIF_URL
@@ -650,6 +654,7 @@ def _build_profile(
         phases=_build_phases(p.get("phases", {})),
         silence_duration=int(silence),
         alert_once=bool(p.get("alert_once", False)),
+        update_triggers=_resolve_update_triggers(p),
         tag=p.get("tag", DEFAULT_TAG),
         group=p.get("group", DEFAULT_GROUP),
         base_url=defaults.base_url,
@@ -660,6 +665,16 @@ def _build_profile(
         client_id=defaults.client_id,
         on_button_action=tuple(p.get("on_button_action", [])),
     )
+
+
+def _resolve_update_triggers(p: Mapping[str, Any]) -> frozenset[UpdateTrigger]:
+    """Parse stored update triggers, dropping values this version does not know."""
+    known = {t.value for t in UpdateTrigger}
+    raw = p.get("update_triggers", [])
+    unknown = [v for v in raw if v not in known]
+    if unknown:
+        _LOGGER.debug("Ignoring unknown update triggers %s for profile %s", unknown, p.get("name"))
+    return frozenset(UpdateTrigger(v) for v in raw if v in known)
 
 
 # Public runtime assembly.
