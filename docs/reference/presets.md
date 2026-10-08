@@ -225,6 +225,7 @@ Each phase accepts these fields (all optional except where the phase requires th
 | `enabled` | boolean | |
 | `critical` | boolean | |
 | `use_latest_detection` | boolean | |
+| `tap_action` | mapping | `preset` (required) and `uri` (for `custom_url`); overrides the profile tap action for this phase |
 
 Unknown keys are rejected. If a file fails any validation check, it is skipped with a log warning and the integration continues loading other presets.
 

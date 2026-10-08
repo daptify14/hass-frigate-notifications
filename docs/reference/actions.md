@@ -10,7 +10,7 @@ Each notification can display up to three action buttons. You configure these in
 
 | Preset | What it does | Platform notes |
 | -------- | ------------- | ---------------- |
-| **View Clip** | Opens the video clip for this event | HLS stream on iOS, MP4 on Android |
+| **View Clip** | Opens the video clip for this event | HLS stream on iOS, MP4 on Android; see [when each tap target works](#when-each-tap-target-works) |
 | **View Snapshot** | Opens the full-resolution snapshot | Same on all platforms |
 | **View GIF** | Opens the animated review preview | Same on all platforms |
 | **View Live Stream** | Opens the camera's live proxy stream | Same on all platforms |
@@ -47,9 +47,31 @@ The tap action controls what happens when the user taps the notification body it
 | **Open HA (App)** | Navigates to `/lovelace` in the app |
 | **Open HA (Browser)** | Opens HA in the browser |
 | **Open Frigate** | Opens the Frigate UI |
+| **Custom URL** | Opens the URL or in-app path you enter |
 | **No Action** | Suppresses the default tap behavior |
 
 **Default:** View Clip.
+
+### Custom URL
+
+Enter a full `http(s)` URL, or a path starting with `/` such as `/dashboard-cameras/live`. A path opens inside the Companion App with its own login, so it works whenever the app can reach Home Assistant and never expires. Use `/<dashboard>/<view>` for a dashboard view. Paths starting with `//` are rejected.
+
+### Per-phase override
+
+Each phase's media section has its own **Tap action** dropdown, defaulting to **Inherit profile**. Pick a different option there to change what a tap opens for that phase only. A common setup is a Custom URL to a live camera dashboard on the profile, with **View Clip** on the end phase.
+
+### When each tap target works
+
+| Target | Immediately | After the review ends | Notes |
+| -------- | ------------- | ----------------------- | ------- |
+| **Custom URL** | Yes | Yes | |
+| **View Snapshot** | Yes | Yes | Kept for Frigate's snapshot retention |
+| **View GIF** | No | Yes | Frigate builds the preview from the finished review |
+| **View Clip** | No | Yes | Needs the recording segment on disk; on iOS the HLS stream can fail on objects spanning two segments in Frigate 0.18 |
+| **View Live Stream** | Yes | For 5 to 10 minutes | Carries a camera token that Home Assistant rotates every 5 minutes |
+| **Open HA / Open Frigate** | Yes | Yes | |
+
+Snapshot, GIF, and clip links stay valid as long as Frigate retains the media, unless the Frigate integration's notification proxy is configured to expire them.
 
 !!! warning "Frigate URL reachability"
 

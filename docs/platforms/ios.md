@@ -29,3 +29,5 @@ The iOS Companion App supports rich notifications with images, GIFs, video, soun
 !!! tip "HLS vs MP4"
 
     HLS clips stream progressively and begin playback almost immediately when expanding the notification. MP4 clips must download the entire file before playback starts, which can mean a noticeable delay on longer clips depending on network conditions. **HLS is recommended for iOS.** MP4 is the only option on Android.
+
+    The **View Clip** tap and button also use HLS on iOS. Frigate generates the MP4 on the fly without byte-range support, which Safari needs for progressive playback. HLS needs the recording on disk, so clip taps only work once the review has ended; see [when each tap target works](../reference/actions.md#when-each-tap-target-works).
