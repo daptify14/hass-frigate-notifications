@@ -113,6 +113,47 @@ class TestPresetLoaders:
         with pytest.raises(vol.Invalid):
             PROFILE_PRESET_SCHEMA(raw)
 
+    def test_phase_accepts_tap_action_override(self) -> None:
+        """A preset phase may carry a tap action override."""
+        raw = {
+            "schema_version": 1,
+            "id": "tap",
+            "version": 1,
+            "name": "Tap",
+            "summary": "Tap override",
+            "phases": {
+                "initial": {"message_template": "{{ object }}"},
+                "end": {"tap_action": {"preset": "custom_url", "uri": "/cams/live"}},
+            },
+        }
+        validated = PROFILE_PRESET_SCHEMA(raw)
+        assert validated["phases"]["end"]["tap_action"] == {
+            "preset": "custom_url",
+            "uri": "/cams/live",
+        }
+
+    @pytest.mark.parametrize(
+        "tap_action",
+        [
+            {"preset": "custom_url", "uri": "app://com.example.app"},
+            {"preset": "custom_url"},
+            {"preset": "silence"},
+        ],
+        ids=["bad-uri", "missing-uri", "non-tap-preset"],
+    )
+    def test_phase_rejects_bad_tap_action(self, tap_action: dict[str, str]) -> None:
+        """A preset phase tap override is validated like the flow field."""
+        raw = {
+            "schema_version": 1,
+            "id": "tap",
+            "version": 1,
+            "name": "Tap",
+            "summary": "Tap override",
+            "phases": {"initial": {"tap_action": tap_action}},
+        }
+        with pytest.raises(vol.Invalid):
+            PROFILE_PRESET_SCHEMA(raw)
+
     def test_build_template_id_map_contains_all_ids(self) -> None:
         """ID map contains every content and title ID."""
         template_presets = load_template_presets()

@@ -8,18 +8,28 @@ from homeassistant.data_entry_flow import SectionConfig, section
 from homeassistant.helpers.selector import (
     ActionSelector,
     BooleanSelector,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
+    TextSelector,
 )
 import voluptuous as vol
 
+from ....action_presets import (
+    CUSTOM_URL_PRESET,
+    TAP_ACTION_OPTIONS,
+    is_valid_tap_url,
+    preset_select_options,
+)
 from ....media import VALID_TV_ATTACHMENTS
 from ...helpers import ATTACHMENT_SELECTOR, TV_ATTACHMENT_SELECTOR, video_selector
 from ..context import PROFILE_PHASE_DEFAULTS, PROFILE_PHASE_ORDER
 
 if TYPE_CHECKING:
     from ..context import FlowContext
+
+TAP_INHERIT = "inherit"
 
 
 def build_media_actions_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.Schema:
@@ -53,6 +63,8 @@ def build_media_actions_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.S
                     ),
                 )
             ] = BooleanSelector()
+        if caps.supports_action_presets:
+            fields.update(_phase_tap_fields(phase_data))
         schema_dict[vol.Optional(f"{phase_name}_media")] = section(
             vol.Schema(fields), SectionConfig(collapsed=(phase_name != "initial"))
         )
@@ -71,10 +83,30 @@ def build_media_actions_schema(draft: dict[str, Any], ctx: FlowContext) -> vol.S
     return vol.Schema(schema_dict)
 
 
+def _phase_tap_fields(phase_data: dict[str, Any]) -> dict[Any, Any]:
+    """Tap override fields for one phase section."""
+    options: list[SelectOptionDict] = [
+        SelectOptionDict(value=TAP_INHERIT, label="Inherit profile"),
+        *preset_select_options(TAP_ACTION_OPTIONS),
+    ]
+    current = phase_data.get("tap_action", {}).get("preset", TAP_INHERIT)
+    return {
+        vol.Optional("tap_preset", default=current): SelectSelector(
+            SelectSelectorConfig(options=options, mode=SelectSelectorMode.DROPDOWN)
+        ),
+        vol.Optional("tap_url"): TextSelector(),
+    }
+
+
 def build_media_actions_suggested(draft: dict[str, Any], ctx: FlowContext) -> dict[str, Any]:
     """Build suggested values for media/actions form."""
     enabled = ctx.enabled_phases
     suggested: dict[str, Any] = {}
+
+    for pn in enabled:
+        phase_uri = draft.get("phases", {}).get(pn, {}).get("tap_action", {}).get("uri")
+        if phase_uri:
+            suggested[f"{pn}_media"] = {"tap_url": phase_uri}
 
     custom_suggested: dict[str, Any] = {}
     for pn in enabled:
@@ -87,8 +119,37 @@ def build_media_actions_suggested(draft: dict[str, Any], ctx: FlowContext) -> di
         suggested["on_button_action_section"] = {
             "on_button_action": draft["on_button_action"],
         }
+    tap_uri = draft.get("tap_action", {}).get("uri")
+    if tap_uri:
+        suggested["tap_action"] = {"tap_url": tap_uri}
 
     return suggested
+
+
+def _custom_url_invalid(sec: dict[str, Any]) -> bool:
+    """True when the section picks Custom URL without a usable URL."""
+    if sec.get("tap_preset") != CUSTOM_URL_PRESET:
+        return False
+    return not is_valid_tap_url((sec.get("tap_url") or "").strip())
+
+
+def validate_media_actions_input(user_input: dict[str, Any]) -> dict[str, str]:
+    """Validate media/actions step input. Returns error dict (empty = valid)."""
+    if _custom_url_invalid(user_input.get("tap_action", {})):
+        return {"tap_action": "tap_url_invalid"}
+    for phase_name in PROFILE_PHASE_ORDER:
+        section_key = f"{phase_name}_media"
+        if _custom_url_invalid(user_input.get(section_key, {})):
+            return {section_key: "tap_url_invalid"}
+    return {}
+
+
+def _tap_action_from_section(sec: dict[str, Any], preset: str) -> dict[str, Any]:
+    """Build the stored tap action dict for a chosen preset."""
+    tap_action: dict[str, Any] = {"preset": preset}
+    if preset == CUSTOM_URL_PRESET:
+        tap_action["uri"] = sec["tap_url"].strip()
+    return tap_action
 
 
 def apply_media_actions_input(
@@ -121,6 +182,7 @@ def _build_action_preset_schema(data: dict[str, Any]) -> dict[Any, Any]:
                 vol.Optional("tap_preset", default=tap_default): SelectSelector(
                     SelectSelectorConfig(options=tap_options, mode=SelectSelectorMode.DROPDOWN)
                 ),
+                vol.Optional("tap_url"): TextSelector(),
             }
         ),
         SectionConfig(collapsed=True),
@@ -166,6 +228,12 @@ def _submit_media_phases(data: dict[str, Any], user_input: dict[str, Any]) -> No
             phase["video"] = phase_sec["video"]
         if "use_latest_detection" in phase_sec:
             phase["use_latest_detection"] = phase_sec["use_latest_detection"]
+        if "tap_preset" in phase_sec:
+            tap_preset = phase_sec["tap_preset"]
+            if tap_preset == TAP_INHERIT:
+                phase.pop("tap_action", None)
+            else:
+                phase["tap_action"] = _tap_action_from_section(phase_sec, tap_preset)
         phases[phase_name] = phase
 
 
@@ -187,7 +255,9 @@ def _submit_action_presets(data: dict[str, Any], user_input: dict[str, Any]) -> 
     """Extract tap action and button presets from user_input."""
     if "tap_action" in user_input:
         tap_sec = user_input.get("tap_action", {})
-        data["tap_action"] = {"preset": tap_sec.get("tap_preset", "view_clip")}
+        data["tap_action"] = _tap_action_from_section(
+            tap_sec, tap_sec.get("tap_preset", "view_clip")
+        )
 
     if "actions_config" in user_input:
         actions_sec = user_input.get("actions_config", {})

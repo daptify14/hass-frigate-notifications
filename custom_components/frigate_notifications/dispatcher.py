@@ -268,7 +268,9 @@ def assemble_notification(request: DispatchRequest) -> RenderedNotification:
     access_token = camera_state.attributes.get("access_token", "") if camera_state else ""
     action_ctx = {**ctx, "access_token": access_token}
 
-    click_url = resolve_tap_url(r.profile, action_ctx)
+    click_url = resolve_tap_url(
+        r.phase_config.tap_action or r.profile.tap_action, r.profile.provider, action_ctx
+    )
 
     return RenderedNotification(
         title=title,

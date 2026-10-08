@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 import voluptuous as vol
 import yaml
 
+from ..action_presets import CUSTOM_URL_PRESET, TAP_ACTION_OPTIONS, is_valid_tap_url
 from ..config import (
     DEFAULT_PHASE_GENAI,
     DEFAULT_PHASE_INITIAL,
@@ -27,6 +28,15 @@ _LOGGER = logging.getLogger(__name__)
 
 SUPPORTED_SCHEMA_VERSION = 1
 
+
+def _validate_tap_action(value: dict[str, Any]) -> dict[str, Any]:
+    """Require a usable URL when a preset phase picks Custom URL."""
+    if value["preset"] == CUSTOM_URL_PRESET and not is_valid_tap_url(value.get("uri", "")):
+        msg = "custom_url tap_action needs a valid uri"
+        raise vol.Invalid(msg)
+    return value
+
+
 PHASE_SCHEMA = vol.Schema(
     {
         vol.Optional("message_template"): str,
@@ -42,6 +52,16 @@ PHASE_SCHEMA = vol.Schema(
         vol.Optional("enabled"): bool,
         vol.Optional("critical"): bool,
         vol.Optional("use_latest_detection"): bool,
+        vol.Optional("tap_action"): vol.All(
+            vol.Schema(
+                {
+                    vol.Required("preset"): vol.In(TAP_ACTION_OPTIONS),
+                    vol.Optional("uri"): str,
+                },
+                extra=vol.PREVENT_EXTRA,
+            ),
+            _validate_tap_action,
+        ),
     },
     extra=vol.PREVENT_EXTRA,
 )

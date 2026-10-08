@@ -188,6 +188,7 @@ class TestProfileReconfigure:
                     "attachment": "review_gif",
                     "video": "clip_mp4",
                     "use_latest_detection": True,
+                    "tap_action": {"preset": "custom_url", "uri": "/cams/live"},
                     "sound": "alert",
                     "volume": 0.5,
                     "interruption_level": "active",
@@ -333,6 +334,9 @@ class TestProfileReconfigure:
             media_sec["video"] = p["video"]
             if phase_name != "initial":
                 media_sec["use_latest_detection"] = p["use_latest_detection"]
+            if phase_name == "end":
+                media_sec["tap_preset"] = "custom_url"
+                media_sec["tap_url"] = "/cams/live"
             media_input[f"{phase_name}_media"] = media_sec
         result = await hass.config_entries.subentries.async_configure(flow_id, media_input)
         assert result["type"] is FlowResultType.MENU
@@ -458,6 +462,11 @@ class TestProfileReconfigure:
         assert "custom_actions" not in saved["phases"]["update"]
         assert "custom_actions" not in saved["phases"]["end"]
 
+        # Tap override: only end had one.
+        assert saved["phases"]["end"]["tap_action"] == {"preset": "custom_url", "uri": "/cams/live"}
+        assert "tap_action" not in saved["phases"]["initial"]
+        assert "tap_action" not in saved["phases"]["genai"]
+
     async def test_reconfigure_basics_shows_identity_fields_readonly(
         self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
     ) -> None:
@@ -547,3 +556,55 @@ class TestProfileReconfigure:
             result["flow_id"], {"next_step_id": "content"}
         )
         assert _suggested_value(result, "initial_content", "subtitle_template") is None
+
+    async def test_reconfigure_media_actions_rejects_invalid_custom_url(
+        self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]
+    ) -> None:
+        """An invalid Custom URL re-shows the media step with a field error."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={"frigate_entry_id": FRIGATE_ENTRY_ID},
+            options={},
+            title="Test",
+            subentries_data=[
+                ConfigSubentryData(
+                    data={**PROFILE_SUBENTRY_DATA},
+                    subentry_type="profile",
+                    title="Test Profile",
+                    unique_id="test_profile_tap_url",
+                ),
+            ],
+        )
+        entry.add_to_hass(hass)
+        subentry_id = next(
+            s.subentry_id for s in entry.subentries.values() if s.subentry_type == "profile"
+        )
+
+        result = await _start_profile_reconfigure(hass, entry, subentry_id)
+        flow_id = result["flow_id"]
+        await hass.config_entries.subentries.async_configure(
+            flow_id, {"next_step_id": "media_actions"}
+        )
+        result = await hass.config_entries.subentries.async_configure(
+            flow_id, {"tap_action": {"tap_preset": "custom_url", "tap_url": "cams/live"}}
+        )
+        assert result["type"] is FlowResultType.FORM
+        assert result["step_id"] == "media_actions"
+        assert result["errors"] == {"tap_action": "tap_url_invalid"}
+
+        result = await hass.config_entries.subentries.async_configure(
+            flow_id, {"tap_action": {"tap_preset": "custom_url", "tap_url": "/cams/live"}}
+        )
+        assert result["type"] is FlowResultType.MENU
+        result = await hass.config_entries.subentries.async_configure(
+            flow_id, {"next_step_id": "save"}
+        )
+        assert result["reason"] == "reconfigure_successful"
+        saved = entry.subentries[subentry_id].data
+        assert saved["tap_action"] == {"preset": "custom_url", "uri": "/cams/live"}
+
+        result = await _start_profile_reconfigure(hass, entry, subentry_id)
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"], {"next_step_id": "media_actions"}
+        )
+        assert _suggested_value(result, "tap_action", "tap_url") == "/cams/live"

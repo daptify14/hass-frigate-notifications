@@ -79,6 +79,25 @@ class TestAssembleNotification:
         )
         assert not rendered.title.startswith("ALERT ")
 
+    async def test_assemble_phase_tap_override_wins(self, hass: HomeAssistant) -> None:
+        """A phase tap override replaces the profile tap for that phase only."""
+        profile = make_profile(tap_action={"preset": "custom_url", "uri": "/cams/live"})
+        end_phase = make_phase(tap_action={"preset": "view_snapshot"})
+
+        inherited = assemble_notification(make_dispatch_request(hass, profile=profile))
+        overridden = assemble_notification(
+            make_dispatch_request(
+                hass,
+                profile=profile,
+                phase=Phase.END,
+                phase_config=end_phase,
+                lifecycle=Lifecycle.END,
+                is_initial=False,
+            )
+        )
+        assert inherited.click_url == "/cams/live"
+        assert overridden.click_url.endswith("/snapshot.jpg?bbox=0&crop=0")
+
     async def test_assemble_alert_once_silent_on_subsequent(self, hass: HomeAssistant) -> None:
         """Alert-once marks subsequent non-critical dispatches as silent."""
         rendered = assemble_notification(

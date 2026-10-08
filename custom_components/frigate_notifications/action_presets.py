@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 import logging
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit
 
 from jinja2 import StrictUndefined
 from jinja2.sandbox import SandboxedEnvironment
@@ -15,8 +16,6 @@ from .media import ATTACHMENT_URL_TEMPLATES, VIDEO_URL_TEMPLATES
 if TYPE_CHECKING:
     from homeassistant.helpers.selector import SelectOptionDict
 
-    from .data import ProfileRuntime
-
 # Separate from HA's Template engine: uses StrictUndefined so a missing
 # variable in a URI template fails loudly instead of rendering empty.
 _JINJA_ENV = SandboxedEnvironment(undefined=StrictUndefined)
@@ -25,6 +24,9 @@ _LOGGER = logging.getLogger(__name__)
 # Android-only sentinel that makes a tap/action do nothing. iOS has no
 # equivalent and treats it as a frontend route, so never send it as "url".
 NO_ACTION_URI = "noAction"
+
+# Tap-only option: the URL lives in the tap config, not in a preset.
+CUSTOM_URL_PRESET = "custom_url"
 
 ACTION_PRESETS: dict[str, dict[str, str]] = {
     "view_clip": {
@@ -116,6 +118,7 @@ TAP_ACTION_OPTIONS = [
     "open_ha_app",
     "open_ha_web",
     "open_frigate",
+    CUSTOM_URL_PRESET,
     "no_action",
 ]
 
@@ -128,10 +131,24 @@ _PRESET_LABELS: dict[str, str] = {
     "open_ha_app": "Open HA (App)",
     "open_ha_web": "Open HA (Browser)",
     "open_frigate": "Open Frigate",
+    CUSTOM_URL_PRESET: "Custom URL",
     "custom_action": "Custom Action",
     "no_action": "No Action (Android)",
     "none": "None (empty slot)",
 }
+
+
+def is_valid_tap_url(value: str) -> bool:
+    """Accept an http(s) URL with a host, or an in-app path with a single leading slash."""
+    if not value.isprintable() or any(ch in " \\" for ch in value):
+        return False
+    if value.startswith("/"):
+        return not value.startswith("//")
+    try:
+        parts = urlsplit(value)
+    except ValueError:
+        return False
+    return parts.scheme in ("http", "https") and bool(parts.netloc)
 
 
 def preset_select_options(preset_ids: list[str]) -> list[SelectOptionDict]:
@@ -156,15 +173,23 @@ def resolve_uri_for_platform(
 
 
 def resolve_tap_url(
-    profile: ProfileRuntime,
+    tap_cfg: Mapping[str, Any] | None,
+    provider: Provider,
     ctx: Mapping[str, Any],
 ) -> str:
-    """Resolve the tap action preset to a rendered URL string.
+    """Resolve a tap action config to a rendered URL string.
 
     Caller is expected to pass a context already enriched with access_token.
     """
-    tap_cfg: dict[str, Any] = profile.tap_action or {}
+    tap_cfg = tap_cfg or {}
     preset_id = tap_cfg.get("preset", "view_clip")
+
+    # A Custom URL is literal text, never a template.
+    if preset_id == CUSTOM_URL_PRESET:
+        if tap_cfg.get("uri"):
+            return str(tap_cfg["uri"])
+        _LOGGER.warning("Custom URL tap_action has no URL; using noAction")
+        return NO_ACTION_URI
 
     if tap_cfg.get("uri"):
         return _JINJA_ENV.from_string(tap_cfg["uri"]).render(ctx)
@@ -187,5 +212,5 @@ def resolve_tap_url(
         )
         return NO_ACTION_URI
 
-    uri_tpl = resolve_uri_for_platform(profile.provider, preset)
+    uri_tpl = resolve_uri_for_platform(provider, preset)
     return _JINJA_ENV.from_string(uri_tpl).render(ctx)
