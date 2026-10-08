@@ -11,9 +11,11 @@ from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
+    TextSelector,
 )
 import voluptuous as vol
 
+from ....action_presets import CUSTOM_URL_PRESET, is_valid_tap_url
 from ....media import VALID_TV_ATTACHMENTS
 from ...helpers import ATTACHMENT_SELECTOR, TV_ATTACHMENT_SELECTOR, video_selector
 from ..context import PROFILE_PHASE_DEFAULTS, PROFILE_PHASE_ORDER
@@ -87,8 +89,21 @@ def build_media_actions_suggested(draft: dict[str, Any], ctx: FlowContext) -> di
         suggested["on_button_action_section"] = {
             "on_button_action": draft["on_button_action"],
         }
+    tap_uri = draft.get("tap_action", {}).get("uri")
+    if tap_uri:
+        suggested["tap_action"] = {"tap_url": tap_uri}
 
     return suggested
+
+
+def validate_media_actions_input(user_input: dict[str, Any]) -> dict[str, str]:
+    """Validate media/actions step input. Returns error dict (empty = valid)."""
+    tap_sec = user_input.get("tap_action", {})
+    if tap_sec.get("tap_preset") == CUSTOM_URL_PRESET and not is_valid_tap_url(
+        (tap_sec.get("tap_url") or "").strip()
+    ):
+        return {"tap_action": "tap_url_invalid"}
+    return {}
 
 
 def apply_media_actions_input(
@@ -121,6 +136,7 @@ def _build_action_preset_schema(data: dict[str, Any]) -> dict[Any, Any]:
                 vol.Optional("tap_preset", default=tap_default): SelectSelector(
                     SelectSelectorConfig(options=tap_options, mode=SelectSelectorMode.DROPDOWN)
                 ),
+                vol.Optional("tap_url"): TextSelector(),
             }
         ),
         SectionConfig(collapsed=True),
@@ -187,7 +203,11 @@ def _submit_action_presets(data: dict[str, Any], user_input: dict[str, Any]) -> 
     """Extract tap action and button presets from user_input."""
     if "tap_action" in user_input:
         tap_sec = user_input.get("tap_action", {})
-        data["tap_action"] = {"preset": tap_sec.get("tap_preset", "view_clip")}
+        preset = tap_sec.get("tap_preset", "view_clip")
+        tap_action = {"preset": preset}
+        if preset == CUSTOM_URL_PRESET:
+            tap_action["uri"] = tap_sec["tap_url"].strip()
+        data["tap_action"] = tap_action
 
     if "actions_config" in user_input:
         actions_sec = user_input.get("actions_config", {})

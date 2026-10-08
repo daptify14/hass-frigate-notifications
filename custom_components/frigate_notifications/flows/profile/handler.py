@@ -38,6 +38,7 @@ from .steps.media_actions import (
     apply_media_actions_input,
     build_media_actions_schema,
     build_media_actions_suggested,
+    validate_media_actions_input,
 )
 from .steps.preset import (
     apply_preset_input,
@@ -222,17 +223,21 @@ class ProfileSubentryFlowHandler(ConfigSubentryFlow):
     async def async_step_media_actions(self, user_input=None) -> SubentryFlowResult:
         """Step 5: attachments, video, and action presets across all 4 phases."""
         ctx = self._build_context()
+        errors: dict[str, str] = {}
 
         if user_input is not None:
-            apply_media_actions_input(self._data, user_input, ctx)
-            self._invalidate_context()
-            return await self._go_to_menu()
+            errors = validate_media_actions_input(user_input)
+            if not errors:
+                apply_media_actions_input(self._data, user_input, ctx)
+                self._invalidate_context()
+                return await self._go_to_menu()
 
         schema = build_media_actions_schema(self._data, ctx)
         suggested = build_media_actions_suggested(self._data, ctx)
         return self.async_show_form(
             step_id="media_actions",
             data_schema=self.add_suggested_values_to_schema(schema, suggested),
+            errors=errors,
             description_placeholders=self._placeholders(),
             last_step=False,
         )

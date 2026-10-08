@@ -24,6 +24,8 @@ from custom_components.frigate_notifications.flows.profile.steps.delivery import
 )
 from custom_components.frigate_notifications.flows.profile.steps.media_actions import (
     apply_media_actions_input,
+    build_media_actions_suggested,
+    validate_media_actions_input,
 )
 from custom_components.frigate_notifications.providers.base import get_capabilities
 
@@ -277,6 +279,63 @@ class TestMediaActionsApply:
             ctx,
         )
         assert "video" not in draft["phases"]["initial"]
+
+    def test_custom_url_tap_stores_stripped_uri(self) -> None:
+        """Custom URL tap preset stores the trimmed URL alongside the preset."""
+        draft: dict[str, Any] = {}
+        apply_media_actions_input(
+            draft,
+            {"tap_action": {"tap_preset": "custom_url", "tap_url": " /cams/live "}},
+            _make_ctx(),
+        )
+        assert draft["tap_action"] == {"preset": "custom_url", "uri": "/cams/live"}
+
+    def test_other_tap_preset_drops_uri(self) -> None:
+        """Switching away from Custom URL drops the stored URL."""
+        draft: dict[str, Any] = {"tap_action": {"preset": "custom_url", "uri": "/cams/live"}}
+        apply_media_actions_input(
+            draft,
+            {"tap_action": {"tap_preset": "view_snapshot", "tap_url": "/cams/live"}},
+            _make_ctx(),
+        )
+        assert draft["tap_action"] == {"preset": "view_snapshot"}
+
+
+class TestMediaActionsValidate:
+    """Test validate_media_actions_input."""
+
+    @pytest.mark.parametrize("tap_url", ["", "   ", "//evil.test", "cams/live"])
+    def test_custom_url_requires_valid_url(self, tap_url: str) -> None:
+        errors = validate_media_actions_input(
+            {"tap_action": {"tap_preset": "custom_url", "tap_url": tap_url}}
+        )
+        assert errors == {"tap_action": "tap_url_invalid"}
+
+    def test_custom_url_accepts_path(self) -> None:
+        errors = validate_media_actions_input(
+            {"tap_action": {"tap_preset": "custom_url", "tap_url": "/cams/live"}}
+        )
+        assert errors == {}
+
+    def test_other_preset_ignores_url_field(self) -> None:
+        errors = validate_media_actions_input(
+            {"tap_action": {"tap_preset": "view_clip", "tap_url": "nonsense"}}
+        )
+        assert errors == {}
+
+
+class TestMediaActionsSuggested:
+    """Test build_media_actions_suggested."""
+
+    def test_stored_tap_uri_is_suggested(self) -> None:
+        draft: dict[str, Any] = {"tap_action": {"preset": "custom_url", "uri": "/cams/live"}}
+        suggested = build_media_actions_suggested(draft, _make_ctx())
+        assert suggested["tap_action"] == {"tap_url": "/cams/live"}
+
+    def test_no_tap_suggestion_without_uri(self) -> None:
+        draft: dict[str, Any] = {"tap_action": {"preset": "view_clip"}}
+        suggested = build_media_actions_suggested(draft, _make_ctx())
+        assert "tap_action" not in suggested
 
 
 class TestDeliverySuggested:

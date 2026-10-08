@@ -30,7 +30,8 @@
       "presence_entities_required": "Presence entities are required when mode is Custom.",
       "state_entity_required": "A state entity is required when mode is Custom.",
       "sub_label_overlap": "The same identity cannot be in both include and exclude lists.",
-      "invalid_template": "One or more templates contain invalid syntax."
+      "invalid_template": "One or more templates contain invalid syntax.",
+      "tap_url_invalid": "Enter a full http(s) URL or a path starting with /."
     }
   },
   "options": {
@@ -473,10 +474,12 @@
             "tap_action": {
               "name": "Tap action",
               "data": {
-                "tap_preset": "Tap action preset"
+                "tap_preset": "Tap action preset",
+                "tap_url": "Custom URL"
               },
               "data_description": {
-                "tap_preset": "What opens when you tap the notification."
+                "tap_preset": "What opens when you tap the notification.",
+                "tap_url": "Used by the Custom URL preset. A full http(s) URL, or a path such as /dashboard-cameras/live that opens inside the companion app."
               }
             },
             "actions_config": {
