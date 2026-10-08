@@ -96,6 +96,7 @@ class PhaseConfig:
     media: PhaseMedia = field(default_factory=PhaseMedia)
     tv: AndroidTvOverlay = field(default_factory=AndroidTvOverlay)
     custom_actions: tuple[dict[str, Any], ...] = ()
+    tap_action: dict[str, Any] | None = None
 
 
 DEFAULT_PHASE_INITIAL = PhaseConfig(

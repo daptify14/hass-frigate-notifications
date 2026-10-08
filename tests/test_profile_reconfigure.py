@@ -188,6 +188,7 @@ class TestProfileReconfigure:
                     "attachment": "review_gif",
                     "video": "clip_mp4",
                     "use_latest_detection": True,
+                    "tap_action": {"preset": "custom_url", "uri": "/cams/live"},
                     "sound": "alert",
                     "volume": 0.5,
                     "interruption_level": "active",
@@ -333,6 +334,9 @@ class TestProfileReconfigure:
             media_sec["video"] = p["video"]
             if phase_name != "initial":
                 media_sec["use_latest_detection"] = p["use_latest_detection"]
+            if phase_name == "end":
+                media_sec["tap_preset"] = "custom_url"
+                media_sec["tap_url"] = "/cams/live"
             media_input[f"{phase_name}_media"] = media_sec
         result = await hass.config_entries.subentries.async_configure(flow_id, media_input)
         assert result["type"] is FlowResultType.MENU
@@ -457,6 +461,11 @@ class TestProfileReconfigure:
         )
         assert "custom_actions" not in saved["phases"]["update"]
         assert "custom_actions" not in saved["phases"]["end"]
+
+        # Tap override: only end had one.
+        assert saved["phases"]["end"]["tap_action"] == {"preset": "custom_url", "uri": "/cams/live"}
+        assert "tap_action" not in saved["phases"]["initial"]
+        assert "tap_action" not in saved["phases"]["genai"]
 
     async def test_reconfigure_basics_shows_identity_fields_readonly(
         self, hass: HomeAssistant, mock_frigate_data: dict[str, Any]

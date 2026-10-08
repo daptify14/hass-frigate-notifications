@@ -300,9 +300,37 @@ class TestMediaActionsApply:
         )
         assert draft["tap_action"] == {"preset": "view_snapshot"}
 
+    def test_phase_tap_override_stored(self) -> None:
+        """A non-inherit phase tap preset is stored on that phase."""
+        draft: dict[str, Any] = {}
+        apply_media_actions_input(
+            draft,
+            {"end_media": {"attachment": "snapshot", "tap_preset": "view_clip"}},
+            _make_ctx(),
+        )
+        assert draft["phases"]["end"]["tap_action"] == {"preset": "view_clip"}
+
+    def test_phase_tap_inherit_clears_override(self) -> None:
+        """Choosing Inherit removes a stored phase tap override."""
+        draft: dict[str, Any] = {
+            "phases": {"end": {"tap_action": {"preset": "custom_url", "uri": "/cams/live"}}}
+        }
+        apply_media_actions_input(
+            draft,
+            {"end_media": {"attachment": "snapshot", "tap_preset": "inherit"}},
+            _make_ctx(),
+        )
+        assert "tap_action" not in draft["phases"]["end"]
+
 
 class TestMediaActionsValidate:
     """Test validate_media_actions_input."""
+
+    def test_phase_custom_url_requires_valid_url(self) -> None:
+        errors = validate_media_actions_input(
+            {"end_media": {"tap_preset": "custom_url", "tap_url": "cams/live"}}
+        )
+        assert errors == {"end_media": "tap_url_invalid"}
 
     @pytest.mark.parametrize("tap_url", ["", "   ", "//evil.test", "cams/live"])
     def test_custom_url_requires_valid_url(self, tap_url: str) -> None:
@@ -336,6 +364,13 @@ class TestMediaActionsSuggested:
         draft: dict[str, Any] = {"tap_action": {"preset": "view_clip"}}
         suggested = build_media_actions_suggested(draft, _make_ctx())
         assert "tap_action" not in suggested
+
+    def test_phase_tap_uri_is_suggested(self) -> None:
+        draft: dict[str, Any] = {
+            "phases": {"end": {"tap_action": {"preset": "custom_url", "uri": "/cams/live"}}}
+        }
+        suggested = build_media_actions_suggested(draft, _make_ctx())
+        assert suggested["end_media"] == {"tap_url": "/cams/live"}
 
 
 class TestDeliverySuggested:

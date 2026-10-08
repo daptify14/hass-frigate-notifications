@@ -482,6 +482,7 @@ def _build_phases(phases_data: dict[str, Any]) -> dict[Phase, PhaseConfig]:
                 color=pd.get("tv_color", ""),
             ),
             custom_actions=tuple(pd.get("custom_actions", [])),
+            tap_action=dict(pd["tap_action"]) if pd.get("tap_action") else None,
         )
     return result
 

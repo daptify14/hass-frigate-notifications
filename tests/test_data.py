@@ -355,6 +355,14 @@ class TestBuildPhases:
         assert pc.delivery.volume == 1.0
         assert pc.media.attachment == AttachmentType.SNAPSHOT_CROPPED
         assert pc.tv.fontsize == "medium"
+        assert pc.tap_action is None
+
+    def test_tap_action_override_is_copied(self) -> None:
+        """A phase tap override is read into PhaseConfig as its own dict."""
+        raw = {"end": {"tap_action": {"preset": "custom_url", "uri": "/cams/live"}}}
+        result = _build_phases(raw)
+        assert result[Phase.END].tap_action == {"preset": "custom_url", "uri": "/cams/live"}
+        assert result[Phase.END].tap_action is not raw["end"]["tap_action"]
 
     def test_all_four_phases_built(self) -> None:
         """All four phase keys are converted to Phase enum keys."""

@@ -13,8 +13,6 @@ from custom_components.frigate_notifications.action_presets import (
 )
 from custom_components.frigate_notifications.enums import Provider
 
-from .factories import make_profile
-
 
 class TestSelectorHelpers:
     """Tests for config flow selector helpers."""
@@ -71,35 +69,38 @@ class TestResolveTapUrl:
 
     def test_no_action_returns_noaction(self) -> None:
         """no_action preset returns 'noAction'."""
-        profile = make_profile(tap_action={"preset": "no_action"})
-        result = resolve_tap_url(profile, {})
+        result = resolve_tap_url({"preset": "no_action"}, Provider.APPLE, {})
         assert result == "noAction"
+
+    def test_none_config_uses_view_clip(self) -> None:
+        """A missing tap config falls back to the View Clip preset."""
+        result = resolve_tap_url(None, Provider.ANDROID, _BASE_CTX)
+        assert result.endswith("/det1/driveway/clip.mp4")
 
     def test_custom_uri_override(self) -> None:
         """Custom URI override is used when present in tap_action."""
-        profile = make_profile(tap_action={"preset": "view_clip", "uri": "{{ base_url }}/custom"})
-        result = resolve_tap_url(profile, {"base_url": "https://ha.test"})
+        tap = {"preset": "view_clip", "uri": "{{ base_url }}/custom"}
+        result = resolve_tap_url(tap, Provider.APPLE, {"base_url": "https://ha.test"})
         assert result == "https://ha.test/custom"
 
     def test_custom_url_preset_returns_stored_path(self) -> None:
         """Custom URL preset returns its stored path unchanged."""
-        profile = make_profile(tap_action={"preset": CUSTOM_URL_PRESET, "uri": "/cams/live"})
-        assert resolve_tap_url(profile, _BASE_CTX) == "/cams/live"
+        tap = {"preset": CUSTOM_URL_PRESET, "uri": "/cams/live"}
+        assert resolve_tap_url(tap, Provider.APPLE, _BASE_CTX) == "/cams/live"
 
     @pytest.mark.parametrize("uri", ["/{{", '/{{ "/evil.test" }}'])
     def test_custom_url_preset_is_not_templated(self, uri: str) -> None:
         """Custom URL text is returned literally, never rendered as a template."""
-        profile = make_profile(tap_action={"preset": CUSTOM_URL_PRESET, "uri": uri})
-        assert resolve_tap_url(profile, _BASE_CTX) == uri
+        tap = {"preset": CUSTOM_URL_PRESET, "uri": uri}
+        assert resolve_tap_url(tap, Provider.APPLE, _BASE_CTX) == uri
 
     def test_custom_url_preset_without_url_returns_noaction_and_warns(
         self,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Custom URL preset with no stored URL degrades to noAction."""
-        profile = make_profile(tap_action={"preset": CUSTOM_URL_PRESET})
         with caplog.at_level(logging.WARNING):
-            result = resolve_tap_url(profile, _BASE_CTX)
+            result = resolve_tap_url({"preset": CUSTOM_URL_PRESET}, Provider.APPLE, _BASE_CTX)
         assert result == "noAction"
         assert "Custom URL tap_action has no URL; using noAction" in caplog.text
 
@@ -108,18 +109,13 @@ class TestResolveTapUrl:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Unknown preset ID degrades to noAction with warning."""
-        profile = make_profile(
-            provider=Provider.APPLE,
-            tap_action={"preset": "nonexistent"},
-        )
         with caplog.at_level(logging.WARNING):
-            result = resolve_tap_url(profile, _BASE_CTX)
+            result = resolve_tap_url({"preset": "nonexistent"}, Provider.APPLE, _BASE_CTX)
         assert result == "noAction"
         assert "Unknown tap_action preset nonexistent; using noAction" in caplog.text
 
     def test_template_variables_substituted(self) -> None:
         """Template variables are fully substituted."""
-        profile = make_profile(provider=Provider.APPLE)
         ctx = {
             "base_url": "https://ha.test",
             "client_id": "/inst1",
@@ -127,7 +123,7 @@ class TestResolveTapUrl:
             "camera": "front",
             "review_id": "rev1",
         }
-        result = resolve_tap_url(profile, ctx)
+        result = resolve_tap_url({"preset": "view_clip"}, Provider.APPLE, ctx)
         expected = "https://ha.test/api/frigate/inst1/notifications/det1/front/master.m3u8"
         assert result == expected
 
@@ -136,12 +132,8 @@ class TestResolveTapUrl:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Non-URI preset type degrades to noAction with warning."""
-        profile = make_profile(
-            provider=Provider.APPLE,
-            tap_action={"preset": "silence"},
-        )
         with caplog.at_level(logging.WARNING):
-            result = resolve_tap_url(profile, _BASE_CTX)
+            result = resolve_tap_url({"preset": "silence"}, Provider.APPLE, _BASE_CTX)
         assert result == "noAction"
         assert (
             "Unsupported tap_action preset type silence for preset silence; using noAction"
@@ -150,9 +142,8 @@ class TestResolveTapUrl:
 
     def test_view_stream_includes_access_token(self) -> None:
         """view_stream preset uses access_token from pre-enriched context."""
-        profile = make_profile(tap_action={"preset": "view_stream"})
         ctx = {**_BASE_CTX, "access_token": "tok123"}
-        result = resolve_tap_url(profile, ctx)
+        result = resolve_tap_url({"preset": "view_stream"}, Provider.APPLE, ctx)
         assert "token=tok123" in result
         assert "camera_proxy_stream/camera.driveway" in result
 
@@ -167,6 +158,5 @@ class TestResolveTapUrl:
     )
     def test_provider_uri_selection(self, provider: Provider, expected_fragment: str) -> None:
         """Each provider selects the correct URI variant."""
-        profile = make_profile(provider=provider)
-        result = resolve_tap_url(profile, _BASE_CTX)
+        result = resolve_tap_url({"preset": "view_clip"}, provider, _BASE_CTX)
         assert expected_fragment in result
