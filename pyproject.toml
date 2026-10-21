@@ -76,6 +76,8 @@ include = ["custom_components", "tests"]
 
 [tool.ty.rules]
 all = "warn"
+# Opt-in rule flagged by `all`; `if x:` on `str | None` is intentional (empty means absent).
+truthiness-test-of-none-union = "ignore"
 
 [tool.coverage.run]
 branch = true
